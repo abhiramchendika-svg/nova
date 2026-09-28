@@ -1,0 +1,93 @@
+/*
+ * NOVA design tokens ("Signal"). Single source of truth: docs/ui-design.md.
+ * Components must use these semantic tokens (via Tailwind utilities mapped in globals.css),
+ * never raw hex values.
+ *
+ * The theme is always stamped on <html data-theme="light|dark"> before first paint
+ * (see index.html), so only two blocks are needed here.
+ */
+:root {
+  color-scheme: light;
+
+  /* Neutrals */
+  --bg: #f4f6fa;
+  --surface: #ffffff;
+  --surface-2: #eef1f6;
+  --surface-3: #e4e8f0;
+  --line: #e1e5ee;
+  --line-strong: #c9cfdc;
+  --ink: #111522;
+  --ink-2: #4a5266;
+  --ink-3: #626a7f;
+  --primary: #111522;
+  --on-primary: #ffffff;
+
+  /* Domain hues (identity) + text-safe variants (>= 4.5:1) */
+  --academics: #2a78d6;
+  --planner: #eb6834;
+  --developer: #1baf7a;
+  --academics-text: #1d5fb2;
+  --planner-text: #b34217;
+  --developer-text: #0b7a55;
+
+  /* Status (reserved; always paired with an icon + label) */
+  --critical: #c8283c;
+  --warning: #8a5e00;
+  --warning-fill: #f2b233;
+  --good: #1f7a3f;
+
+  --focus: #2a78d6;
+
+  /* Elevation (floating layers only) */
+  --shadow-pop: 0 8px 24px -8px rgb(17 21 34 / 0.18), 0 0 0 1px var(--line);
+  --shadow-dialog: 0 24px 64px -16px rgb(17 21 34 / 0.28);
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.2, 0, 0, 1);
+  --ease-emph: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --dur-1: 120ms;
+  --dur-2: 180ms;
+  --dur-3: 260ms;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --bg: #0c1019;
+  --surface: #131926;
+  --surface-2: #1a2131;
+  --surface-3: #222a3d;
+  --line: #252d40;
+  --line-strong: #34405a;
+  --ink: #e9ecf4;
+  --ink-2: #a9b1c6;
+  --ink-3: #7f89a3;
+  --primary: #e9ecf4;
+  --on-primary: #0c1019;
+
+  --academics: #3987e5;
+  --planner: #d95926;
+  --developer: #199e70;
+  --academics-text: #7fb2f5;
+  --planner-text: #f59a74;
+  --developer-text: #5ed3a6;
+
+  --critical: #ff6b7d;
+  --warning: #f5c451;
+  --warning-fill: #f5c451;
+  --good: #5ccb85;
+
+  --focus: #7fb2f5;
+
+  /* Shadows barely read on dark; floating layers rely on a lighter surface + border instead */
+  --shadow-pop: 0 0 0 1px var(--line-strong), 0 12px 32px -12px rgb(0 0 0 / 0.6);
+  --shadow-dialog: 0 0 0 1px var(--line-strong), 0 24px 64px -16px rgb(0 0 0 / 0.7);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-1: 0ms;
+    --dur-2: 0ms;
+    --dur-3: 0ms;
+  }
+}

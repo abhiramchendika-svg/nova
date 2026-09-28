@@ -1,0 +1,146 @@
+@import 'tailwindcss';
+@import './tokens.css';
+
+/* Class-based dark variant, driven by <html data-theme="dark"> */
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+/*
+ * Map NOVA tokens into Tailwind so utilities read semantically:
+ *   bg-surface, text-ink-2, border-line, text-academics-text, rounded-md, font-display ...
+ * `inline` keeps the var() reference so the theme switch needs no rebuild.
+ */
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-primary: var(--primary);
+  --color-on-primary: var(--on-primary);
+  --color-academics: var(--academics);
+  --color-planner: var(--planner);
+  --color-developer: var(--developer);
+  --color-academics-text: var(--academics-text);
+  --color-planner-text: var(--planner-text);
+  --color-developer-text: var(--developer-text);
+  --color-critical: var(--critical);
+  --color-warning: var(--warning);
+  --color-warning-fill: var(--warning-fill);
+  --color-good: var(--good);
+  --color-focus: var(--focus);
+
+  --font-display:
+    'Bricolage Grotesque Variable', 'Instrument Sans Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Instrument Sans Variable', ui-sans-serif, system-ui, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, 'SF Mono', Consolas, monospace;
+
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+
+  --shadow-pop: var(--shadow-pop);
+  --shadow-dialog: var(--shadow-dialog);
+
+  --ease-out: var(--ease-out);
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+  :focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+  ::selection {
+    background: color-mix(in oklch, var(--academics) 22%, transparent);
+  }
+}
+
+@layer components {
+  /* Uppercase eyebrow / table-header label */
+  .label-caps {
+    font: 550 11.5px/16px var(--font-sans);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+  /* 12% domain tints for chips and blocks */
+  .tint-academics {
+    background: color-mix(in oklch, var(--academics) 12%, var(--surface));
+  }
+  .tint-planner {
+    background: color-mix(in oklch, var(--planner) 12%, var(--surface));
+  }
+  .tint-developer {
+    background: color-mix(in oklch, var(--developer) 12%, var(--surface));
+  }
+  .tint-critical {
+    background: color-mix(in oklch, var(--critical) 11%, var(--surface));
+  }
+  .tint-warning {
+    background: color-mix(in oklch, var(--warning-fill) 16%, var(--surface));
+  }
+  .tint-good {
+    background: color-mix(in oklch, var(--good) 11%, var(--surface));
+  }
+}
+
+@layer utilities {
+  /* Page-enter motion: fade + 6px rise. Collapses to nothing under reduced motion via --dur-3. */
+  .animate-enter {
+    animation: nova-enter var(--dur-3) var(--ease-emph) both;
+  }
+  .skeleton {
+    background: linear-gradient(90deg, var(--surface-2) 0%, var(--surface-3) 50%, var(--surface-2) 100%);
+    background-size: 200% 100%;
+    animation: nova-shimmer 1.4s linear infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .skeleton {
+      animation: none;
+    }
+  }
+}
+
+@keyframes nova-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes nova-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}

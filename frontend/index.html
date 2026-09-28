@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta
+      name="description"
+      content="NOVA is a student developer OS: academics, planning and developer growth in one calm dashboard."
+    />
+    <meta name="theme-color" content="#F4F6FA" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0C1019" media="(prefers-color-scheme: dark)" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>NOVA — Student Developer OS</title>
+    <script>
+      // Apply the saved theme before first paint so there is no light/dark flash.
+      // Must stay in sync with src/features/theme/theme.ts (STORAGE_KEY and resolution rules).
+      (function () {
+        var pref = 'system';
+        try {
+          pref = localStorage.getItem('nova-theme') || 'system';
+        } catch (e) {}
+        var dark =
+          pref === 'dark' || (pref !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
