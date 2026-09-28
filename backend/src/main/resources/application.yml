@@ -1,0 +1,61 @@
+spring:
+  application:
+    name: nova
+
+  # Defaults match docker-compose.yml / .env.example so `docker compose up -d` + run just works.
+  # Override with environment variables in any other environment.
+  datasource:
+    url: ${NOVA_DB_URL:jdbc:postgresql://localhost:5432/nova}
+    username: ${NOVA_DB_USER:nova}
+    password: ${NOVA_DB_PASSWORD:change-me-locally}
+
+  jpa:
+    # Flyway owns the schema; Hibernate only checks that entities match it and fails fast if not.
+    hibernate:
+      ddl-auto: validate
+    # Don't keep a DB session open during view rendering: avoids hidden lazy-loading queries.
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+
+  flyway:
+    locations: classpath:db/migration
+
+  session:
+    jdbc:
+      # Tables come from Flyway migration V2, not from Spring Session's own script
+      initialize-schema: never
+
+server:
+  port: ${PORT:8080}
+  error:
+    # Never expose internals in error responses
+    include-stacktrace: never
+    include-message: never
+  servlet:
+    session:
+      # Sliding expiry: every request extends the session
+      timeout: 14d
+      # Cookie name and flags: see dev.nova.security.SessionCookieConfig
+
+nova:
+  # Filled in from pom.xml at build time (Spring Boot parent filters @...@ in application*.yml)
+  version: '@project.version@'
+  cors:
+    # Comma-separated; empty = no cross-origin access (normal: dev and prod are same-origin via /api proxy)
+    allowed-origins: ${NOVA_CORS_ORIGINS:}
+  security:
+    cookie-secure: ${NOVA_COOKIE_SECURE:false}   # true in production (HTTPS only)
+    login-attempts: 5
+    login-window: PT1M
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
