@@ -1,6 +1,6 @@
 # NOVA — Database Design
 
-> Status: **Phase 0 design.** The SQL below is a *specification draft*. It becomes Flyway migrations (`V1__…`, `V2__…`) in the phase that introduces each feature.
+> Status: **Phase 0 design, implemented phase by phase.** The SQL below is a *specification draft*. It becomes Flyway migrations (`V1__…`, `V2__…`) in the phase that introduces each feature.
 >
 > **Verified (Phase 0):** the DDL was applied to a scratch **PostgreSQL 16** instance with `tasks` created after `projects`, as the ordering note below describes. It created 23 tables. Constraint smoke tests passed:
 >
@@ -12,6 +12,16 @@
 > - Deleting a course nulls only `tasks.course_id`.
 >
 > **Not verified yet:** JPA mapping, audit columns (omitted below), and performance.
+>
+> **Implemented as Flyway migrations** (the files in `backend/src/main/resources/db/migration` are the source of truth; they add `created_at`/`updated_at` audit columns and name every constraint):
+>
+> | Migration | Tables | Phase |
+> |---|---|---|
+> | `V1__create_users.sql` | `users`, `user_settings` | 1 |
+> | `V2__create_spring_session.sql` | `spring_session`, `spring_session_attributes` | 1 |
+> | `V3__create_grading_semesters_courses.sql` | `grading_schemes`, `grade_definitions`, `semesters`, `courses` + the three built-in presets | 2.1 |
+>
+> Differences from the draft in V3: `ordinal`, `position` and `color_hue` are `integer` rather than `smallint` (simpler Java mapping, same checks); `notes` is `varchar(2000)`; `grade_definitions` has a unique `(scheme_id, position)` too, and both of its unique constraints are **deferred to commit** so a scheme edit can swap labels or order between grades in one transaction; `courses.grade_definition_id` has its own index. V3 was applied to PostgreSQL 16 and its constraints were exercised directly (cross-tenant course, second current semester, duplicate ordinal, half-set grade, deleting an in-use scheme, label swap at commit, cascades): all behaved as designed.
 
 ## 1. Design principles
 

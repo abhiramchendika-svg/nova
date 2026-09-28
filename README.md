@@ -3,7 +3,7 @@
 > **Your student life, organized in one place.**
 > NOVA brings classes, deadlines, grades and developer growth into one calm dashboard, so every morning starts with a clear answer to *what now?*
 
-**Status:** early development (end of Phase 1 of 8). Accounts, login and settings work end to end; the academic, planner and developer features arrive in Phases 2–4. Nothing here is production-ready yet.
+**Status:** early development (Phase 2 of 8). Accounts, login and settings work end to end; the grades API (grading schemes, semesters, courses, GPA/CGPA, what-if) is being built, with its UI next. Planner and developer features arrive in Phases 3–4. Nothing here is production-ready yet.
 
 ## The problem
 
@@ -132,7 +132,7 @@ Tests never call a real external API. Backend integration tests start a throwawa
 |---|---|---|
 | 0 | Product & technical blueprint | Done |
 | 1 | Foundation: frontend shell, design system, accounts and login, settings API, CI | Done |
-| 2 | Academics: semesters, courses, grading, GPA/CGPA, attendance, assignments, exams, timetable | Planned |
+| 2 | Academics: semesters, courses, grading, GPA/CGPA, attendance, assignments, exams, timetable | In progress |
 | 3 | Planner: tasks, calendar, Today view | Planned |
 | 4 | Developer growth: projects, learning goals, hackathons, internships, GitHub | Planned |
 | 5 | Insights and notifications | Planned |

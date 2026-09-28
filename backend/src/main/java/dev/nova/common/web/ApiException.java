@@ -41,6 +41,19 @@ public class ApiException extends RuntimeException {
                 null);
     }
 
+    /**
+     * The request is well-formed but asks for an impossible state (docs/api.md §1: 422 RULE_VIOLATION),
+     * e.g. switching a semester's grading scheme while its courses still have grades from the old one.
+     */
+    public static ApiException ruleViolation(String field, String message) {
+        return new ApiException(
+                HttpStatus.UNPROCESSABLE_ENTITY,
+                "RULE_VIOLATION",
+                message,
+                List.of(new FieldProblem(field, message)),
+                null);
+    }
+
     public static ApiException notFound() {
         return new ApiException(HttpStatus.NOT_FOUND, "NOT_FOUND", "We couldn't find that", List.of(), null);
     }

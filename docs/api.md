@@ -104,49 +104,73 @@ Legend: 🔓 public · everything else requires a session. **P** marks paginated
 
 | Method | Path | Purpose |
 |---|---|---|
-| GET | `/api/v1/grading-schemes` | Built-in presets plus your own schemes, each with its grade definitions |
-| POST | `/api/v1/grading-schemes` | Create a custom scheme (optionally `?cloneFrom={id}`) |
-| PUT | `/api/v1/grading-schemes/{id}` | Replace the name and grade definitions (custom schemes only) |
-| DELETE | `/api/v1/grading-schemes/{id}` | Only if no semester uses it. Otherwise `409`. |
+| GET | `/api/v1/grading-schemes` | Built-in presets first, then your own schemes, each with its grades (best first) |
+| POST | `/api/v1/grading-schemes` | Create a custom scheme → `201` |
+| POST | `/api/v1/grading-schemes/{id}/clone` | Copy a preset (or one of yours) into a new editable scheme named "… (copy)" → `201` |
+| PUT | `/api/v1/grading-schemes/{id}` | Replace the name, maximum and grades (your schemes only) |
+| DELETE | `/api/v1/grading-schemes/{id}` | `204`. `409` while any semester uses it. |
 
-- Request: `{ "name": "SRM 10-point", "maxPoints": 10, "grades": [ { "label": "O", "points": 10, "isPassing": true, "countsInGpa": true }, … ] }`
-- Errors: `400` (duplicate labels, points > maxPoints, no passing grade), `403`-as-`404` when editing a built-in preset.
+- Request: `{ "name": "SRM 10-point", "maxPoints": 10, "grades": [ { "id?": "…", "label": "O", "points": 10, "passing": true, "countsInGpa": true }, … ] }`. The order of `grades` is the display order.
+- **Updates are applied in place.** A grade sent with its `id` is edited, so courses graded with it keep their grade and their GPA follows the new points. A grade without an `id` is added. An existing grade left out is removed, unless a course still uses it (`409`).
+- Errors: `400` for duplicate labels (ignoring case), points above `maxPoints`, no passing grade, 0 or more than 20 grades, or an `id` that isn't one of this scheme's grades. Editing or deleting a built-in preset, or someone else's scheme, returns `404`. A user can have up to 20 schemes (`422`).
+- Built-in presets have fixed ids: 10-point scale `00000000-0000-4000-8000-000000000001`, 4.0 scale (US) `…0002`, Pass/Fail `…0003`. They are examples, not assumed university policies.
+
+**Response (one scheme)**
+
+```json
+{ "id": "…", "name": "10-point scale", "maxPoints": 10.00, "builtIn": true,
+  "grades": [ { "id": "…", "label": "O", "points": 10.00, "passing": true, "countsInGpa": true }, … ] }
+```
 
 ### 2.3 Semesters & grades (Phase 2)
 
 | Method | Path | Purpose |
 |---|---|---|
-| GET | `/api/v1/semesters` | All semesters with computed `gpa`, `credits`, `completedCredits` |
-| POST | `/api/v1/semesters` | Create. `{ "name", "ordinal", "startsOn", "endsOn", "gradingSchemeId", "isCurrent", "attendanceTarget?" }` |
-| PUT / DELETE | `/api/v1/semesters/{id}` | Update / delete (cascades to courses, after the UI asks for confirmation) |
-| POST | `/api/v1/semesters/{id}/make-current` | Atomically moves the "current" flag |
+| GET | `/api/v1/semesters` | All your semesters, in order of `ordinal` |
+| GET | `/api/v1/semesters/{id}` | One semester |
+| POST | `/api/v1/semesters` | Create → `201`. `{ "name", "ordinal", "startsOn?", "endsOn?", "gradingSchemeId", "current", "attendanceTarget?" }` |
+| PUT | `/api/v1/semesters/{id}` | Full replace (same body). `current: true` moves the flag here. |
+| DELETE | `/api/v1/semesters/{id}` | `204`. Also deletes its courses (the UI asks for confirmation first). |
+| POST | `/api/v1/semesters/{id}/make-current` | Moves the "current" flag to this semester |
 | GET | `/api/v1/grades/summary` | CGPA, projected CGPA, totals, per-semester GPAs, and a list of what was **excluded** and why |
-| POST | `/api/v1/grades/what-if` | Stateless calculation: `{ "overrides": [ { "courseId", "gradeDefinitionId" } ] }` → projected GPA/CGPA. Nothing is saved. |
+| POST | `/api/v1/grades/what-if` | Stateless calculation: `{ "overrides": [ { "courseId", "gradeDefinitionId" } ] }` → the same shape as the summary. Nothing is saved. |
+
+- Semester response: `{ "id", "name", "ordinal", "startsOn", "endsOn", "current", "attendanceTarget", "gradingScheme": { "id", "name", "maxPoints" } }`.
+- Rules: `ordinal` is 1–20 and unique per user (`400`); `endsOn` can't be before `startsOn` (`400`); the grading scheme must be a preset or yours (`400`); at most one semester is current (moving the flag is automatic; the database enforces it too). Switching the grading scheme while any course in the semester has a grade → `422 RULE_VIOLATION` (clear those grades first). Up to 20 semesters.
+- Per-semester GPA lives in `/grades/summary` rather than in the semester list, so it's calculated in exactly one place.
 
 **`/grades/summary` response**
 
 ```json
 {
-  "cgpa": 8.62, "projectedCgpa": 8.71, "scale": 10,
+  "cgpa": 8.62, "projectedCgpa": 8.71, "scale": 10.00, "cgpaUnavailableReason": null,
   "totalCredits": 84.0, "completedCredits": 64.0,
-  "semesters": [ { "id": "…", "name": "Semester 3", "gpa": 8.40, "credits": 22.0, "isCurrent": true, "hasExpectedGrades": true } ],
-  "excluded": [ { "courseId": "…", "courseName": "Soft Skills", "reason": "GRADE_NOT_IN_GPA" } ]
+  "semesters": [ { "id": "…", "name": "Semester 3", "ordinal": 3, "current": true, "scale": 10.00,
+                   "gpa": 8.40, "projectedGpa": 8.55, "credits": 22.0, "completedCredits": 18.0, "hasExpectedGrades": true } ],
+  "excluded": [ { "courseId": "…", "courseName": "Soft Skills", "semesterId": "…", "reason": "GRADE_NOT_IN_GPA" } ]
 }
 ```
 
-- `gpa`/`cgpa` are `null` when there are no counted credits.
-- A student whose semesters use *different* grading scales gets `cgpa: null` and `reason: "MIXED_SCALES"`. We refuse to average incompatible scales.
+- Official figures (`gpa`, `cgpa`) use FINAL grades; projected figures also include EXPECTED grades.
+- GPA values are rounded half-up to 2 decimals, once, from the exact fraction. They are `null` when nothing counts yet (never `0.00`).
+- `excluded` reasons: `GRADE_NOT_IN_GPA` (e.g. a Pass in a Pass/Fail scheme) and `ZERO_CREDITS`. Ungraded courses aren't listed.
+- If the semesters that count use *different* scales (e.g. 10-point and 4.0), `cgpa`, `projectedCgpa` and `scale` are `null` and `cgpaUnavailableReason` is `"MIXED_SCALES"`. We refuse to average incompatible scales. Each semester's own GPA is still returned.
+- **What-if:** each override is treated as an EXPECTED grade for that course, so it changes the projected figures, never the official CGPA. The course must be yours and the grade must belong to its semester's scheme (`400` otherwise); each course may appear once.
 
 ### 2.4 Courses (Phase 2)
 
 | Method | Path | Purpose |
 |---|---|---|
-| GET | `/api/v1/courses?semesterId=` | Courses (defaults to the current semester), each with attendance summary and next deadline |
-| POST | `/api/v1/courses` | Create. `{ "semesterId", "code?", "name", "credits", "faculty?", "attendanceTarget?", "baselineConducted?", "baselineAttended?" }` |
-| GET | `/api/v1/courses/{id}` | **Consolidated course page:** course, attendance stats, next assignment, next exam, timetable slots, resources, recent activity (last 10 events) |
-| PUT / DELETE | `/api/v1/courses/{id}` | Update / delete |
-| PUT | `/api/v1/courses/{id}/grade` | `{ "gradeDefinitionId", "kind": "FINAL" \| "EXPECTED" }` or `null` to clear. Errors: `400` if the grade belongs to a different scheme. |
+| GET | `/api/v1/courses?semesterId=` | Courses of a semester, sorted by name. Without `semesterId`: the current semester's (empty if there's none). *(Attendance summary and next deadline are added in 2.2–2.3.)* |
+| POST | `/api/v1/courses` | Create → `201`. `{ "semesterId", "code?", "name", "credits", "faculty?", "colorHue?", "notes?", "attendanceTarget?" }` |
+| GET | `/api/v1/courses/{id}` | One course. *(Becomes the consolidated course page in 2.3: attendance stats, next assignment, next exam, timetable slots, resources, recent activity.)* |
+| PUT / DELETE | `/api/v1/courses/{id}` | Full replace (same body) / delete → `204` |
+| PUT | `/api/v1/courses/{id}/grade` | `{ "gradeDefinitionId", "kind": "FINAL" \| "EXPECTED" }`. `400` if the grade isn't from the semester's scheme. |
+| DELETE | `/api/v1/courses/{id}/grade` | Clear the grade → `204` |
 | POST / DELETE | `/api/v1/courses/{id}/resources[/{resourceId}]` | Manage links `{ "title", "url" }` (http/https only) |
+
+- Course response: `{ "id", "semesterId", "code", "name", "credits", "faculty", "colorHue", "notes", "attendanceTarget", "grade": null | { "gradeDefinitionId", "label", "points", "passing", "countsInGpa", "kind" } }`.
+- Rules: `credits` 0–99.9 with at most 1 decimal; `colorHue` 0–359; the semester must be yours (`400`, the same answer whether it's missing or someone else's). Moving a graded course to a semester with a different grading scheme → `422` (clear the grade first). Up to 40 courses per semester.
 
 ### 2.5 Attendance (Phase 2)
 
