@@ -7,7 +7,7 @@ import { Field } from '@/components/ui/Field';
 import { errorMessage } from '@/services/http';
 import { useRegister } from './api';
 import { AuthLayout } from './AuthLayout';
-import { FormAlert } from './FormAlert';
+import { FormAlert } from '@/components/patterns/FormAlert';
 import { PasswordToggle } from './PasswordToggle';
 import { PASSWORD_MIN, registerSchema, type RegisterValues } from './schemas';
 

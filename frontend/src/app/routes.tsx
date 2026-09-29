@@ -11,6 +11,15 @@ const LoginPage = lazy(() => import('@/features/auth/LoginPage').then((m) => ({ 
 const RegisterPage = lazy(() =>
   import('@/features/auth/RegisterPage').then((m) => ({ default: m.RegisterPage })),
 );
+const CoursesPage = lazy(() =>
+  import('@/features/academics/CoursesPage').then((m) => ({ default: m.CoursesPage })),
+);
+const GradesPage = lazy(() =>
+  import('@/features/academics/GradesPage').then((m) => ({ default: m.GradesPage })),
+);
+const GradingSchemesPage = lazy(() =>
+  import('@/features/academics/GradingSchemesPage').then((m) => ({ default: m.GradingSchemesPage })),
+);
 const SectionPlaceholder = lazy(() =>
   import('@/pages/SectionPlaceholder').then((m) => ({ default: m.SectionPlaceholder })),
 );
@@ -37,6 +46,10 @@ export const routes: RouteObject[] = [
     ),
     children: [
       { index: true, element: <HomePage /> },
+      // Specific routes win over the section placeholders below (React Router ranks by specificity)
+      { path: 'academics/courses', element: <CoursesPage /> },
+      { path: 'academics/grades', element: <GradesPage /> },
+      { path: 'academics/grades/schemes', element: <GradingSchemesPage /> },
       ...PLANNED.map(({ path, phase }) => ({ path, element: <SectionPlaceholder phase={phase} /> })),
     ],
   },

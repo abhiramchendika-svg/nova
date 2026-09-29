@@ -1,5 +1,8 @@
 import { http, HttpResponse, type HttpHandler } from 'msw';
+import { API, CSRF_TOKEN, csrfOk, problem } from './http';
 import type { CurrentUser } from '@/features/auth/types';
+import { createAcademicsHandlers } from './academicsHandlers';
+import { createAcademicStore, type AcademicStore } from './academics';
 
 /**
  * In-memory fake of the NOVA auth API (docs/api.md §2.1).
@@ -15,12 +18,14 @@ interface StoredUser extends CurrentUser {
 export interface MockDb {
   users: Map<string, StoredUser>;
   sessionEmail: string | null;
+  /** Academic data per user id, created on first use. */
+  academics: Map<string, AcademicStore>;
 }
 
 export function createMockDb(
   seed: { loggedInAs?: Omit<StoredUser, 'id' | 'onboardingCompleted'> } = {},
 ): MockDb {
-  const db: MockDb = { users: new Map(), sessionEmail: null };
+  const db: MockDb = { users: new Map(), sessionEmail: null, academics: new Map() };
   if (seed.loggedInAs) {
     const user: StoredUser = {
       id: '00000000-0000-4000-8000-000000000001',
@@ -33,29 +38,8 @@ export function createMockDb(
   return db;
 }
 
-const API = '/api/v1';
-const CSRF_TOKEN = 'mock-csrf-token';
-
-function problem(status: number, code: string, title: string, extra: Record<string, unknown> = {}) {
-  return HttpResponse.json(
-    {
-      type: `https://nova.dev/problems/${code.toLowerCase()}`,
-      title,
-      status,
-      code,
-      requestId: 'mock',
-      ...extra,
-    },
-    { status, headers: { 'Content-Type': 'application/problem+json' } },
-  );
-}
-
 function publicUser({ password: _password, ...user }: StoredUser): CurrentUser {
   return user;
-}
-
-function csrfOk(request: Request): boolean {
-  return request.headers.get('X-XSRF-TOKEN') === CSRF_TOKEN;
 }
 
 export function createHandlers(db: MockDb): HttpHandler[] {
@@ -111,6 +95,17 @@ export function createHandlers(db: MockDb): HttpHandler[] {
       if (!csrfOk(request)) return problem(403, 'CSRF_INVALID', 'Invalid CSRF token');
       db.sessionEmail = null;
       return new HttpResponse(null, { status: 204 });
+    }),
+
+    ...createAcademicsHandlers(() => {
+      const user = db.sessionEmail ? db.users.get(db.sessionEmail) : undefined;
+      if (!user) return null;
+      let store = db.academics.get(user.id);
+      if (!store) {
+        store = createAcademicStore();
+        db.academics.set(user.id, store);
+      }
+      return store;
     }),
   ];
 }

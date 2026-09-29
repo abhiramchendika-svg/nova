@@ -7,7 +7,7 @@ import { Field } from '@/components/ui/Field';
 import { errorMessage } from '@/services/http';
 import { useLogin } from './api';
 import { AuthLayout } from './AuthLayout';
-import { FormAlert } from './FormAlert';
+import { FormAlert } from '@/components/patterns/FormAlert';
 import { PasswordToggle } from './PasswordToggle';
 import { loginSchema, safeNextPath, type LoginValues } from './schemas';
 
