@@ -412,3 +412,8 @@ Each rule has a minimum-data guard. For example, "task completion rate" needs �
 ### 2.15 Onboarding (Phase 2+)
 
 Onboarding reuses the endpoints above (settings, grading schemes, semesters, courses, timetable, learning goals, GitHub account) and ends with `POST /settings/onboarding/complete`. There's no special onboarding API, which means no duplicated logic.
+
+- **Phase 2 flow** (`/app/welcome`): You (time zone, university, attendance target → `PUT /settings`) → Semester (`POST /semesters`) → Courses (`POST /courses`, one per row) → Timetable (`POST /timetable`, skippable) → `POST /settings/onboarding/complete` → Home. "Skip setup" calls the same completion endpoint. Learning-goal and GitHub steps join in Phase 4.
+- Home sends an account whose `onboardingCompleted` is `false` (from `/auth/me`) to `/app/welcome`; deep links into the app are never redirected.
+- Resuming uses saved data, not a stored step: no current semester → the first step (pre-filled); a semester without courses → Courses; otherwise → Timetable.
+- Migration V7 marks accounts that already had a semester before onboarding shipped as onboarded, so existing users never see it.

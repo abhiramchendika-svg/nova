@@ -14,7 +14,7 @@ export async function startMockApi(): Promise<void> {
     id: '00000000-0000-4000-8000-00000000de00',
     email: 'demo@nova.dev',
     displayName: 'Demo Student',
-    onboardingCompleted: false,
+    onboardingCompleted: true, // the demo is already set up; register a new account to see onboarding
     password: 'nova-demo-2026',
   });
   const demoAcademics = createAcademicStore();

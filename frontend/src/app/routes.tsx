@@ -3,45 +3,25 @@ import type { RouteObject } from 'react-router';
 import { RequireAuth } from '@/features/auth/RequireAuth';
 import { LandingPage } from '@/features/landing/LandingPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
+import { pageLoaders } from './pages';
 
 // Code-split by area: visitors to the landing page don't download the app, and vice versa.
-const AppShell = lazy(() => import('@/layouts/AppShell').then((m) => ({ default: m.AppShell })));
-const HomePage = lazy(() => import('@/features/dashboard/HomePage').then((m) => ({ default: m.HomePage })));
-const LoginPage = lazy(() => import('@/features/auth/LoginPage').then((m) => ({ default: m.LoginPage })));
-const RegisterPage = lazy(() =>
-  import('@/features/auth/RegisterPage').then((m) => ({ default: m.RegisterPage })),
-);
-const CoursesPage = lazy(() =>
-  import('@/features/academics/CoursesPage').then((m) => ({ default: m.CoursesPage })),
-);
-const AttendancePage = lazy(() =>
-  import('@/features/academics/AttendancePage').then((m) => ({ default: m.AttendancePage })),
-);
-const AssignmentsPage = lazy(() =>
-  import('@/features/academics/AssignmentsPage').then((m) => ({ default: m.AssignmentsPage })),
-);
-const CoursePage = lazy(() =>
-  import('@/features/academics/CoursePage').then((m) => ({ default: m.CoursePage })),
-);
-const ExamsPage = lazy(() =>
-  import('@/features/academics/ExamsPage').then((m) => ({ default: m.ExamsPage })),
-);
-const ExamPage = lazy(() => import('@/features/academics/ExamPage').then((m) => ({ default: m.ExamPage })));
-const TimetablePage = lazy(() =>
-  import('@/features/academics/TimetablePage').then((m) => ({ default: m.TimetablePage })),
-);
-const GradesPage = lazy(() =>
-  import('@/features/academics/GradesPage').then((m) => ({ default: m.GradesPage })),
-);
-const GradingSchemesPage = lazy(() =>
-  import('@/features/academics/GradingSchemesPage').then((m) => ({ default: m.GradingSchemesPage })),
-);
-const SettingsPage = lazy(() =>
-  import('@/features/settings/SettingsPage').then((m) => ({ default: m.SettingsPage })),
-);
-const SectionPlaceholder = lazy(() =>
-  import('@/pages/SectionPlaceholder').then((m) => ({ default: m.SectionPlaceholder })),
-);
+const AppShell = lazy(pageLoaders.AppShell);
+const HomePage = lazy(pageLoaders.HomePage);
+const LoginPage = lazy(pageLoaders.LoginPage);
+const RegisterPage = lazy(pageLoaders.RegisterPage);
+const CoursesPage = lazy(pageLoaders.CoursesPage);
+const AttendancePage = lazy(pageLoaders.AttendancePage);
+const AssignmentsPage = lazy(pageLoaders.AssignmentsPage);
+const CoursePage = lazy(pageLoaders.CoursePage);
+const ExamsPage = lazy(pageLoaders.ExamsPage);
+const ExamPage = lazy(pageLoaders.ExamPage);
+const TimetablePage = lazy(pageLoaders.TimetablePage);
+const GradesPage = lazy(pageLoaders.GradesPage);
+const GradingSchemesPage = lazy(pageLoaders.GradingSchemesPage);
+const SettingsPage = lazy(pageLoaders.SettingsPage);
+const OnboardingPage = lazy(pageLoaders.OnboardingPage);
+const SectionPlaceholder = lazy(pageLoaders.SectionPlaceholder);
 
 /** Sections that exist in the navigation but ship in a later phase (docs/architecture.md §18). */
 const PLANNED: { path: string; phase: string }[] = [
@@ -56,6 +36,15 @@ export const routes: RouteObject[] = [
   { path: '/', element: <LandingPage /> },
   { path: '/login', element: <LoginPage /> },
   { path: '/register', element: <RegisterPage /> },
+  {
+    // First-run setup has its own focused layout (no sidebar), so it sits outside the app shell
+    path: '/app/welcome',
+    element: (
+      <RequireAuth>
+        <OnboardingPage />
+      </RequireAuth>
+    ),
+  },
   {
     path: '/app',
     element: (

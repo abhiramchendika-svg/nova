@@ -1,5 +1,5 @@
 import { ArrowRight } from 'lucide-react';
-import { Link } from 'react-router';
+import { Link, Navigate } from 'react-router';
 import { EmptyState } from '@/components/patterns/EmptyState';
 import { DomainDot, type Domain } from '@/components/ui/DomainDot';
 import { Panel } from '@/components/ui/Panel';
@@ -24,6 +24,9 @@ export function HomePage() {
   const nowTime = localParts(now.toISOString(), timezone).time;
   const firstName = user?.displayName.split(' ')[0] ?? '';
   const day = useTimetableDay(); // shared with TodayClasses through the query cache
+
+  // A new account goes through setup first (skipping it counts as done)
+  if (user && !user.onboardingCompleted) return <Navigate to="/app/welcome" replace />;
 
   return (
     <div className="animate-enter mx-auto grid max-w-[1360px] gap-5 px-4 py-6 lg:grid-cols-12 lg:px-6">

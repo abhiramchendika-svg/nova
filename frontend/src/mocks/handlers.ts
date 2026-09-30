@@ -33,14 +33,18 @@ export const DEFAULT_SETTINGS: SettingsRequest = {
   theme: 'SYSTEM',
 };
 
+/**
+ * A fake backend. A seeded, logged-in user has finished onboarding unless the test says otherwise
+ * (onboarding: 'pending'); accounts registered through the mock start it like real new ones.
+ */
 export function createMockDb(
-  seed: { loggedInAs?: Omit<StoredUser, 'id' | 'onboardingCompleted'> } = {},
+  seed: { loggedInAs?: Omit<StoredUser, 'id' | 'onboardingCompleted'>; onboarding?: 'done' | 'pending' } = {},
 ): MockDb {
   const db: MockDb = { users: new Map(), sessionEmail: null, academics: new Map(), settings: new Map() };
   if (seed.loggedInAs) {
     const user: StoredUser = {
       id: '00000000-0000-4000-8000-000000000001',
-      onboardingCompleted: false,
+      onboardingCompleted: seed.onboarding !== 'pending',
       ...seed.loggedInAs,
     };
     db.users.set(user.email.toLowerCase(), user);
@@ -117,6 +121,14 @@ export function createHandlers(db: MockDb): HttpHandler[] {
     http.get(`${API}/settings`, () => {
       const user = currentUser();
       if (!user) return problem(401, 'UNAUTHENTICATED', 'Log in to continue');
+      return HttpResponse.json(settingsOf(user));
+    }),
+
+    http.post(`${API}/settings/onboarding/complete`, ({ request }) => {
+      const user = currentUser();
+      if (!user) return problem(401, 'UNAUTHENTICATED', 'Log in to continue');
+      if (!csrfOk(request)) return problem(403, 'CSRF_INVALID', 'Invalid CSRF token');
+      user.onboardingCompleted = true;
       return HttpResponse.json(settingsOf(user));
     }),
 

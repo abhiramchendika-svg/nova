@@ -87,15 +87,16 @@ describe('register', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('may already exist');
   });
 
-  it('creates the account and lands on Home', async () => {
+  it('creates the account and starts setup', async () => {
     installMockApi();
     const { user, router } = renderRoute('/register');
     await user.type(await screen.findByLabelText('What should we call you?'), 'Riya Sharma');
     await user.type(screen.getByLabelText('Email'), 'riya@example.com');
     await user.type(screen.getByLabelText('Password'), 'a-long-enough-password');
     await user.click(screen.getByRole('button', { name: 'Create account' }));
-    await waitFor(() => expect(router.state.location.pathname).toBe('/app'));
-    expect(await screen.findByRole('heading', { level: 1, name: /Riya\./ })).toBeInTheDocument();
+    // Home sends a new account to onboarding first
+    await waitFor(() => expect(router.state.location.pathname).toBe('/app/welcome'));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Welcome, Riya.' })).toBeInTheDocument();
   });
 });
 

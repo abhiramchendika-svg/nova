@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { meQueryKey } from '@/features/auth/api';
 import { api, type ApiError } from '@/services/http';
 import type { Settings, SettingsRequest } from './types';
 
@@ -35,4 +36,16 @@ export function toSettingsRequest(s: Settings): SettingsRequest {
     defaultAttendanceTarget: s.defaultAttendanceTarget,
     theme: s.theme,
   };
+}
+
+/** Marks onboarding done (finished or skipped); /auth/me carries the flag too, so it's refreshed. */
+export function useCompleteOnboarding() {
+  const queryClient = useQueryClient();
+  return useMutation<Settings, ApiError, void>({
+    mutationFn: () => api<Settings>('/settings/onboarding/complete', { method: 'POST' }),
+    onSuccess: async (saved) => {
+      queryClient.setQueryData(settingsKey, saved);
+      await queryClient.invalidateQueries({ queryKey: meQueryKey });
+    },
+  });
 }

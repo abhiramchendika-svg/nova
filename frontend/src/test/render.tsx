@@ -4,7 +4,13 @@ import { Suspense, type ReactElement } from 'react';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { Providers } from '@/app/Providers';
 import { createQueryClient } from '@/app/queryClient';
+import { preloadPages } from '@/app/pages';
 import { routes } from '@/app/routes';
+
+// Load every page's code once, while the test file is being collected (no test timer running yet).
+// Otherwise the first test in a file pays for importing its page inside a findBy… timeout, which
+// on slower machines can take longer than the timeout itself.
+await preloadPages();
 
 /** Render the real route tree at a path, with production providers and a fresh query cache. */
 export function renderRoute(path: string) {
