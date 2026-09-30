@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import { Outlet } from 'react-router';
 import { PageSkeleton } from '@/components/patterns/Skeleton';
+import { ThemeSync } from '@/features/settings/ThemeSync';
 import { BottomNav } from './BottomNav';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
@@ -9,6 +10,7 @@ import { TopBar } from './TopBar';
 export function AppShell() {
   return (
     <div className="flex min-h-dvh bg-bg">
+      <ThemeSync />
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-sm focus:bg-surface focus:px-3 focus:py-2 focus:shadow-pop"

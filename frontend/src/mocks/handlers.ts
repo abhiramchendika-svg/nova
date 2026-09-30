@@ -125,6 +125,14 @@ export function createHandlers(db: MockDb): HttpHandler[] {
       if (!user) return problem(401, 'UNAUTHENTICATED', 'Log in to continue');
       if (!csrfOk(request)) return problem(403, 'CSRF_INVALID', 'Invalid CSRF token');
       const body = (await request.json()) as SettingsRequest;
+      try {
+        new Intl.DateTimeFormat('en-US', { timeZone: body.timezone });
+        if (!body.timezone?.trim()) throw new RangeError();
+      } catch {
+        return problem(400, 'VALIDATION_FAILED', 'Some fields need attention', {
+          errors: [{ field: 'timezone', message: 'Unknown timezone. Use a name like Asia/Kolkata.' }],
+        });
+      }
       const t = body.defaultAttendanceTarget;
       if (t !== null && (!(t > 0) || t >= 100 || Math.round(t * 100) !== t * 100)) {
         return problem(400, 'VALIDATION_FAILED', 'Some fields need attention', {

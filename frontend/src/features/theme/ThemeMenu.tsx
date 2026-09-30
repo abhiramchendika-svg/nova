@@ -10,9 +10,13 @@ const OPTIONS: { value: ThemePreference; label: string; Icon: typeof Sun }[] = [
   { value: 'system', label: 'System', Icon: Monitor },
 ];
 
-/** Theme switcher: Light / Dark / System, persisted per browser. */
-export function ThemeMenu() {
+/**
+ * Theme switcher: Light / Dark / System, persisted per browser. Signed-in pages pass
+ * {@code onChange} so the choice is saved to the account as well.
+ */
+export function ThemeMenu({ onChange }: { onChange?: (preference: ThemePreference) => void } = {}) {
   const { preference, resolved, setPreference } = useTheme();
+  const choose = onChange ?? setPreference;
   const TriggerIcon = resolved === 'dark' ? Moon : Sun;
 
   return (
@@ -31,7 +35,7 @@ export function ThemeMenu() {
           <DropdownMenu.Label className="label-caps px-2 pb-1 pt-1.5">Theme</DropdownMenu.Label>
           <DropdownMenu.RadioGroup
             value={preference}
-            onValueChange={(value) => setPreference(value as ThemePreference)}
+            onValueChange={(value) => choose(value as ThemePreference)}
           >
             {OPTIONS.map(({ value, label, Icon }) => (
               <DropdownMenu.RadioItem

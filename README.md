@@ -143,7 +143,7 @@ Tests never call a real external API. Backend integration tests start a throwawa
 
 - `npm run dev` needs the backend running; without it the app shows "We couldn't check your session." Use `npm run dev:mock` for UI-only work.
 - The login rate limiter is in memory, which suits a single instance; multiple instances would need a shared store.
-- The theme choice is saved per browser; syncing it to the account arrives with the Settings page (Phase 2).
+- The theme is saved to your account (and mirrored in the browser so pages open without a flash); signed-out pages use the browser’s own choice.
 - Courses, Attendance, Grades and Grading schemes are live. The other sections show an honest "on the way" placeholder until their phase ships.
 
 ## License

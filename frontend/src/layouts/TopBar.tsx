@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router';
 import { TriMark } from '@/components/patterns/TriMark';
+import { useSaveTheme } from '@/features/settings/accountTheme';
 import { ThemeMenu } from '@/features/theme/ThemeMenu';
 import { AccountMenu } from './AccountMenu';
 import { titleForPath } from './navigation';
@@ -11,6 +12,7 @@ import { titleForPath } from './navigation';
 export function TopBar() {
   const { pathname } = useLocation();
   const title = titleForPath(pathname);
+  const saveTheme = useSaveTheme();
 
   return (
     <header className="sticky top-[env(safe-area-inset-top,0px)] z-30 flex h-14 items-center gap-3 border-b border-line bg-surface/90 px-4 backdrop-blur supports-[backdrop-filter]:bg-surface/80 lg:px-6">
@@ -21,7 +23,7 @@ export function TopBar() {
         {title}
       </p>
       <div className="ml-auto flex items-center gap-1">
-        <ThemeMenu />
+        <ThemeMenu onChange={saveTheme} />
         <AccountMenu />
       </div>
     </header>
