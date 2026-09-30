@@ -52,7 +52,9 @@ describe('Courses page', () => {
 
     expect(await screen.findByText('Database Systems')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '1 course' })).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: '1 course' })).toHaveTextContent('CSE 201Database Systems4 credits');
+    expect(screen.getByRole('region', { name: '1 course' })).toHaveTextContent(
+      'CSE 201Database Systems4 credits',
+    );
   });
 
   it('validates a course before sending it', async () => {
