@@ -21,10 +21,13 @@
 > | `V2__create_spring_session.sql` | `spring_session`, `spring_session_attributes` | 1 |
 > | `V3__create_grading_semesters_courses.sql` | `grading_schemes`, `grade_definitions`, `semesters`, `courses` + the three built-in presets | 2.1 |
 > | `V4__create_attendance_records.sql` | `attendance_records` | 2.2 |
+| `V5__create_assignments_exams_resources.sql` | `course_resources`, `assignments`, `exams`, `exam_topics` | 2.3 |
 >
 > Differences from the draft in V3: `ordinal`, `position` and `color_hue` are `integer` rather than `smallint` (simpler Java mapping, same checks); `notes` is `varchar(2000)`; `grade_definitions` has a unique `(scheme_id, position)` too, and both of its unique constraints are **deferred to commit** so a scheme edit can swap labels or order between grades in one transaction; `courses.grade_definition_id` has its own index. V3 was applied to PostgreSQL 16 and its constraints were exercised directly (cross-tenant course, second current semester, duplicate ordinal, half-set grade, deleting an in-use scheme, label swap at commit, cascades): all behaved as designed.
 >
 > V4: `slot` is `integer`; the unique `(course_id, held_on, slot)` index replaces the planned `ix_attendance_course_date` (same leading columns), plus `ix_attendance_user`. Applied to PostgreSQL 16 and exercised (duplicate slot, second slot same day, cross-tenant record, bad status/slot, cascade on course delete).
+>
+> V5: every child row carries `user_id` with a composite FK to its parent's `(id, user_id)` (`exams` gains `uq_exams_id_user` as the target for `exam_topics`). `course_resources.url` must match `^https?://`. Assignment timestamps are tied to status by checks (`completed_at` set exactly when COMPLETED, `submitted_at` only when SUBMITTED/COMPLETED, COMPLETED means 100%). `ix_assignments_open_due` is partial (open work only). `exam_topics` stores `done_at` and a `position`; prep % is never stored. Applied to PostgreSQL 16 and exercised (cross-tenant assignment/topic, `javascript:` URL, completed without timestamp, submitted_at on an open assignment, progress > 100, bad kind, cascade from course to all four tables).
 
 ## 1. Design principles
 

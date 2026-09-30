@@ -161,16 +161,36 @@ Legend: 🔓 public · everything else requires a session. **P** marks paginated
 
 | Method | Path | Purpose |
 |---|---|---|
-| GET | `/api/v1/courses?semesterId=` | Courses of a semester, sorted by name. Without `semesterId`: the current semester's (empty if there's none). *(Attendance summary and next deadline are added in 2.2–2.3.)* |
+| GET | `/api/v1/courses?semesterId=` | Courses of a semester, sorted by name. Without `semesterId`: the current semester's (empty if there's none). Attendance per course comes from §2.5; the course page uses the overview. |
 | POST | `/api/v1/courses` | Create → `201`. `{ "semesterId", "code?", "name", "credits", "faculty?", "colorHue?", "notes?", "attendanceTarget?" }` |
-| GET | `/api/v1/courses/{id}` | One course. *(Becomes the consolidated course page in 2.3: attendance stats, next assignment, next exam, timetable slots, resources, recent activity.)* |
+| GET | `/api/v1/courses/{id}` | One course |
+| GET | `/api/v1/courses/{id}/overview` | The course page in one request (see below) |
 | PUT / DELETE | `/api/v1/courses/{id}` | Full replace (same body) / delete → `204` |
 | PUT | `/api/v1/courses/{id}/grade` | `{ "gradeDefinitionId", "kind": "FINAL" \| "EXPECTED" }`. `400` if the grade isn't from the semester's scheme. |
 | DELETE | `/api/v1/courses/{id}/grade` | Clear the grade → `204` |
-| POST / DELETE | `/api/v1/courses/{id}/resources[/{resourceId}]` | Manage links `{ "title", "url" }` (http/https only) |
+| GET | `/api/v1/courses/{id}/resources` | The course's links, oldest first |
+| POST | `/api/v1/courses/{id}/resources` | Add a link → `201`: `{ "title", "url" }` |
+| PUT / DELETE | `/api/v1/courses/{id}/resources/{resourceId}` | Replace (same body) / remove → `204` |
 
 - Course response: `{ "id", "semesterId", "code", "name", "credits", "faculty", "colorHue", "notes", "attendanceTarget", "grade": null | { "gradeDefinitionId", "label", "points", "passing", "countsInGpa", "kind" } }`.
 - Rules: `credits` 0–99.9 with at most 1 decimal; `colorHue` 0–359; the semester must be yours (`400`, the same answer whether it's missing or someone else's). Moving a graded course to a semester with a different grading scheme → `422` (clear the grade first). Up to 40 courses per semester.
+- **Links:** only `http://` and `https://` URLs with a host are accepted (`400` on `url` otherwise), so `javascript:`, `data:` and `file:` links can never be stored and later rendered as an `href`. The database checks the scheme too. Title ≤ 120 characters, URL ≤ 2048, up to 50 links per course (`422`). A link is only reachable through its own course.
+
+**Course overview** (`GET /api/v1/courses/{id}/overview`, one read-only transaction):
+
+```json
+{
+  "course": { "…the course response…" },
+  "attendance": { "…the per-course stats object from §2.5…" },
+  "openAssignments": [ "…up to 5 open assignments, soonest due first (overdue ones lead)…" ],
+  "openAssignmentCount": 6,
+  "overdueCount": 1,
+  "upcomingExams": [ "…up to 3 exam summaries from today on, soonest first…" ],
+  "resources": [ { "id", "courseId", "title", "url", "createdAt" } ]
+}
+```
+
+*(Timetable slots join in 2.4; recent activity comes later.)*
 
 ### 2.5 Attendance (Phase 2)
 
@@ -210,23 +230,34 @@ Legend: 🔓 public · everything else requires a session. **P** marks paginated
 
 | Method | Path | Purpose |
 |---|---|---|
-| GET | `/api/v1/assignments` **P** | Filters: `status`, `courseId`, `priority`, `dueFrom`, `dueTo`. Sort: `dueAt`, `priority`, `createdAt`. |
-| POST | `/api/v1/assignments` | `{ "courseId", "title", "description?", "dueAt", "priority", "estimatedMinutes?" }` |
-| GET / PUT / DELETE | `/api/v1/assignments/{id}` | Read / update / delete |
-| PATCH | `/api/v1/assignments/{id}/progress` | `{ "status?", "progressPct?" }`. The server sets `submittedAt`/`completedAt`, and `COMPLETED` forces 100%. |
+| GET | `/api/v1/assignments` **P** | Filters (all optional): `status` (repeatable), `courseId`, `priority`, `dueFrom` (inclusive), `dueTo` (exclusive). `sort=dueAt,asc` (default) or `createdAt`, either direction. |
+| POST | `/api/v1/assignments` | Create → `201`: `{ "courseId", "title", "description?", "dueAt": "2026-10-03T23:59:00+05:30", "priority?", "estimatedMinutes?" }` |
+| GET / PUT / DELETE | `/api/v1/assignments/{id}` | Read / full replace (same body; status and progress are untouched) / delete → `204` |
+| PATCH | `/api/v1/assignments/{id}/progress` | `{ "status?", "progressPct?" }`, at least one |
 
-Each item includes a computed `urgency` (`OVERDUE`, `DUE_TODAY`, `DUE_TOMORROW`, `THIS_WEEK`, `LATER`), calculated in the user's timezone. It drives the visual deadline indicators.
+- Response: `{ "id", "courseId", "courseCode", "courseName", "title", "description", "dueAt", "priority", "status", "estimatedMinutes", "progressPct", "submittedAt", "completedAt", "urgency" }`.
+- `priority`: `LOW`, `MEDIUM` (default), `HIGH`. `status`: `NOT_STARTED`, `IN_PROGRESS`, `SUBMITTED`, `COMPLETED`. Sorting by priority isn't offered: the stored names don't sort meaningfully, and a deadline list sorted by due date is what students scan.
+- **Progress rules** (the database checks the same): `COMPLETED` forces 100% and sets `completedAt`; `SUBMITTED` sets `submittedAt`; going back to `NOT_STARTED`/`IN_PROGRESS` clears both, and `NOT_STARTED` means 0%; progress above 0 on a not-started assignment (with no status sent) moves it to `IN_PROGRESS`. Repeating a status keeps its original timestamp.
+- **`urgency`** (`OVERDUE`, `DUE_TODAY`, `DUE_TOMORROW`, `THIS_WEEK` = within 7 calendar days, `LATER`) is calculated in the user's timezone from calendar days, not 24-hour windows: 23:30 → 00:15 is "tomorrow". It is `null` for submitted and completed work. It drives the deadline indicators.
+- Rules: title ≤ 160, description ≤ 4000, `estimatedMinutes` 1–10000. The course must be yours (`400` on `courseId`, the same answer whether it's missing or someone else's); another user's assignment is `404`.
 
 ### 2.7 Exams (Phase 2)
 
 | Method | Path | Purpose |
 |---|---|---|
-| GET | `/api/v1/exams?upcoming=true` | With `daysUntil` (calendar days in the user's zone), `prep: { done, total, percentage }` |
-| POST | `/api/v1/exams` | `{ "courseId", "title", "kind", "startsAt", "durationMinutes?", "location?", "topics?": ["Normalization", "Transactions"] }` |
-| GET / PUT / DELETE | `/api/v1/exams/{id}` | The detail view includes topics and linked study tasks |
-| POST | `/api/v1/exams/{id}/topics` | Add topic |
-| PATCH | `/api/v1/exams/{id}/topics/{topicId}` | `{ "done": true }` or `{ "title", "position" }` |
-| DELETE | `/api/v1/exams/{id}/topics/{topicId}` | Remove |
+| GET | `/api/v1/exams?upcoming=true&courseId=` | Summaries, soonest first. `upcoming` keeps exams starting **today or later** in the user's timezone (this morning's exam stays until the day ends). |
+| POST | `/api/v1/exams` | Create → `201`: `{ "courseId", "title", "kind?", "startsAt", "durationMinutes?", "location?", "topics?": ["Normalization", "Transactions"] }` |
+| GET / PUT / DELETE | `/api/v1/exams/{id}` | Detail with topics / full replace (same body; `topics` is ignored) / delete → `204` |
+| POST | `/api/v1/exams/{id}/topics` | Add a topic at the end → `201` with the updated exam: `{ "title" }` |
+| PATCH | `/api/v1/exams/{id}/topics/{topicId}` | Any of `{ "done", "title", "position" }` → the updated exam |
+| DELETE | `/api/v1/exams/{id}/topics/{topicId}` | Remove → `204` |
+
+- Summary: `{ "id", "courseId", "courseCode", "courseName", "title", "kind", "startsAt", "durationMinutes", "location", "daysUntil", "prep": { "done", "total", "percentage" } }`. The detail adds `"topics": [{ "id", "title", "position", "done", "doneAt" }]` in order.
+- `kind`: `QUIZ`, `MIDTERM`, `FINAL`, `LAB`, `OTHER` (default). `daysUntil` counts calendar days in the user's timezone: `0` today, `1` tomorrow, negative once past.
+- `prep.percentage` is a whole number rounded half-up (1 of 8 → 13), and `null` while the checklist is empty.
+- Topic positions are always `0…n-1`: moving a topic shifts the others, deleting renumbers. A `position` outside that range is `400`.
+- Rules: title ≤ 120, location ≤ 60, `durationMinutes` 1–1440; topic titles ≤ 160, up to 100 topics per exam and 50 exams per course (`422`). Another user's exam, or a topic from a different exam, is `404`.
+- *(Linked study tasks arrive with Tasks in Phase 3.)*
 
 ### 2.8 Timetable (Phase 2)
 

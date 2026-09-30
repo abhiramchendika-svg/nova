@@ -2,6 +2,7 @@ package dev.nova.academics;
 
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -42,6 +43,11 @@ public abstract class AcademicsTestSupport extends IntegrationTest {
     protected ResultActions putJson(Cookie session, String url, String json) throws Exception {
         return mvc.perform(
                 put(url).cookie(session).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(json));
+    }
+
+    protected ResultActions patchJson(Cookie session, String url, String json) throws Exception {
+        return mvc.perform(
+                patch(url).cookie(session).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(json));
     }
 
     protected ResultActions deleteAs(Cookie session, String url) throws Exception {

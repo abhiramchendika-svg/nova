@@ -3,7 +3,7 @@
 > **Your student life, organized in one place.**
 > NOVA brings classes, deadlines, grades and developer growth into one calm dashboard, so every morning starts with a clear answer to *what now?*
 
-**Status:** early development (Phase 2 of 8). Accounts, login and settings work end to end; semesters, courses, grading schemes, GPA/CGPA, what-if grades and attendance have their API and pages (Courses, Attendance, Grades). Planner and developer features arrive in Phases 3–4. Nothing here is production-ready yet.
+**Status:** early development (Phase 2 of 8). Accounts, login and settings work end to end; semesters, courses, grading schemes, GPA/CGPA, what-if grades and attendance have their API and pages (Courses, Attendance, Grades); assignments, exams with prep checklists, course links and the course overview have their API, with pages next. Planner and developer features arrive in Phases 3–4. Nothing here is production-ready yet.
 
 ## The problem
 
