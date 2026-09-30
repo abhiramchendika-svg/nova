@@ -21,6 +21,9 @@ public interface AttendanceRecordRepository extends JpaRepository<AttendanceReco
 
     Optional<AttendanceRecord> findByIdAndUserId(UUID id, UUID userId);
 
+    /** One day's marks for some courses (the timetable's day view). */
+    List<AttendanceRecord> findByUserIdAndHeldOnAndCourseIdIn(UUID userId, LocalDate heldOn, Collection<UUID> courseIds);
+
     boolean existsByCourseIdAndHeldOnAndSlot(UUID courseId, LocalDate heldOn, int slot);
 
     /** History, newest first (the sort comes from the caller's Pageable). */

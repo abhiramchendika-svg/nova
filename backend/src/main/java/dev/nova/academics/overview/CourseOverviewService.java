@@ -6,6 +6,7 @@ import dev.nova.academics.course.CourseDtos.CourseResponse;
 import dev.nova.academics.course.CourseService;
 import dev.nova.academics.exam.ExamService;
 import dev.nova.academics.resource.CourseResourceService;
+import dev.nova.academics.timetable.TimetableService;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,18 +26,21 @@ public class CourseOverviewService {
     private final AssignmentService assignments;
     private final ExamService exams;
     private final CourseResourceService resources;
+    private final TimetableService timetable;
 
     public CourseOverviewService(
             CourseService courses,
             AttendanceService attendance,
             AssignmentService assignments,
             ExamService exams,
-            CourseResourceService resources) {
+            CourseResourceService resources,
+            TimetableService timetable) {
         this.courses = courses;
         this.attendance = attendance;
         this.assignments = assignments;
         this.exams = exams;
         this.resources = resources;
+        this.timetable = timetable;
     }
 
     /** One read-only transaction, so every part reflects the same moment. 404 if it isn't the user's course. */
@@ -50,6 +54,7 @@ public class CourseOverviewService {
                 assignments.countOpen(userId, courseId),
                 assignments.countOverdue(userId, courseId),
                 exams.upcomingForCourse(userId, courseId, EXAM_PREVIEW),
-                resources.list(userId, courseId));
+                resources.list(userId, courseId),
+                timetable.forCourse(userId, courseId));
     }
 }

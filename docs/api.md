@@ -186,11 +186,14 @@ Legend: 🔓 public · everything else requires a session. **P** marks paginated
   "openAssignmentCount": 6,
   "overdueCount": 1,
   "upcomingExams": [ "…up to 3 exam summaries from today on, soonest first…" ],
-  "resources": [ { "id", "courseId", "title", "url", "createdAt" } ]
+  "resources": [ { "id", "courseId", "title", "url", "createdAt" } ],
+  "timetable": [ "…the course's weekly classes (§2.8)…" ]
 }
 ```
 
-*(Timetable slots join in 2.4; recent activity comes later.)*
+- `timetable`: the course's weekly classes (entries from §2.8), Monday first.
+
+*(Recent activity comes later.)*
 
 ### 2.5 Attendance (Phase 2)
 
@@ -263,12 +266,30 @@ Legend: 🔓 public · everything else requires a session. **P** marks paginated
 
 | Method | Path | Purpose |
 |---|---|---|
-| GET | `/api/v1/timetable` | All weekly slots for the current semester |
-| GET | `/api/v1/timetable/day?date=` | Slots for that date, with attendance status if marked |
-| POST | `/api/v1/timetable` | `{ "courseId", "dayOfWeek": 1-7, "startsAt": "09:00", "endsAt": "09:50", "kind", "location?", "instructor?" }` |
-| PUT / DELETE | `/api/v1/timetable/{id}` | Update / delete |
+| GET | `/api/v1/timetable?semesterId=` | Every weekly class in a semester (the current one by default; `[]` if there's none), Monday first, then by start time |
+| GET | `/api/v1/timetable/day?date=` | A date's classes (today in the user's timezone by default), each with its attendance slot and any mark |
+| POST | `/api/v1/timetable` | Create → `201`: `{ "courseId", "dayOfWeek": 1-7, "startsAt": "09:00", "endsAt": "09:50", "kind?", "location?", "instructor?" }` |
+| PUT / DELETE | `/api/v1/timetable/{id}` | Full replace (same body) / delete → `204` |
 
-- **Overlap:** overlapping slots are *allowed* (labs sometimes overlap) but come back with `overlapsWith: [ids]`, so the UI can warn about them.
+- Entry: `{ "id", "courseId", "courseCode", "courseName", "colorHue", "dayOfWeek", "startsAt", "endsAt", "kind", "location", "instructor", "overlapsWith": [ids] }`.
+- `dayOfWeek` is ISO (1 = Monday). Times are `"HH:mm"` on the user's wall clock, stored as `time` without a zone, so a 09:00 class stays at 09:00 across DST. `kind`: `LECTURE` (default), `LAB`, `TUTORIAL`, `OTHER`.
+- **Overlap:** overlapping classes are *allowed* (labs sometimes clash with lectures) and come back with `overlapsWith`, so the UI can warn. Only classes in the same semester are compared; one ending at 09:50 and the next starting at 09:50 don't overlap.
+- Rules: `endsAt` must be after `startsAt` (`400` on `endsAt`); the course must be yours (`400` on `courseId`); up to 20 weekly classes per course (`422`). Another user's entry is `404`.
+
+**Day view**
+
+```json
+{
+  "date": "2026-10-05", "dayOfWeek": 1, "semesterId": "…", "inTerm": true,
+  "classes": [
+    { "entry": { "…entry…" }, "slot": 1, "attendance": null },
+    { "entry": { "…entry…" }, "slot": 2, "attendance": { "recordId": "…", "status": "ABSENT" } }
+  ]
+}
+```
+
+- Classes come from the **current** semester, in start-time order. `inTerm` is `false` (and `classes` empty) when there's no current semester, or the date is outside its `startsOn`–`endsOn`.
+- `slot` numbers a course's classes that day in start-time order (1, 2 …), the same slot attendance uses, so marking a class from Home is `POST /courses/{id}/attendance/records` with `{ heldOn: date, slot, status }`.
 
 ### 2.9 Tasks (Phase 3)
 

@@ -62,6 +62,15 @@ class CourseOverviewFlowTest extends AcademicsTestSupport {
         postJson(session, "/api/v1/courses/" + course + "/resources", """
                         {"title":"Syllabus","url":"https://example.edu/s.pdf"}""")
                 .andExpect(status().isCreated());
+        postJson(session, "/api/v1/timetable", """
+                        {"courseId":"%s","dayOfWeek":2,"startsAt":"09:00","endsAt":"09:50"}""".formatted(course))
+                .andExpect(status().isCreated());
+        postJson(session, "/api/v1/timetable", """
+                        {"courseId":"%s","dayOfWeek":1,"startsAt":"14:00","endsAt":"16:00","kind":"LAB"}""".formatted(course))
+                .andExpect(status().isCreated());
+        postJson(session, "/api/v1/timetable", """
+                        {"courseId":"%s","dayOfWeek":1,"startsAt":"10:00","endsAt":"11:00"}""".formatted(elsewhere))
+                .andExpect(status().isCreated());
 
         mvc.perform(get("/api/v1/courses/" + course + "/overview").cookie(session))
                 .andExpect(status().isOk())
@@ -78,7 +87,11 @@ class CourseOverviewFlowTest extends AcademicsTestSupport {
                 .andExpect(jsonPath("$.upcomingExams[0].title").value("Exam 1"))
                 .andExpect(jsonPath("$.upcomingExams[0].daysUntil").value(7))
                 .andExpect(jsonPath("$.resources", hasSize(1)))
-                .andExpect(jsonPath("$.resources[0].title").value("Syllabus"));
+                .andExpect(jsonPath("$.resources[0].title").value("Syllabus"))
+                .andExpect(jsonPath("$.timetable", hasSize(2)))
+                .andExpect(jsonPath("$.timetable[0].dayOfWeek").value(1))
+                .andExpect(jsonPath("$.timetable[0].kind").value("LAB"))
+                .andExpect(jsonPath("$.timetable[1].startsAt").value("09:00"));
     }
 
     @Test
@@ -94,7 +107,8 @@ class CourseOverviewFlowTest extends AcademicsTestSupport {
                 .andExpect(jsonPath("$.openAssignmentCount").value(0))
                 .andExpect(jsonPath("$.overdueCount").value(0))
                 .andExpect(jsonPath("$.upcomingExams", hasSize(0)))
-                .andExpect(jsonPath("$.resources", hasSize(0)));
+                .andExpect(jsonPath("$.resources", hasSize(0)))
+                .andExpect(jsonPath("$.timetable", hasSize(0)));
     }
 
     @Test
