@@ -5,6 +5,7 @@ import type {
   AssignmentStatus,
   AttendanceMark,
   CourseRequest,
+  ExamRequest,
   GradeKind,
   GradeOverride,
   GradingScheme,
@@ -24,12 +25,17 @@ import { courseAttendance, todayIn, type StoredRecord } from './attendance';
 import {
   applyProgress,
   assignmentProblem,
+  examProblem,
+  orderedTopics,
+  renumber,
+  toExamDetail,
   isOpen,
   normalizeLink,
   removeCourseWork,
   toAssignment,
   toExamSummary,
   type StoredAssignment,
+  type StoredExam,
   type StoredResource,
 } from './coursework';
 import type { SettingsRequest } from '@/features/settings/types';
@@ -822,6 +828,174 @@ export function createAcademicsHandlers(
           upcomingExams: exams.slice(0, 3).map((e) => toExamSummary(store, e, now, tz)),
           resources: resourcesOf(store, course.id),
         });
+      }),
+    ),
+
+    // Exams (docs/api.md §2.7)
+    http.get(
+      `${API}/exams`,
+      withStore(storeFor, (store, request) => {
+        const url = new URL(request.url);
+        const upcoming = url.searchParams.get('upcoming') === 'true';
+        const courseId = url.searchParams.get('courseId');
+        const now = new Date();
+        const tz = settingsFor().timezone;
+        const today = todayIn(tz, now);
+        return HttpResponse.json(
+          store.exams
+            .filter((e) => !courseId || e.courseId === courseId)
+            .filter((e) => !upcoming || todayIn(tz, new Date(e.startsAt)) >= today)
+            .sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt) || a.id.localeCompare(b.id))
+            .map((e) => toExamSummary(store, e, now, tz)),
+        );
+      }),
+    ),
+
+    http.get(
+      `${API}/exams/:id`,
+      withStore(storeFor, (store, _request, params) => {
+        const exam = store.exams.find((e) => e.id === params.id);
+        return exam
+          ? HttpResponse.json(toExamDetail(store, exam, new Date(), settingsFor().timezone))
+          : notFound();
+      }),
+    ),
+
+    http.post(
+      `${API}/exams`,
+      withStore(storeFor, async (store, request) => {
+        const body = (await request.json()) as Partial<ExamRequest>;
+        const error = examProblem(store, body);
+        if (error) return invalid(...error);
+        if (store.exams.filter((e) => e.courseId === body.courseId).length >= 50) {
+          const message = 'A course can have up to 50 exams.';
+          return problem(422, 'RULE_VIOLATION', message, { errors: [{ field: 'courseId', message }] });
+        }
+        const exam: StoredExam = {
+          id: crypto.randomUUID(),
+          courseId: body.courseId!,
+          title: body.title!.trim(),
+          kind: body.kind ?? 'OTHER',
+          startsAt: new Date(body.startsAt!).toISOString(),
+          durationMinutes: body.durationMinutes ?? null,
+          location: blankToNull(body.location),
+        };
+        store.exams.push(exam);
+        (body.topics ?? []).forEach((title, i) =>
+          store.topics.push({
+            id: crypto.randomUUID(),
+            examId: exam.id,
+            title: title.trim(),
+            position: i,
+            doneAt: null,
+            createdAt: Date.now() + i,
+          }),
+        );
+        return HttpResponse.json(toExamDetail(store, exam, new Date(), settingsFor().timezone), {
+          status: 201,
+        });
+      }),
+    ),
+
+    http.put(
+      `${API}/exams/:id`,
+      withStore(storeFor, async (store, request, params) => {
+        const exam = store.exams.find((e) => e.id === params.id);
+        if (!exam) return notFound();
+        const body = (await request.json()) as Partial<ExamRequest>;
+        const error = examProblem(store, body);
+        if (error) return invalid(...error);
+        Object.assign(exam, {
+          courseId: body.courseId!,
+          title: body.title!.trim(),
+          kind: body.kind ?? 'OTHER',
+          startsAt: new Date(body.startsAt!).toISOString(),
+          durationMinutes: body.durationMinutes ?? null,
+          location: blankToNull(body.location),
+        });
+        return HttpResponse.json(toExamDetail(store, exam, new Date(), settingsFor().timezone));
+      }),
+    ),
+
+    http.delete(
+      `${API}/exams/:id`,
+      withStore(storeFor, (store, _request, params) => {
+        const index = store.exams.findIndex((e) => e.id === params.id);
+        if (index < 0) return notFound();
+        store.exams.splice(index, 1);
+        store.topics = store.topics.filter((t) => t.examId !== params.id);
+        return new HttpResponse(null, { status: 204 });
+      }),
+    ),
+
+    http.post(
+      `${API}/exams/:id/topics`,
+      withStore(storeFor, async (store, request, params) => {
+        const exam = store.exams.find((e) => e.id === params.id);
+        if (!exam) return notFound();
+        const body = (await request.json()) as { title?: string };
+        if (!body.title?.trim()) return invalid('title', 'Name the topic.');
+        if (body.title.length > 160) return invalid('title', 'Keep it under 160 characters.');
+        const count = orderedTopics(store, exam.id).length;
+        if (count >= 100) {
+          const message = 'An exam can have up to 100 topics.';
+          return problem(422, 'RULE_VIOLATION', message, { errors: [{ field: 'title', message }] });
+        }
+        store.topics.push({
+          id: crypto.randomUUID(),
+          examId: exam.id,
+          title: body.title.trim(),
+          position: count,
+          doneAt: null,
+          createdAt: Date.now(),
+        });
+        return HttpResponse.json(toExamDetail(store, exam, new Date(), settingsFor().timezone), {
+          status: 201,
+        });
+      }),
+    ),
+
+    http.patch(
+      `${API}/exams/:id/topics/:topicId`,
+      withStore(storeFor, async (store, request, params) => {
+        const body = (await request.json()) as { done?: boolean; title?: string; position?: number };
+        if (body.done === undefined && body.title === undefined && body.position === undefined) {
+          return invalid('done', 'Send done, title or position.');
+        }
+        if (body.title !== undefined && !body.title.trim()) return invalid('title', 'Name the topic.');
+        if (body.title !== undefined && body.title.length > 160) {
+          return invalid('title', 'Keep it under 160 characters.');
+        }
+        if (body.position !== undefined && (!Number.isInteger(body.position) || body.position < 0)) {
+          return invalid('position', 'Must be 0 or more.');
+        }
+        const exam = store.exams.find((e) => e.id === params.id);
+        const topic = store.topics.find((t) => t.id === params.topicId && t.examId === params.id);
+        if (!exam || !topic) return notFound();
+        if (body.done !== undefined)
+          topic.doneAt = body.done ? (topic.doneAt ?? new Date().toISOString()) : null;
+        if (body.title !== undefined) topic.title = body.title.trim();
+        if (body.position !== undefined) {
+          const ordered = orderedTopics(store, exam.id);
+          if (body.position >= ordered.length) {
+            return invalid('position', `Must be between 0 and ${ordered.length - 1}.`);
+          }
+          const rest = ordered.filter((t) => t.id !== topic.id);
+          rest.splice(body.position, 0, topic);
+          renumber(rest);
+        }
+        return HttpResponse.json(toExamDetail(store, exam, new Date(), settingsFor().timezone));
+      }),
+    ),
+
+    http.delete(
+      `${API}/exams/:id/topics/:topicId`,
+      withStore(storeFor, (store, _request, params) => {
+        const index = store.topics.findIndex((t) => t.id === params.topicId && t.examId === params.id);
+        if (index < 0) return notFound();
+        store.topics.splice(index, 1);
+        renumber(orderedTopics(store, params.id!));
+        return new HttpResponse(null, { status: 204 });
       }),
     ),
   ];

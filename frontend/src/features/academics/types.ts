@@ -231,6 +231,31 @@ export interface ExamSummary {
   prep: Prep;
 }
 
+export interface ExamTopic {
+  id: string;
+  title: string;
+  /** 0…n-1, always contiguous. */
+  position: number;
+  done: boolean;
+  doneAt: string | null;
+}
+
+/** The exam page: the summary plus its checklist in order. */
+export interface ExamDetail extends ExamSummary {
+  topics: ExamTopic[];
+}
+
+export interface ExamRequest {
+  courseId: string;
+  title: string;
+  kind: ExamKind;
+  startsAt: string;
+  durationMinutes: number | null;
+  location: string | null;
+  /** Only read on create. */
+  topics?: string[];
+}
+
 // ───────────── Course links and overview (docs/api.md §2.4) ─────────────
 
 export interface CourseResource {

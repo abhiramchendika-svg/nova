@@ -20,6 +20,7 @@ import { attendanceVerdict } from './attendanceText';
 import { CourseDialog } from './CourseDialog';
 import { Credits } from './Credits';
 import { DeleteAssignmentDialog } from './DeleteAssignmentDialog';
+import { ExamDialog } from './ExamDialog';
 import { daysUntilText, KIND_LABEL, prepText } from './examText';
 import { formatPercent } from './format';
 import { ResourceDialog } from './ResourceDialog';
@@ -99,6 +100,7 @@ function CourseView({ data, timezone }: { data: CourseOverview; timezone: string
     open: false,
   });
   const [deletingAssignment, setDeletingAssignment] = useState<Assignment | null>(null);
+  const [addingExam, setAddingExam] = useState(false);
   const [announcement, setAnnouncement] = useState('');
 
   return (
@@ -199,7 +201,16 @@ function CourseView({ data, timezone }: { data: CourseOverview; timezone: string
             </Link>
           </Panel>
 
-          <Panel title="Upcoming exams" domain="academics">
+          <Panel
+            title="Upcoming exams"
+            domain="academics"
+            action={
+              <Button size="sm" variant="ghost" onClick={() => setAddingExam(true)}>
+                <Plus size={14} aria-hidden />
+                Add
+              </Button>
+            }
+          >
             {data.upcomingExams.length === 0 ? (
               <p className="text-[13px] text-ink-2">No exams coming up.</p>
             ) : (
@@ -207,7 +218,12 @@ function CourseView({ data, timezone }: { data: CourseOverview; timezone: string
                 {data.upcomingExams.map((e) => (
                   <li key={e.id} className="grid gap-1.5">
                     <p className="flex flex-wrap items-baseline justify-between gap-2">
-                      <span className="font-medium text-ink">{e.title}</span>
+                      <Link
+                        to={`/app/academics/exams/${e.id}`}
+                        className="font-medium text-ink hover:text-academics-text hover:underline"
+                      >
+                        {e.title}
+                      </Link>
                       <span className="text-[12.5px] font-medium text-ink">{daysUntilText(e.daysUntil)}</span>
                     </p>
                     <p className="text-[12.5px] text-ink-2">
@@ -263,6 +279,13 @@ function CourseView({ data, timezone }: { data: CourseOverview; timezone: string
         defaultCourseId={course.id}
       />
       <DeleteAssignmentDialog assignment={deletingAssignment} onClose={() => setDeletingAssignment(null)} />
+      <ExamDialog
+        open={addingExam}
+        onOpenChange={setAddingExam}
+        courses={siblings.data ?? [course]}
+        timezone={timezone}
+        defaultCourseId={course.id}
+      />
     </Shell>
   );
 }

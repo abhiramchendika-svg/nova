@@ -122,6 +122,27 @@ describe('Course page', () => {
     expect(assignments).toHaveTextContent('Indexing notes');
   });
 
+  it('links to each exam and adds one for this course', async () => {
+    const store = setup();
+    const { user } = renderRoute(`/app/academics/courses/${dbmsId(store)}`);
+    const exams = await panel('Upcoming exams');
+    expect(within(exams).getByRole('link', { name: 'Mid-semester 1' })).toHaveAttribute(
+      'href',
+      '/app/academics/exams/00000000-0000-4000-8000-0000000de001',
+    );
+
+    await user.click(within(exams).getByRole('button', { name: 'Add' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Add an exam' });
+    await waitFor(() => expect(within(dialog).getByLabelText('Course')).toHaveValue(dbmsId(store)));
+    await user.type(within(dialog).getByLabelText('Title'), 'Lab exam');
+    await user.selectOptions(within(dialog).getByLabelText('Kind'), 'Lab exam');
+    await user.click(within(dialog).getByRole('button', { name: 'Add exam' }));
+
+    // Today's exam comes first, and the course page stays open
+    expect(await within(exams).findByRole('link', { name: 'Lab exam' })).toBeInTheDocument();
+    expect(exams).toHaveTextContent('Lab examToday');
+  });
+
   it('says so when the course doesn’t exist', async () => {
     setup();
     renderRoute('/app/academics/courses/00000000-0000-4000-8000-00000000beef');

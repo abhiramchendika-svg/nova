@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { zonedToInstant } from '@/lib/dates';
-import type { AssignmentRequest, CourseRequest, SchemeRequest, SemesterRequest } from './types';
+import type { AssignmentRequest, CourseRequest, ExamRequest, SchemeRequest, SemesterRequest } from './types';
 
 /**
  * Form schemas, kept in step with the backend's Bean Validation (docs/api.md §2.2–2.4).
@@ -184,3 +184,54 @@ export const resourceSchema = z.object({
 });
 
 export type ResourceValues = z.infer<typeof resourceSchema>;
+
+// ───────────── Exams (docs/api.md §2.7) ─────────────
+
+/** Non-empty lines of the "topics, one per line" box. */
+export function topicLines(text: string): string[] {
+  return text
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
+export const examSchema = z.object({
+  courseId: z.string().min(1, 'Choose a course.'),
+  title: z.string().trim().min(1, 'Give the exam a title.').max(120, 'Keep it under 120 characters.'),
+  kind: z.enum(['QUIZ', 'MIDTERM', 'FINAL', 'LAB', 'OTHER']),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Choose the date.'),
+  time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Choose a start time, like 09:30.'),
+  durationMinutes: z
+    .string()
+    .trim()
+    .refine(
+      (v) => v === '' || (/^\d{1,4}$/.test(v) && Number(v) >= 1 && Number(v) <= 1440),
+      'Use whole minutes from 1 to 1440.',
+    ),
+  location: z.string().trim().max(60, 'Keep it under 60 characters.'),
+  topics: z
+    .string()
+    .refine((v) => topicLines(v).length <= 100, 'Up to 100 topics.')
+    .refine((v) => topicLines(v).every((t) => t.length <= 160), 'Keep each topic under 160 characters.'),
+});
+
+export type ExamValues = z.infer<typeof examSchema>;
+
+/** The start is the student's wall clock, sent as one instant. Topics are only sent when creating. */
+export function toExamRequest(v: ExamValues, timezone: string, withTopics: boolean): ExamRequest {
+  return {
+    courseId: v.courseId,
+    title: v.title.trim(),
+    kind: v.kind,
+    startsAt: zonedToInstant(v.date, v.time, timezone),
+    durationMinutes: v.durationMinutes.trim() ? Number(v.durationMinutes) : null,
+    location: v.location.trim() || null,
+    ...(withTopics ? { topics: topicLines(v.topics) } : {}),
+  };
+}
+
+export const topicSchema = z
+  .string()
+  .trim()
+  .min(1, 'Name the topic.')
+  .max(160, 'Keep it under 160 characters.');

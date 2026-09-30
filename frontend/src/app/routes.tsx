@@ -23,6 +23,10 @@ const AssignmentsPage = lazy(() =>
 const CoursePage = lazy(() =>
   import('@/features/academics/CoursePage').then((m) => ({ default: m.CoursePage })),
 );
+const ExamsPage = lazy(() =>
+  import('@/features/academics/ExamsPage').then((m) => ({ default: m.ExamsPage })),
+);
+const ExamPage = lazy(() => import('@/features/academics/ExamPage').then((m) => ({ default: m.ExamPage })));
 const GradesPage = lazy(() =>
   import('@/features/academics/GradesPage').then((m) => ({ default: m.GradesPage })),
 );
@@ -59,6 +63,8 @@ export const routes: RouteObject[] = [
       { path: 'academics/courses', element: <CoursesPage /> },
       { path: 'academics/courses/:courseId', element: <CoursePage /> },
       { path: 'academics/assignments', element: <AssignmentsPage /> },
+      { path: 'academics/exams', element: <ExamsPage /> },
+      { path: 'academics/exams/:examId', element: <ExamPage /> },
       { path: 'academics/attendance', element: <AttendancePage /> },
       { path: 'academics/grades', element: <GradesPage /> },
       { path: 'academics/grades/schemes', element: <GradingSchemesPage /> },

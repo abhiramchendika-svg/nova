@@ -12,6 +12,9 @@ import type {
   CourseOverview,
   CourseRequest,
   CourseResource,
+  ExamDetail,
+  ExamRequest,
+  ExamSummary,
   GradeKind,
   GradeOverride,
   GradesSummary,
@@ -39,6 +42,8 @@ export const academicsKeys = {
   history: (courseId: string, page: number) => ['academics', 'attendance-history', courseId, page] as const,
   assignments: (filter: AssignmentFilter) => ['academics', 'assignments', filter] as const,
   overview: (courseId: string) => ['academics', 'course-overview', courseId] as const,
+  exams: (filter: { upcoming: boolean; courseId?: string }) => ['academics', 'exams', filter] as const,
+  exam: (id: string) => ['academics', 'exam', id] as const,
 };
 
 function useInvalidateAcademics() {
@@ -362,5 +367,94 @@ export function useDeleteResource() {
   return useMutation<void, ApiError, { courseId: string; id: string }>({
     mutationFn: ({ courseId, id }) => api<void>(`/courses/${courseId}/resources/${id}`, { method: 'DELETE' }),
     onSuccess: invalidate,
+  });
+}
+
+// ───────────── Exams ─────────────
+
+export function useExams(filter: { upcoming: boolean; courseId?: string }, enabled = true) {
+  const params = new URLSearchParams({ upcoming: String(filter.upcoming) });
+  if (filter.courseId) params.set('courseId', filter.courseId);
+  return useQuery<ExamSummary[], ApiError>({
+    queryKey: academicsKeys.exams(filter),
+    queryFn: ({ signal }) => api<ExamSummary[]>(`/exams?${params.toString()}`, { signal }),
+    enabled,
+  });
+}
+
+export function useExam(id: string) {
+  return useQuery<ExamDetail, ApiError>({
+    queryKey: academicsKeys.exam(id),
+    queryFn: ({ signal }) => api<ExamDetail>(`/exams/${id}`, { signal }),
+  });
+}
+
+/**
+ * Exam and topic writes return the whole exam, so the page updates from the response straight
+ * away; lists and the course page (prep %) refresh through the usual invalidation.
+ */
+function useExamWrite<V>(request: (vars: V) => Promise<ExamDetail>) {
+  const queryClient = useQueryClient();
+  return useMutation<ExamDetail, ApiError, V>({
+    mutationFn: request,
+    onSuccess: async (exam) => {
+      queryClient.setQueryData(academicsKeys.exam(exam.id), exam);
+      await queryClient.invalidateQueries({
+        queryKey: academicsKeys.all,
+        predicate: (q) => !(q.queryKey[1] === 'exam' && q.queryKey[2] === exam.id),
+      });
+    },
+  });
+}
+
+export function useCreateExam() {
+  return useExamWrite((body: ExamRequest) => api<ExamDetail>('/exams', { method: 'POST', body }));
+}
+
+export function useUpdateExam() {
+  return useExamWrite(({ id, body }: { id: string; body: ExamRequest }) =>
+    api<ExamDetail>(`/exams/${id}`, { method: 'PUT', body }),
+  );
+}
+
+export function useDeleteExam() {
+  const queryClient = useQueryClient();
+  return useMutation<void, ApiError, string>({
+    mutationFn: (id) => api<void>(`/exams/${id}`, { method: 'DELETE' }),
+    onSuccess: async (_v, id) => {
+      queryClient.removeQueries({ queryKey: academicsKeys.exam(id) });
+      await queryClient.invalidateQueries({ queryKey: academicsKeys.all });
+    },
+  });
+}
+
+export function useAddTopic() {
+  return useExamWrite(({ examId, title }: { examId: string; title: string }) =>
+    api<ExamDetail>(`/exams/${examId}/topics`, { method: 'POST', body: { title } }),
+  );
+}
+
+export function usePatchTopic() {
+  return useExamWrite(
+    ({
+      examId,
+      topicId,
+      ...body
+    }: {
+      examId: string;
+      topicId: string;
+      done?: boolean;
+      title?: string;
+      position?: number;
+    }) => api<ExamDetail>(`/exams/${examId}/topics/${topicId}`, { method: 'PATCH', body }),
+  );
+}
+
+export function useDeleteTopic() {
+  const queryClient = useQueryClient();
+  return useMutation<void, ApiError, { examId: string; topicId: string }>({
+    mutationFn: ({ examId, topicId }) =>
+      api<void>(`/exams/${examId}/topics/${topicId}`, { method: 'DELETE' }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: academicsKeys.all }),
   });
 }

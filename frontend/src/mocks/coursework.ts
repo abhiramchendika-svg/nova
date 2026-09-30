@@ -1,5 +1,7 @@
 import type {
   Assignment,
+  ExamDetail,
+  ExamRequest,
   AssignmentPriority,
   AssignmentRequest,
   AssignmentStatus,
@@ -158,6 +160,55 @@ export function toExamSummary(store: AcademicStore, e: StoredExam, now: Date, ti
     daysUntil: daysBetween(todayIn(timezone, now), todayIn(timezone, new Date(e.startsAt))),
     prep: prepOf(topics.filter((t) => t.doneAt).length, topics.length),
   };
+}
+
+export function orderedTopics(store: AcademicStore, examId: string): StoredTopic[] {
+  return store.topics
+    .filter((t) => t.examId === examId)
+    .sort((a, b) => a.position - b.position || a.createdAt - b.createdAt);
+}
+
+export function toExamDetail(store: AcademicStore, e: StoredExam, now: Date, timezone: string): ExamDetail {
+  return {
+    ...toExamSummary(store, e, now, timezone),
+    topics: orderedTopics(store, e.id).map((t) => ({
+      id: t.id,
+      title: t.title,
+      position: t.position,
+      done: t.doneAt !== null,
+      doneAt: t.doneAt,
+    })),
+  };
+}
+
+const KINDS: ExamKind[] = ['QUIZ', 'MIDTERM', 'FINAL', 'LAB', 'OTHER'];
+
+/** ExamDtos.ExamRequest's rules, as [field, message], or null when valid. */
+export function examProblem(store: AcademicStore, body: Partial<ExamRequest>): [string, string] | null {
+  if (!body.courseId || !store.courses.some((c) => c.id === body.courseId)) {
+    return ['courseId', 'Choose one of your courses.'];
+  }
+  if (!body.title?.trim()) return ['title', 'Give the exam a title.'];
+  if (body.title.length > 120) return ['title', 'Keep it under 120 characters.'];
+  if (body.kind != null && !KINDS.includes(body.kind)) return ['kind', 'Choose a kind of exam.'];
+  if (!body.startsAt || Number.isNaN(Date.parse(body.startsAt))) return ['startsAt', 'Set when it starts.'];
+  const d = body.durationMinutes;
+  if (d != null && (!Number.isInteger(d) || d < 1 || d > 1440)) {
+    return ['durationMinutes', 'Must be between 1 and 1440 minutes.'];
+  }
+  if (body.location && body.location.length > 60) return ['location', 'Keep it under 60 characters.'];
+  const topics = body.topics ?? [];
+  if (topics.length > 100) return ['topics', 'Up to 100 topics per exam.'];
+  for (const [i, t] of topics.entries()) {
+    if (!t?.trim()) return [`topics[${i}]`, 'Topics can’t be blank.'];
+    if (t.length > 160) return [`topics[${i}]`, 'Keep each topic under 160 characters.'];
+  }
+  return null;
+}
+
+/** Keeps positions 0…n-1 in the given order (ExamService.renumber). */
+export function renumber(topics: StoredTopic[]): void {
+  topics.forEach((t, i) => (t.position = i));
 }
 
 /** WebLinks.java: only http(s) links with a host, trimmed; null when refused. */
