@@ -3,7 +3,7 @@
 > **Your student life, organized in one place.**
 > NOVA brings classes, deadlines, grades and developer growth into one calm dashboard, so every morning starts with a clear answer to *what now?*
 
-**Status:** early development (Phase 2 of 8). Accounts, login and settings work end to end; semesters, courses, grading schemes, GPA/CGPA and what-if grades have their API and pages (Courses, Grades). Planner and developer features arrive in Phases 3–4. Nothing here is production-ready yet.
+**Status:** early development (Phase 2 of 8). Accounts, login and settings work end to end; semesters, courses, grading schemes, GPA/CGPA, what-if grades and attendance have their API and pages (Courses, Attendance, Grades). Planner and developer features arrive in Phases 3–4. Nothing here is production-ready yet.
 
 ## The problem
 
@@ -144,7 +144,7 @@ Tests never call a real external API. Backend integration tests start a throwawa
 - `npm run dev` needs the backend running; without it the app shows "We couldn't check your session." Use `npm run dev:mock` for UI-only work.
 - The login rate limiter is in memory, which suits a single instance; multiple instances would need a shared store.
 - The theme choice is saved per browser; syncing it to the account arrives with the Settings page (Phase 2).
-- Courses, Grades and Grading schemes are live. The other sections show an honest "on the way" placeholder until their phase ships.
+- Courses, Attendance, Grades and Grading schemes are live. The other sections show an honest "on the way" placeholder until their phase ships.
 
 ## License
 

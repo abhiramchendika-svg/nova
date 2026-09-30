@@ -10,21 +10,20 @@ import { Button } from '@/components/ui/Button';
 import { IconButton } from '@/components/ui/IconButton';
 import { SelectField } from '@/components/ui/SelectField';
 import { errorMessage } from '@/services/http';
-import { useCourses, useDeleteCourse, useDeleteSemester, useMakeCurrentSemester, useSemesters } from './api';
+import {
+  useCourses,
+  useDeleteCourse,
+  useDeleteSemester,
+  useMakeCurrentSemester,
+  useSemesterAttendance,
+  useSemesters,
+} from './api';
 import { CourseDialog } from './CourseDialog';
 import { Credits } from './Credits';
-import { formatNumber, formatTerm } from './format';
+import { formatNumber, formatPercent, formatTerm } from './format';
 import { SemesterDialog } from './SemesterDialog';
+import { pickSemester } from './selection';
 import type { Course, Semester } from './types';
-
-/** Which semester to show: the one in ?semester=, else the current one, else the latest. */
-function pickSemester(semesters: Semester[], requestedId: string | null): Semester | undefined {
-  return (
-    semesters.find((s) => s.id === requestedId) ??
-    semesters.find((s) => s.current) ??
-    [...semesters].sort((a, b) => b.ordinal - a.ordinal)[0]
-  );
-}
 
 export function CoursesPage() {
   const [params, setParams] = useSearchParams();
@@ -209,6 +208,8 @@ function CourseList({
   onEdit: (course: Course) => void;
 }) {
   const courses = useCourses(semester.id);
+  const attendance = useSemesterAttendance(semester.id);
+  const percentFor = new Map((attendance.data ?? []).map((a) => [a.courseId, a.percentage]));
   const [deleting, setDeleting] = useState<Course | null>(null);
   const deleteCourse = useDeleteCourse();
 
@@ -269,6 +270,16 @@ function CourseList({
               <p className="text-[12.5px] text-ink-2">
                 <Credits value={course.credits} />
                 {course.faculty && <> · {course.faculty}</>}
+                {percentFor.get(course.id) != null && (
+                  <>
+                    {' '}
+                    ·{' '}
+                    <span className="font-mono tabular">
+                      {formatPercent(percentFor.get(course.id)!, 0)}
+                    </span>{' '}
+                    attended
+                  </>
+                )}
               </p>
             </div>
             {course.grade && (

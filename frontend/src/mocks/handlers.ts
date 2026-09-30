@@ -3,9 +3,10 @@ import { API, CSRF_TOKEN, csrfOk, problem } from './http';
 import type { CurrentUser } from '@/features/auth/types';
 import { createAcademicsHandlers } from './academicsHandlers';
 import { createAcademicStore, type AcademicStore } from './academics';
+import type { Settings, SettingsRequest } from '@/features/settings/types';
 
 /**
- * In-memory fake of the NOVA auth API (docs/api.md §2.1).
+ * In-memory fake of the NOVA API: auth and settings here (docs/api.md §2.1), academics in academicsHandlers.ts.
  * Used by component tests (Node) and by `npm run dev:mock` (browser), so the
  * frontend can be developed and reviewed without running Java or PostgreSQL.
  * It mimics the real contract, including Problem Details errors and CSRF.
@@ -20,12 +21,22 @@ export interface MockDb {
   sessionEmail: string | null;
   /** Academic data per user id, created on first use. */
   academics: Map<string, AcademicStore>;
+  /** Settings per user id; neutral defaults until the user changes them. */
+  settings: Map<string, SettingsRequest>;
 }
+
+export const DEFAULT_SETTINGS: SettingsRequest = {
+  timezone: 'UTC',
+  weekStart: 'MON',
+  universityName: null,
+  defaultAttendanceTarget: null,
+  theme: 'SYSTEM',
+};
 
 export function createMockDb(
   seed: { loggedInAs?: Omit<StoredUser, 'id' | 'onboardingCompleted'> } = {},
 ): MockDb {
-  const db: MockDb = { users: new Map(), sessionEmail: null, academics: new Map() };
+  const db: MockDb = { users: new Map(), sessionEmail: null, academics: new Map(), settings: new Map() };
   if (seed.loggedInAs) {
     const user: StoredUser = {
       id: '00000000-0000-4000-8000-000000000001',
@@ -43,6 +54,12 @@ function publicUser({ password: _password, ...user }: StoredUser): CurrentUser {
 }
 
 export function createHandlers(db: MockDb): HttpHandler[] {
+  const currentUser = () => (db.sessionEmail ? db.users.get(db.sessionEmail) : undefined);
+  const settingsOf = (user: StoredUser): Settings => ({
+    ...(db.settings.get(user.id) ?? DEFAULT_SETTINGS),
+    onboardingCompleted: user.onboardingCompleted,
+  });
+
   return [
     http.get(`${API}/health`, () => HttpResponse.json({ status: 'UP', version: 'mock' })),
 
@@ -97,15 +114,42 @@ export function createHandlers(db: MockDb): HttpHandler[] {
       return new HttpResponse(null, { status: 204 });
     }),
 
-    ...createAcademicsHandlers(() => {
-      const user = db.sessionEmail ? db.users.get(db.sessionEmail) : undefined;
-      if (!user) return null;
-      let store = db.academics.get(user.id);
-      if (!store) {
-        store = createAcademicStore();
-        db.academics.set(user.id, store);
-      }
-      return store;
+    http.get(`${API}/settings`, () => {
+      const user = currentUser();
+      if (!user) return problem(401, 'UNAUTHENTICATED', 'Log in to continue');
+      return HttpResponse.json(settingsOf(user));
     }),
+
+    http.put(`${API}/settings`, async ({ request }) => {
+      const user = currentUser();
+      if (!user) return problem(401, 'UNAUTHENTICATED', 'Log in to continue');
+      if (!csrfOk(request)) return problem(403, 'CSRF_INVALID', 'Invalid CSRF token');
+      const body = (await request.json()) as SettingsRequest;
+      const t = body.defaultAttendanceTarget;
+      if (t !== null && (!(t > 0) || t >= 100 || Math.round(t * 100) !== t * 100)) {
+        return problem(400, 'VALIDATION_FAILED', 'Some fields need attention', {
+          errors: [{ field: 'defaultAttendanceTarget', message: 'Must be more than 0 and less than 100.' }],
+        });
+      }
+      db.settings.set(user.id, { ...DEFAULT_SETTINGS, ...body });
+      return HttpResponse.json(settingsOf(user));
+    }),
+
+    ...createAcademicsHandlers(
+      () => {
+        const user = currentUser();
+        if (!user) return null;
+        let store = db.academics.get(user.id);
+        if (!store) {
+          store = createAcademicStore();
+          db.academics.set(user.id, store);
+        }
+        return store;
+      },
+      () => {
+        const user = currentUser();
+        return user ? (db.settings.get(user.id) ?? DEFAULT_SETTINGS) : DEFAULT_SETTINGS;
+      },
+    ),
   ];
 }

@@ -49,6 +49,8 @@ function course(
     attendanceTarget: null,
     gradeDefinitionId: label ? gradeId(scheme, label) : null,
     gradeKind: label ? kind : null,
+    baselineConducted: 0,
+    baselineAttended: 0,
   });
   return id;
 }

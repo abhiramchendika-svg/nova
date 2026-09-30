@@ -14,6 +14,9 @@ const RegisterPage = lazy(() =>
 const CoursesPage = lazy(() =>
   import('@/features/academics/CoursesPage').then((m) => ({ default: m.CoursesPage })),
 );
+const AttendancePage = lazy(() =>
+  import('@/features/academics/AttendancePage').then((m) => ({ default: m.AttendancePage })),
+);
 const GradesPage = lazy(() =>
   import('@/features/academics/GradesPage').then((m) => ({ default: m.GradesPage })),
 );
@@ -48,6 +51,7 @@ export const routes: RouteObject[] = [
       { index: true, element: <HomePage /> },
       // Specific routes win over the section placeholders below (React Router ranks by specificity)
       { path: 'academics/courses', element: <CoursesPage /> },
+      { path: 'academics/attendance', element: <AttendancePage /> },
       { path: 'academics/grades', element: <GradesPage /> },
       { path: 'academics/grades/schemes', element: <GradingSchemesPage /> },
       ...PLANNED.map(({ path, phase }) => ({ path, element: <SectionPlaceholder phase={phase} /> })),

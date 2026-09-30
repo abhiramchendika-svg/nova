@@ -55,6 +55,7 @@ export const courseSchema = z.object({
     .min(1, 'Enter the credits.')
     .regex(decimal(1), 'Use a number like 3 or 4.5 (at most 1 decimal).'),
   faculty: z.string().trim().max(120, 'Keep it under 120 characters.'),
+  attendanceTarget: optionalPercent,
 });
 
 export type CourseValues = z.infer<typeof courseSchema>;
@@ -63,11 +64,7 @@ export type CourseValues = z.infer<typeof courseSchema>;
 export function toCourseRequest(
   v: CourseValues,
   semesterId: string,
-  keep: Pick<CourseRequest, 'colorHue' | 'notes' | 'attendanceTarget'> = {
-    colorHue: null,
-    notes: null,
-    attendanceTarget: null,
-  },
+  keep: Pick<CourseRequest, 'colorHue' | 'notes'> = { colorHue: null, notes: null },
 ): CourseRequest {
   return {
     semesterId,
@@ -75,6 +72,7 @@ export function toCourseRequest(
     name: v.name.trim(),
     credits: Number(v.credits),
     faculty: v.faculty.trim() || null,
+    attendanceTarget: v.attendanceTarget.trim() ? Number(v.attendanceTarget) : null,
     ...keep,
   };
 }

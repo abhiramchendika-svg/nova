@@ -30,3 +30,13 @@ export function formatTerm(startsOn: string | null, endsOn: string | null): stri
   if (endsOn) return `Until ${fmt(endsOn)}`;
   return null;
 }
+
+/** Attendance percentage: 1 decimal in detail views, whole numbers in summaries (ui-design.md §9). */
+export function formatPercent(value: number | null, decimals: 0 | 1 = 1): string {
+  return value === null ? '—' : `${value.toFixed(decimals)}%`;
+}
+
+/** A target exactly as set: 75 → "75%", 75.5 → "75.5%" (never rounded to a different rule). */
+export function formatTarget(value: number): string {
+  return `${formatNumber(value)}%`;
+}

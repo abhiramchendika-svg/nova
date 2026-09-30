@@ -10,7 +10,7 @@ import { useCreateCourse, useUpdateCourse } from './api';
 import { courseSchema, formFieldName, toCourseRequest, type CourseValues } from './schemas';
 import type { Course } from './types';
 
-const FIELDS = new Set(['code', 'name', 'credits', 'faculty']);
+const FIELDS = new Set(['code', 'name', 'credits', 'faculty', 'attendanceTarget']);
 
 export interface CourseDialogProps {
   open: boolean;
@@ -27,6 +27,7 @@ function defaults(course?: Course): CourseValues {
     name: course?.name ?? '',
     credits: course ? String(course.credits) : '',
     faculty: course?.faculty ?? '',
+    attendanceTarget: course?.attendanceTarget == null ? '' : String(course.attendanceTarget),
   };
 }
 
@@ -63,11 +64,7 @@ export function CourseDialog({ open, onOpenChange, semesterId, semesterName, cou
       },
     };
     if (course) {
-      const keep = {
-        colorHue: course.colorHue,
-        notes: course.notes,
-        attendanceTarget: course.attendanceTarget,
-      };
+      const keep = { colorHue: course.colorHue, notes: course.notes };
       update.mutate({ id: course.id, body: toCourseRequest(values, course.semesterId, keep) }, options);
     } else {
       create.mutate(toCourseRequest(values, semesterId), options);
@@ -118,6 +115,13 @@ export function CourseDialog({ open, onOpenChange, semesterId, semesterName, cou
           />
           <Field label="Faculty (optional)" error={errors.faculty?.message} {...register('faculty')} />
         </div>
+        <Field
+          label="Attendance target % (optional)"
+          inputMode="decimal"
+          hint="Only if this course has its own rule. Leave empty to use the semester’s or your default."
+          error={errors.attendanceTarget?.message}
+          {...register('attendanceTarget')}
+        />
       </form>
     </Dialog>
   );

@@ -120,3 +120,44 @@ export interface GradeOverride {
   courseId: string;
   gradeDefinitionId: string;
 }
+
+// ───────────── Attendance (docs/api.md §2.5) ─────────────
+
+export type AttendanceMark = 'PRESENT' | 'ABSENT' | 'CANCELLED';
+export type AttendanceStatus = 'SAFE' | 'AT_RISK' | 'BELOW' | 'NO_TARGET' | 'NO_CLASSES';
+export type TargetSource = 'COURSE' | 'SEMESTER' | 'DEFAULT';
+
+export interface CourseAttendance {
+  courseId: string;
+  courseCode: string | null;
+  courseName: string;
+  baselineConducted: number;
+  baselineAttended: number;
+  present: number;
+  absent: number;
+  cancelled: number;
+  conducted: number;
+  attended: number;
+  percentage: number | null;
+  target: number | null;
+  targetSource: TargetSource | null;
+  canMiss: number | null;
+  needToAttend: number | null;
+  status: AttendanceStatus;
+}
+
+export interface AttendanceRecord {
+  id: string;
+  courseId: string;
+  heldOn: string;
+  slot: number;
+  status: AttendanceMark;
+}
+
+export interface Page<T> {
+  items: T[];
+  page: number;
+  size: number;
+  totalItems: number;
+  totalPages: number;
+}

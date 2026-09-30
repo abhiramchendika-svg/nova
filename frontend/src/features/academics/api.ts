@@ -1,12 +1,16 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, type ApiError } from '@/services/http';
 import type {
+  AttendanceMark,
+  AttendanceRecord,
   Course,
+  CourseAttendance,
   CourseRequest,
   GradeKind,
   GradeOverride,
   GradesSummary,
   GradingScheme,
+  Page,
   SchemeRequest,
   Semester,
   SemesterRequest,
@@ -24,6 +28,8 @@ export const academicsKeys = {
   courses: (semesterId: string) => ['academics', 'courses', semesterId] as const,
   summary: ['academics', 'grades', 'summary'] as const,
   whatIf: (overrides: GradeOverride[]) => ['academics', 'grades', 'what-if', overrides] as const,
+  attendance: (semesterId: string) => ['academics', 'attendance', semesterId] as const,
+  history: (courseId: string, page: number) => ['academics', 'attendance-history', courseId, page] as const,
 };
 
 function useInvalidateAcademics() {
@@ -191,5 +197,70 @@ export function useWhatIf(overrides: GradeOverride[], enabled: boolean) {
     enabled: enabled && overrides.length > 0,
     placeholderData: keepPreviousData,
     staleTime: 0,
+  });
+}
+
+// ───────────── Attendance ─────────────
+
+export function useSemesterAttendance(semesterId: string | undefined) {
+  return useQuery<CourseAttendance[], ApiError>({
+    queryKey: academicsKeys.attendance(semesterId ?? ''),
+    queryFn: ({ signal }) =>
+      api<CourseAttendance[]>(`/attendance?semesterId=${encodeURIComponent(semesterId ?? '')}`, { signal }),
+    enabled: Boolean(semesterId),
+  });
+}
+
+export const HISTORY_PAGE_SIZE = 10;
+
+export function useAttendanceHistory(courseId: string, page: number, enabled: boolean) {
+  return useQuery<Page<AttendanceRecord>, ApiError>({
+    queryKey: academicsKeys.history(courseId, page),
+    queryFn: ({ signal }) =>
+      api<Page<AttendanceRecord>>(
+        `/courses/${courseId}/attendance/records?page=${page}&size=${HISTORY_PAGE_SIZE}`,
+        { signal },
+      ),
+    enabled,
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function useMarkAttendance() {
+  const invalidate = useInvalidateAcademics();
+  return useMutation<
+    AttendanceRecord,
+    ApiError,
+    { courseId: string; heldOn: string; slot: number; status: AttendanceMark }
+  >({
+    mutationFn: ({ courseId, ...body }) =>
+      api<AttendanceRecord>(`/courses/${courseId}/attendance/records`, { method: 'POST', body }),
+    onSuccess: invalidate,
+  });
+}
+
+export function useChangeMark() {
+  const invalidate = useInvalidateAcademics();
+  return useMutation<AttendanceRecord, ApiError, { recordId: string; status: AttendanceMark }>({
+    mutationFn: ({ recordId, status }) =>
+      api<AttendanceRecord>(`/attendance/records/${recordId}`, { method: 'PUT', body: { status } }),
+    onSuccess: invalidate,
+  });
+}
+
+export function useDeleteMark() {
+  const invalidate = useInvalidateAcademics();
+  return useMutation<void, ApiError, string>({
+    mutationFn: (recordId) => api<void>(`/attendance/records/${recordId}`, { method: 'DELETE' }),
+    onSuccess: invalidate,
+  });
+}
+
+export function useSetBaseline() {
+  const invalidate = useInvalidateAcademics();
+  return useMutation<CourseAttendance, ApiError, { courseId: string; conducted: number; attended: number }>({
+    mutationFn: ({ courseId, ...body }) =>
+      api<CourseAttendance>(`/courses/${courseId}/attendance/baseline`, { method: 'PUT', body }),
+    onSuccess: invalidate,
   });
 }

@@ -1,5 +1,6 @@
 import { http, HttpResponse, type HttpHandler } from 'msw';
 import type {
+  AttendanceMark,
   CourseRequest,
   GradeKind,
   GradeOverride,
@@ -16,6 +17,8 @@ import {
   type AcademicStore,
   type StoredCourse,
 } from './academics';
+import { courseAttendance, todayIn, type StoredRecord } from './attendance';
+import type { SettingsRequest } from '@/features/settings/types';
 import { API, csrfOk, problem } from './http';
 
 /**
@@ -126,7 +129,10 @@ function setCurrent(store: AcademicStore, id: string) {
 
 // ───────────── handlers ─────────────
 
-export function createAcademicsHandlers(storeFor: StoreFor): HttpHandler[] {
+export function createAcademicsHandlers(
+  storeFor: StoreFor,
+  settingsFor: () => SettingsRequest,
+): HttpHandler[] {
   return [
     // Grading schemes
     http.get(
@@ -306,7 +312,9 @@ export function createAcademicsHandlers(storeFor: StoreFor): HttpHandler[] {
         const index = store.semesters.findIndex((s) => s.id === params.id);
         if (index < 0) return notFound();
         store.semesters.splice(index, 1);
-        store.courses = store.courses.filter((c) => c.semesterId !== params.id);
+        const gone = new Set(store.courses.filter((c) => c.semesterId === params.id).map((c) => c.id));
+        store.courses = store.courses.filter((c) => !gone.has(c.id));
+        store.records = store.records.filter((r) => !gone.has(r.courseId));
         return new HttpResponse(null, { status: 204 });
       }),
     ),
@@ -355,6 +363,8 @@ export function createAcademicsHandlers(storeFor: StoreFor): HttpHandler[] {
           attendanceTarget: body.attendanceTarget,
           gradeDefinitionId: null,
           gradeKind: null,
+          baselineConducted: 0,
+          baselineAttended: 0,
         };
         store.courses.push(course);
         return HttpResponse.json(toCourse(store, course), { status: 201 });
@@ -397,7 +407,8 @@ export function createAcademicsHandlers(storeFor: StoreFor): HttpHandler[] {
       withStore(storeFor, (store, _request, params) => {
         const index = store.courses.findIndex((c) => c.id === params.id);
         if (index < 0) return notFound();
-        store.courses.splice(index, 1);
+        const [removed] = store.courses.splice(index, 1);
+        store.records = store.records.filter((r) => r.courseId !== removed!.id);
         return new HttpResponse(null, { status: 204 });
       }),
     ),
@@ -461,6 +472,137 @@ export function createAcademicsHandlers(storeFor: StoreFor): HttpHandler[] {
           overrides.set(o.courseId, o.gradeDefinitionId);
         }
         return HttpResponse.json(summarize(store, overrides));
+      }),
+    ),
+
+    // Attendance (docs/api.md §2.5)
+    http.get(
+      `${API}/attendance`,
+      withStore(storeFor, (store, request) => {
+        const semesterId = new URL(request.url).searchParams.get('semesterId');
+        const semester = semesterId
+          ? store.semesters.find((s) => s.id === semesterId)
+          : store.semesters.find((s) => s.current);
+        if (semesterId && !semester) return notFound();
+        if (!semester) return HttpResponse.json([]);
+        const target = settingsFor().defaultAttendanceTarget;
+        return HttpResponse.json(
+          store.courses
+            .filter((c) => c.semesterId === semester.id)
+            .sort((a, b) => a.name.localeCompare(b.name))
+            .map((c) => courseAttendance(store, c, target)),
+        );
+      }),
+    ),
+
+    http.get(
+      `${API}/courses/:id/attendance`,
+      withStore(storeFor, (store, _request, params) => {
+        const course = store.courses.find((c) => c.id === params.id);
+        if (!course) return notFound();
+        return HttpResponse.json(courseAttendance(store, course, settingsFor().defaultAttendanceTarget));
+      }),
+    ),
+
+    http.get(
+      `${API}/courses/:id/attendance/records`,
+      withStore(storeFor, (store, request, params) => {
+        if (!store.courses.some((c) => c.id === params.id)) return notFound();
+        const url = new URL(request.url);
+        const page = Number(url.searchParams.get('page') ?? '0');
+        const size = Number(url.searchParams.get('size') ?? '20');
+        if (!(size >= 1 && size <= 100)) return invalid('size', 'Must be between 1 and 100.');
+        const all = store.records
+          .filter((r) => r.courseId === params.id)
+          .sort((a, b) => b.heldOn.localeCompare(a.heldOn) || b.slot - a.slot || b.createdAt - a.createdAt);
+        return HttpResponse.json({
+          items: all.slice(page * size, page * size + size).map(({ createdAt: _c, ...r }) => r),
+          page,
+          size,
+          totalItems: all.length,
+          totalPages: Math.ceil(all.length / size),
+        });
+      }),
+    ),
+
+    http.post(
+      `${API}/courses/:id/attendance/records`,
+      withStore(storeFor, async (store, request, params) => {
+        const course = store.courses.find((c) => c.id === params.id);
+        if (!course) return notFound();
+        const body = (await request.json()) as { heldOn?: string; slot?: number; status?: AttendanceMark };
+        const slot = body.slot ?? 1;
+        if (!body.heldOn) return invalid('heldOn', 'Choose the day of the class.');
+        if (!body.status) return invalid('status', 'Choose present, absent or cancelled.');
+        if (!(slot >= 1 && slot <= 12)) return invalid('slot', 'Must be between 1 and 12.');
+        if (body.heldOn > todayIn(settingsFor().timezone)) {
+          return invalid('heldOn', 'You can’t mark a class that hasn’t happened yet.');
+        }
+        if (
+          store.records.some((r) => r.courseId === course.id && r.heldOn === body.heldOn && r.slot === slot)
+        ) {
+          return problem(
+            409,
+            'CONFLICT',
+            'You’ve already marked this class. Change or delete that mark instead.',
+          );
+        }
+        const record: StoredRecord = {
+          id: crypto.randomUUID(),
+          courseId: course.id,
+          heldOn: body.heldOn,
+          slot,
+          status: body.status,
+          createdAt: Date.now(),
+        };
+        store.records.push(record);
+        const { createdAt: _c, ...response } = record;
+        return HttpResponse.json(response, { status: 201 });
+      }),
+    ),
+
+    http.put(
+      `${API}/attendance/records/:id`,
+      withStore(storeFor, async (store, request, params) => {
+        const record = store.records.find((r) => r.id === params.id);
+        if (!record) return notFound();
+        const body = (await request.json()) as { status?: AttendanceMark };
+        if (!body.status) return invalid('status', 'Choose present, absent or cancelled.');
+        record.status = body.status;
+        const { createdAt: _c, ...response } = record;
+        return HttpResponse.json(response);
+      }),
+    ),
+
+    http.delete(
+      `${API}/attendance/records/:id`,
+      withStore(storeFor, (store, _request, params) => {
+        const index = store.records.findIndex((r) => r.id === params.id);
+        if (index < 0) return notFound();
+        store.records.splice(index, 1);
+        return new HttpResponse(null, { status: 204 });
+      }),
+    ),
+
+    http.put(
+      `${API}/courses/:id/attendance/baseline`,
+      withStore(storeFor, async (store, request, params) => {
+        const course = store.courses.find((c) => c.id === params.id);
+        if (!course) return notFound();
+        const body = (await request.json()) as { conducted?: number; attended?: number };
+        for (const field of ['conducted', 'attended'] as const) {
+          const v = body[field];
+          if (typeof v !== 'number' || !Number.isInteger(v) || v < 0 || v > 9999) {
+            return invalid(field, 'Use a whole number from 0 to 9999.');
+          }
+        }
+        if (body.attended! > body.conducted!) {
+          const message = 'You can’t have attended more classes than were held.';
+          return problem(422, 'RULE_VIOLATION', message, { errors: [{ field: 'attended', message }] });
+        }
+        course.baselineConducted = body.conducted!;
+        course.baselineAttended = body.attended!;
+        return HttpResponse.json(courseAttendance(store, course, settingsFor().defaultAttendanceTarget));
       }),
     ),
   ];

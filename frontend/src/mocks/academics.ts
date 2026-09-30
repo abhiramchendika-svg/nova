@@ -8,6 +8,7 @@ import type {
   GradingScheme,
   Semester,
 } from '@/features/academics/types';
+import type { StoredRecord } from './attendance';
 
 /**
  * In-memory academics store for the mock API (tests and `npm run dev:mock`).
@@ -79,16 +80,19 @@ export const PRESETS: GradingScheme[] = [
 export interface StoredCourse extends Omit<Course, 'grade'> {
   gradeDefinitionId: string | null;
   gradeKind: GradeKind | null;
+  baselineConducted: number;
+  baselineAttended: number;
 }
 
 export interface AcademicStore {
   schemes: GradingScheme[]; // the user's own schemes (presets are shared)
   semesters: Semester[];
   courses: StoredCourse[];
+  records: StoredRecord[];
 }
 
 export function createAcademicStore(): AcademicStore {
-  return { schemes: [], semesters: [], courses: [] };
+  return { schemes: [], semesters: [], courses: [], records: [] };
 }
 
 export function visibleSchemes(store: AcademicStore): GradingScheme[] {
@@ -106,7 +110,7 @@ export function findGrade(store: AcademicStore, gradeId: string | null): GradeDe
 }
 
 export function toCourse(store: AcademicStore, c: StoredCourse): Course {
-  const { gradeDefinitionId, gradeKind, ...rest } = c;
+  const { gradeDefinitionId, gradeKind, baselineConducted: _bc, baselineAttended: _ba, ...rest } = c;
   const definition = findGrade(store, gradeDefinitionId);
   const courseGrade: CourseGrade | null =
     definition && gradeKind
@@ -285,6 +289,8 @@ export function seedDemoAcademics(store: AcademicStore): void {
       attendanceTarget: null,
       gradeDefinitionId: label ? byLabel(label) : null,
       gradeKind: kind,
+      baselineConducted: 0,
+      baselineAttended: 0,
     });
   };
   add(s1, 'MAT 101', 'Calculus', 4, 'A', 'FINAL');
@@ -296,4 +302,15 @@ export function seedDemoAcademics(store: AcademicStore): void {
   add(s3, 'CSE 201', 'Database Systems', 4, 'A+', 'EXPECTED');
   add(s3, 'CSE 203', 'Operating Systems', 4, null, null);
   add(s3, 'CSE 205', 'Compilers', 3, null, null);
+
+  // Attendance starting counts for the current semester (with a 75% default target, see browser.ts):
+  // Database Systems 26/30 is safe, Compilers 16/20 is at risk, Operating Systems 22/30 is below
+  const baseline = (name: string, conducted: number, attended: number) => {
+    const course = store.courses.find((c) => c.name === name)!;
+    course.baselineConducted = conducted;
+    course.baselineAttended = attended;
+  };
+  baseline('Database Systems', 30, 26);
+  baseline('Compilers', 20, 16);
+  baseline('Operating Systems', 30, 22);
 }
