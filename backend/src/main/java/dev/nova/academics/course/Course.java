@@ -60,7 +60,7 @@ public class Course extends AuditedEntity {
     @Column(name = "attendance_target", precision = 5, scale = 2)
     private BigDecimal attendanceTarget;
 
-    // Attendance baseline, edited from Phase 2.2
+    // Attendance baseline (see setAttendanceBaseline)
     @Column(name = "baseline_conducted", nullable = false)
     private int baselineConducted;
 
@@ -91,6 +91,15 @@ public class Course extends AuditedEntity {
         this.colorHue = colorHue;
         this.notes = notes;
         this.attendanceTarget = attendanceTarget;
+    }
+
+    /** The counts a student starts from, e.g. "28 of 34" copied from the university portal. */
+    public void setAttendanceBaseline(int conducted, int attended) {
+        if (conducted < 0 || attended < 0 || attended > conducted) {
+            throw new IllegalArgumentException("Need 0 ≤ attended ≤ conducted");
+        }
+        this.baselineConducted = conducted;
+        this.baselineAttended = attended;
     }
 
     public void grade(UUID gradeDefinitionId, GradeKind kind) {

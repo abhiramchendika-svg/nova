@@ -176,26 +176,35 @@ Legend: 🔓 public · everything else requires a session. **P** marks paginated
 
 | Method | Path | Purpose |
 |---|---|---|
-| GET | `/api/v1/attendance?semesterId=` | Per-course stats (see below) |
-| GET | `/api/v1/courses/{id}/attendance/records` **P** | History, newest first |
-| POST | `/api/v1/courses/{id}/attendance/records` | Mark one class: `{ "heldOn": "2026-09-26", "slot": 1, "status": "ABSENT" }`. `409` if that slot is already marked; use PUT to change it. |
-| PUT / DELETE | `/api/v1/attendance/records/{recordId}` | Change status / remove |
-| PUT | `/api/v1/courses/{id}/attendance/baseline` | `{ "conducted": 34, "attended": 28 }`. `422` if attended > conducted. |
+| GET | `/api/v1/attendance?semesterId=` | Per-course stats for a semester (the current one by default; `[]` if there's none) |
+| GET | `/api/v1/courses/{id}/attendance` | One course's stats |
+| GET | `/api/v1/courses/{id}/attendance/records` **P** | History, newest first (`?page=0&size=20`, size ≤ 100) |
+| POST | `/api/v1/courses/{id}/attendance/records` | Mark one class → `201`: `{ "heldOn": "2026-09-26", "slot": 1, "status": "ABSENT" }`. `slot` defaults to 1. |
+| PUT | `/api/v1/attendance/records/{recordId}` | Change the status: `{ "status": "PRESENT" }` |
+| DELETE | `/api/v1/attendance/records/{recordId}` | Remove a mark → `204` |
+| PUT | `/api/v1/courses/{id}/attendance/baseline` | `{ "conducted": 34, "attended": 28 }` → the recalculated stats |
+
+- `status` is `PRESENT`, `ABSENT` or `CANCELLED`. Cancelled classes are kept in the history but never counted.
+- Errors: `409` if that course, day and slot is already marked (change or delete the mark instead); `400` for a date in the future (in the user's timezone) or a slot outside 1–12; `422 RULE_VIOLATION` if a baseline has attended > conducted. Another user's course or record returns `404`.
 
 **Per-course stats object**
 
 ```json
 {
-  "courseId": "…", "courseName": "Database Systems",
-  "conducted": 34, "attended": 28, "percentage": 82.35,
-  "target": 75.00, "targetSource": "SEMESTER",
-  "canMiss": 3, "needToAttend": 0,
+  "courseId": "…", "courseCode": "CSE 201", "courseName": "Database Systems",
+  "baselineConducted": 34, "baselineAttended": 28,
+  "present": 0, "absent": 1, "cancelled": 1,
+  "conducted": 35, "attended": 28, "percentage": 80.00,
+  "target": 75.00, "targetSource": "DEFAULT",
+  "canMiss": 2, "needToAttend": 0,
   "status": "SAFE"
 }
 ```
 
-- `status` is one of `SAFE`, `AT_RISK` (can miss ≤ 1), `BELOW`, or `NO_TARGET`.
-- With no target set, `target`, `canMiss` and `needToAttend` are `null` and `status` is `NO_TARGET`. NOVA never invents a policy.
+- `conducted` and `attended` include the baseline; `present`, `absent` and `cancelled` count marked classes only.
+- The target comes from the course, else its semester, else the user's default (`targetSource`: `COURSE`, `SEMESTER` or `DEFAULT`).
+- `status`: `SAFE`, `AT_RISK` (at or above target but can miss ≤ 1 more), `BELOW`, `NO_TARGET`, or `NO_CLASSES` (a target is set but nothing has been held yet; `percentage` is `null`).
+- With no target anywhere, `target`, `targetSource`, `canMiss` and `needToAttend` are `null` and `status` is `NO_TARGET`. NOVA never invents a policy.
 
 ### 2.6 Assignments (Phase 2)
 

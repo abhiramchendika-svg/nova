@@ -20,8 +20,11 @@
 > | `V1__create_users.sql` | `users`, `user_settings` | 1 |
 > | `V2__create_spring_session.sql` | `spring_session`, `spring_session_attributes` | 1 |
 > | `V3__create_grading_semesters_courses.sql` | `grading_schemes`, `grade_definitions`, `semesters`, `courses` + the three built-in presets | 2.1 |
+> | `V4__create_attendance_records.sql` | `attendance_records` | 2.2 |
 >
 > Differences from the draft in V3: `ordinal`, `position` and `color_hue` are `integer` rather than `smallint` (simpler Java mapping, same checks); `notes` is `varchar(2000)`; `grade_definitions` has a unique `(scheme_id, position)` too, and both of its unique constraints are **deferred to commit** so a scheme edit can swap labels or order between grades in one transaction; `courses.grade_definition_id` has its own index. V3 was applied to PostgreSQL 16 and its constraints were exercised directly (cross-tenant course, second current semester, duplicate ordinal, half-set grade, deleting an in-use scheme, label swap at commit, cascades): all behaved as designed.
+>
+> V4: `slot` is `integer`; the unique `(course_id, held_on, slot)` index replaces the planned `ix_attendance_course_date` (same leading columns), plus `ix_attendance_user`. Applied to PostgreSQL 16 and exercised (duplicate slot, second slot same day, cross-tenant record, bad status/slot, cascade on course delete).
 
 ## 1. Design principles
 
