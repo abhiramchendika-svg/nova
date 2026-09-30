@@ -1,5 +1,6 @@
 import { cn } from '@/lib/cn';
 import { DomainDot, type Domain } from '@/components/ui/DomainDot';
+import { placeDay } from '@/features/academics/timetableLayout';
 import { fitRange, formatMinutes, hourTicks, percentAt, toMinutes } from './timeScale';
 
 export interface StripBlock {
@@ -70,6 +71,13 @@ export function TodayStrip({
   const gridTicks = hourTicks(range, 1);
   const labelTicks = hourTicks(range, 2);
   const nowMin = now ? toMinutes(now) : null;
+  // Overlapping blocks in a lane share its height instead of covering each other
+  const classLanes = placeDay(
+    blocks.filter((b) => b.kind === 'class').map((b) => ({ id: b.id, startsAt: b.start, endsAt: b.end })),
+  );
+  const taskLanes = placeDay(
+    blocks.filter((b) => b.kind === 'task').map((b) => ({ id: b.id, startsAt: b.start, endsAt: b.end })),
+  );
   const showNow = nowMin !== null && nowMin >= range.startMin && nowMin <= range.endMin;
 
   const agenda: AgendaItem[] = [
@@ -160,17 +168,24 @@ export function TodayStrip({
             const left = percentAt(startMin, range);
             const width = percentAt(endMin, range) - left;
             const past = nowMin !== null && endMin <= nowMin;
+            const place = (b.kind === 'class' ? classLanes : taskLanes).get(b.id) ?? { lane: 0, lanes: 1 };
+            const laneTop = b.kind === 'class' ? 8 : 80;
+            const laneHeight = 58 / place.lanes;
             return (
               <div
                 key={b.id}
                 title={`${b.title} · ${b.start}–${b.end}${b.meta ? ` · ${b.meta}` : ''}`}
                 className={cn(
-                  'absolute h-[58px] overflow-hidden rounded-sm border px-1.5 py-1.5',
-                  b.kind === 'class' ? 'top-2' : 'top-[80px]',
+                  'absolute overflow-hidden rounded-sm border px-1.5 py-1',
                   blockTone[b.domain],
                   past && 'opacity-55',
                 )}
-                style={{ left: `${left}%`, width: `calc(${width}% - 3px)` }}
+                style={{
+                  left: `${left}%`,
+                  width: `calc(${width}% - 3px)`,
+                  top: `${laneTop + place.lane * laneHeight}px`,
+                  height: `${laneHeight - (place.lanes > 1 ? 2 : 0)}px`,
+                }}
               >
                 <span className="block truncate text-[12px] font-semibold leading-tight">
                   {b.shortTitle ?? b.title}

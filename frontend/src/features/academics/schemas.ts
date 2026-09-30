@@ -1,6 +1,13 @@
 import { z } from 'zod';
 import { zonedToInstant } from '@/lib/dates';
-import type { AssignmentRequest, CourseRequest, ExamRequest, SchemeRequest, SemesterRequest } from './types';
+import type {
+  AssignmentRequest,
+  CourseRequest,
+  ExamRequest,
+  SchemeRequest,
+  SemesterRequest,
+  TimetableEntryRequest,
+} from './types';
 
 /**
  * Form schemas, kept in step with the backend's Bean Validation (docs/api.md §2.2–2.4).
@@ -235,3 +242,36 @@ export const topicSchema = z
   .trim()
   .min(1, 'Name the topic.')
   .max(160, 'Keep it under 160 characters.');
+
+// ───────────── Timetable (docs/api.md §2.8) ─────────────
+
+const hhmm = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+export const entrySchema = z
+  .object({
+    courseId: z.string().min(1, 'Choose a course.'),
+    dayOfWeek: z.string().regex(/^[1-7]$/, 'Choose a day.'),
+    startsAt: z.string().regex(hhmm, 'Use a time like 09:00.'),
+    endsAt: z.string().regex(hhmm, 'Use a time like 09:50.'),
+    kind: z.enum(['LECTURE', 'LAB', 'TUTORIAL', 'OTHER']),
+    location: z.string().trim().max(60, 'Keep it under 60 characters.'),
+    instructor: z.string().trim().max(120, 'Keep it under 120 characters.'),
+  })
+  .refine((v) => !hhmm.test(v.startsAt) || !hhmm.test(v.endsAt) || v.endsAt > v.startsAt, {
+    path: ['endsAt'],
+    message: 'A class must end after it starts.',
+  });
+
+export type EntryValues = z.infer<typeof entrySchema>;
+
+export function toEntryRequest(v: EntryValues): TimetableEntryRequest {
+  return {
+    courseId: v.courseId,
+    dayOfWeek: Number(v.dayOfWeek),
+    startsAt: v.startsAt,
+    endsAt: v.endsAt,
+    kind: v.kind,
+    location: v.location.trim() || null,
+    instructor: v.instructor.trim() || null,
+  };
+}

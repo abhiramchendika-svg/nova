@@ -1,5 +1,8 @@
 import type {
   Assignment,
+  ClassKind,
+  TimetableEntry,
+  TimetableEntryRequest,
   ExamDetail,
   ExamRequest,
   AssignmentPriority,
@@ -52,6 +55,17 @@ export interface StoredTopic {
   position: number;
   doneAt: string | null;
   createdAt: number;
+}
+
+export interface StoredEntry {
+  id: string;
+  courseId: string;
+  dayOfWeek: number;
+  startsAt: string;
+  endsAt: string;
+  kind: ClassKind;
+  location: string | null;
+  instructor: string | null;
 }
 
 export interface StoredResource extends CourseResource {
@@ -235,6 +249,87 @@ export function removeCourseWork(store: AcademicStore, courseIds: Set<string>): 
   store.exams = store.exams.filter((e) => !examIds.has(e.id));
   store.topics = store.topics.filter((t) => !examIds.has(t.examId));
   store.resources = store.resources.filter((r) => !courseIds.has(r.courseId));
+  store.timetable = store.timetable.filter((e) => !courseIds.has(e.courseId));
+}
+
+// ───────────── Timetable (ports of TimetableRules.java) ─────────────
+
+/** Same weekday and intersecting times; touching end-to-start is not an overlap ("HH:mm" compares as text). */
+export function overlapsOf(entries: StoredEntry[]): Map<string, string[]> {
+  const result = new Map<string, string[]>();
+  for (const a of entries) {
+    result.set(
+      a.id,
+      entries
+        .filter(
+          (b) =>
+            b.id !== a.id && b.dayOfWeek === a.dayOfWeek && a.startsAt < b.endsAt && b.startsAt < a.endsAt,
+        )
+        .map((b) => b.id)
+        .sort(),
+    );
+  }
+  return result;
+}
+
+/** Each course's classes that day numbered 1, 2 … by start time, ties by id. */
+export function slotNumbers(dayEntries: StoredEntry[]): Map<string, number> {
+  const slots = new Map<string, number>();
+  const byCourse = new Map<string, StoredEntry[]>();
+  for (const e of dayEntries) byCourse.set(e.courseId, [...(byCourse.get(e.courseId) ?? []), e]);
+  for (const list of byCourse.values()) {
+    [...list]
+      .sort((a, b) => a.startsAt.localeCompare(b.startsAt) || a.id.localeCompare(b.id))
+      .forEach((e, i) => slots.set(e.id, i + 1));
+  }
+  return slots;
+}
+
+/** A semester's entries in week order, with overlaps worked out across that semester. */
+export function semesterWeek(store: AcademicStore, semesterId: string): TimetableEntry[] {
+  const courseIds = new Set(store.courses.filter((c) => c.semesterId === semesterId).map((c) => c.id));
+  const entries = store.timetable
+    .filter((e) => courseIds.has(e.courseId))
+    .sort(
+      (a, b) =>
+        a.dayOfWeek - b.dayOfWeek ||
+        a.startsAt.localeCompare(b.startsAt) ||
+        a.endsAt.localeCompare(b.endsAt) ||
+        a.id.localeCompare(b.id),
+    );
+  const overlaps = overlapsOf(entries);
+  return entries.map((e) => {
+    const course = store.courses.find((c) => c.id === e.courseId);
+    return {
+      ...e,
+      courseCode: course?.code ?? null,
+      courseName: course?.name ?? '',
+      colorHue: course?.colorHue ?? null,
+      overlapsWith: overlaps.get(e.id) ?? [],
+    };
+  });
+}
+
+const CLASS_KINDS: ClassKind[] = ['LECTURE', 'LAB', 'TUTORIAL', 'OTHER'];
+const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+/** TimetableDtos.EntryRequest plus the service's end-after-start rule. */
+export function entryProblem(
+  store: AcademicStore,
+  body: Partial<TimetableEntryRequest>,
+): [string, string] | null {
+  if (!body.courseId) return ['courseId', 'Choose a course.'];
+  if (!Number.isInteger(body.dayOfWeek) || body.dayOfWeek! < 1 || body.dayOfWeek! > 7) {
+    return ['dayOfWeek', 'Use 1 (Monday) to 7 (Sunday).'];
+  }
+  if (!body.startsAt || !TIME.test(body.startsAt)) return ['startsAt', 'Use a time like 09:00.'];
+  if (!body.endsAt || !TIME.test(body.endsAt)) return ['endsAt', 'Use a time like 09:50.'];
+  if (body.kind != null && !CLASS_KINDS.includes(body.kind)) return ['kind', 'Choose a kind of class.'];
+  if (body.location && body.location.length > 60) return ['location', 'Keep it under 60 characters.'];
+  if (body.instructor && body.instructor.length > 120) return ['instructor', 'Keep it under 120 characters.'];
+  if (!store.courses.some((c) => c.id === body.courseId)) return ['courseId', 'Choose one of your courses.'];
+  if (body.endsAt <= body.startsAt) return ['endsAt', 'A class must end after it starts.'];
+  return null;
 }
 
 // ───────────── Demo data for `npm run dev:mock` ─────────────
@@ -342,4 +437,42 @@ export function seedDemoCoursework(store: AcademicStore, now: Date = new Date())
     });
   link('Database Systems', 'Syllabus', 'https://example.edu/cse201/syllabus', 1);
   link('Database Systems', 'Lecture recordings', 'https://example.edu/cse201/lectures', 2);
+
+  // A Monday-to-Friday week; Wednesday's OS lab clashes with a DBMS tutorial on purpose
+  let t = 0;
+  const slot = (
+    courseName: string,
+    dayOfWeek: number,
+    startsAt: string,
+    endsAt: string,
+    kind: ClassKind = 'LECTURE',
+    location: string | null = 'Room 204',
+  ) => {
+    t += 1;
+    store.timetable.push({
+      id: `00000000-0000-4000-8000-0000000dd${String(t).padStart(3, '0')}`,
+      courseId: course(courseName),
+      dayOfWeek,
+      startsAt,
+      endsAt,
+      kind,
+      location,
+      instructor: null,
+    });
+  };
+  slot('Database Systems', 1, '09:00', '09:50');
+  slot('Operating Systems', 1, '10:00', '10:50');
+  slot('Compilers', 1, '14:00', '16:00', 'LAB', 'Lab 2');
+  slot('Operating Systems', 2, '09:00', '09:50');
+  slot('Database Systems', 2, '11:00', '11:50');
+  slot('Database Systems', 3, '09:00', '09:50');
+  slot('Compilers', 3, '10:00', '10:50');
+  slot('Operating Systems', 3, '14:00', '16:00', 'LAB', 'Lab 1');
+  slot('Database Systems', 3, '15:00', '15:50', 'TUTORIAL', 'Room 110');
+  slot('Compilers', 4, '09:00', '09:50');
+  slot('Operating Systems', 4, '11:00', '11:50');
+  slot('Database Systems', 4, '14:00', '16:00', 'LAB', 'Lab 3');
+  slot('Database Systems', 5, '10:00', '10:50');
+  slot('Compilers', 5, '11:00', '11:50');
+  slot('Operating Systems', 5, '12:00', '12:50');
 }

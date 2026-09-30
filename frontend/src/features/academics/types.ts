@@ -279,4 +279,54 @@ export interface CourseOverview {
   overdueCount: number;
   upcomingExams: ExamSummary[];
   resources: CourseResource[];
+  /** The course's weekly classes, Monday first. */
+  timetable: TimetableEntry[];
+}
+
+// ───────────── Timetable (docs/api.md §2.8) ─────────────
+
+export type ClassKind = 'LECTURE' | 'LAB' | 'TUTORIAL' | 'OTHER';
+
+export interface TimetableEntry {
+  id: string;
+  courseId: string;
+  courseCode: string | null;
+  courseName: string;
+  colorHue: number | null;
+  /** ISO weekday: 1 = Monday … 7 = Sunday. */
+  dayOfWeek: number;
+  /** "HH:mm" on the user's wall clock. */
+  startsAt: string;
+  endsAt: string;
+  kind: ClassKind;
+  location: string | null;
+  instructor: string | null;
+  /** Same-day classes whose times intersect this one. */
+  overlapsWith: string[];
+}
+
+export interface TimetableEntryRequest {
+  courseId: string;
+  dayOfWeek: number;
+  startsAt: string;
+  endsAt: string;
+  kind: ClassKind;
+  location: string | null;
+  instructor: string | null;
+}
+
+export interface DayClass {
+  entry: TimetableEntry;
+  /** This course's nth class that day: the attendance slot. */
+  slot: number;
+  attendance: { recordId: string; status: AttendanceMark } | null;
+}
+
+export interface TimetableDay {
+  date: string;
+  dayOfWeek: number;
+  semesterId: string | null;
+  /** False when there's no current semester or the date is outside its dates. */
+  inTerm: boolean;
+  classes: DayClass[];
 }

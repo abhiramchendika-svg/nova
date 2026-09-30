@@ -6,6 +6,7 @@ import type {
   AttendanceMark,
   CourseRequest,
   ExamRequest,
+  TimetableEntryRequest,
   GradeKind,
   GradeOverride,
   GradingScheme,
@@ -25,6 +26,9 @@ import { courseAttendance, todayIn, type StoredRecord } from './attendance';
 import {
   applyProgress,
   assignmentProblem,
+  entryProblem,
+  semesterWeek,
+  slotNumbers,
   examProblem,
   orderedTopics,
   renumber,
@@ -35,6 +39,7 @@ import {
   toAssignment,
   toExamSummary,
   type StoredAssignment,
+  type StoredEntry,
   type StoredExam,
   type StoredResource,
 } from './coursework';
@@ -827,6 +832,7 @@ export function createAcademicsHandlers(
           overdueCount: open.filter((a) => Date.parse(a.dueAt) < now.getTime()).length,
           upcomingExams: exams.slice(0, 3).map((e) => toExamSummary(store, e, now, tz)),
           resources: resourcesOf(store, course.id),
+          timetable: semesterWeek(store, course.semesterId).filter((e) => e.courseId === course.id),
         });
       }),
     ),
@@ -998,7 +1004,120 @@ export function createAcademicsHandlers(
         return new HttpResponse(null, { status: 204 });
       }),
     ),
+
+    // Timetable (docs/api.md §2.8)
+    http.get(
+      `${API}/timetable`,
+      withStore(storeFor, (store, request) => {
+        const semesterId = new URL(request.url).searchParams.get('semesterId');
+        const semester = semesterId
+          ? store.semesters.find((s) => s.id === semesterId)
+          : store.semesters.find((s) => s.current);
+        if (semesterId && !semester) return notFound();
+        return HttpResponse.json(semester ? semesterWeek(store, semester.id) : []);
+      }),
+    ),
+
+    http.get(
+      `${API}/timetable/day`,
+      withStore(storeFor, (store, request) => {
+        const date = new URL(request.url).searchParams.get('date') ?? todayIn(settingsFor().timezone);
+        const weekday = new Date(`${date}T00:00:00Z`).getUTCDay() || 7;
+        const semester = store.semesters.find((s) => s.current);
+        const inTerm =
+          Boolean(semester) &&
+          (!semester!.startsOn || date >= semester!.startsOn) &&
+          (!semester!.endsOn || date <= semester!.endsOn);
+        if (!semester || !inTerm) {
+          return HttpResponse.json({
+            date,
+            dayOfWeek: weekday,
+            semesterId: semester?.id ?? null,
+            inTerm: false,
+            classes: [],
+          });
+        }
+        const today = semesterWeek(store, semester.id)
+          .filter((e) => e.dayOfWeek === weekday)
+          .sort((a, b) => a.startsAt.localeCompare(b.startsAt) || a.endsAt.localeCompare(b.endsAt));
+        const slots = slotNumbers(today);
+        return HttpResponse.json({
+          date,
+          dayOfWeek: weekday,
+          semesterId: semester.id,
+          inTerm: true,
+          classes: today.map((entry) => {
+            const slot = slots.get(entry.id)!;
+            const mark = store.records.find(
+              (r) => r.courseId === entry.courseId && r.heldOn === date && r.slot === slot,
+            );
+            return { entry, slot, attendance: mark ? { recordId: mark.id, status: mark.status } : null };
+          }),
+        });
+      }),
+    ),
+
+    http.post(
+      `${API}/timetable`,
+      withStore(storeFor, async (store, request) => {
+        const body = (await request.json()) as Partial<TimetableEntryRequest>;
+        const error = entryProblem(store, body);
+        if (error) return invalid(...error);
+        if (store.timetable.filter((e) => e.courseId === body.courseId).length >= 20) {
+          const message = 'A course can have up to 20 weekly classes.';
+          return problem(422, 'RULE_VIOLATION', message, { errors: [{ field: 'courseId', message }] });
+        }
+        const entry: StoredEntry = {
+          id: crypto.randomUUID(),
+          courseId: body.courseId!,
+          dayOfWeek: body.dayOfWeek!,
+          startsAt: body.startsAt!,
+          endsAt: body.endsAt!,
+          kind: body.kind ?? 'LECTURE',
+          location: blankToNull(body.location),
+          instructor: blankToNull(body.instructor),
+        };
+        store.timetable.push(entry);
+        return HttpResponse.json(entryResponse(store, entry), { status: 201 });
+      }),
+    ),
+
+    http.put(
+      `${API}/timetable/:id`,
+      withStore(storeFor, async (store, request, params) => {
+        const entry = store.timetable.find((e) => e.id === params.id);
+        if (!entry) return notFound();
+        const body = (await request.json()) as Partial<TimetableEntryRequest>;
+        const error = entryProblem(store, body);
+        if (error) return invalid(...error);
+        Object.assign(entry, {
+          courseId: body.courseId!,
+          dayOfWeek: body.dayOfWeek!,
+          startsAt: body.startsAt!,
+          endsAt: body.endsAt!,
+          kind: body.kind ?? 'LECTURE',
+          location: blankToNull(body.location),
+          instructor: blankToNull(body.instructor),
+        });
+        return HttpResponse.json(entryResponse(store, entry));
+      }),
+    ),
+
+    http.delete(
+      `${API}/timetable/:id`,
+      withStore(storeFor, (store, _request, params) => {
+        const index = store.timetable.findIndex((e) => e.id === params.id);
+        if (index < 0) return notFound();
+        store.timetable.splice(index, 1);
+        return new HttpResponse(null, { status: 204 });
+      }),
+    ),
   ];
+}
+
+function entryResponse(store: AcademicStore, entry: StoredEntry) {
+  const semesterId = store.courses.find((c) => c.id === entry.courseId)!.semesterId;
+  return semesterWeek(store, semesterId).find((e) => e.id === entry.id)!;
 }
 
 function resourcesOf(store: AcademicStore, courseId: string) {

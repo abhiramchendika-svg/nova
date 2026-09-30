@@ -23,6 +23,9 @@ import type {
   ResourceRequest,
   SchemeRequest,
   Semester,
+  TimetableDay,
+  TimetableEntry,
+  TimetableEntryRequest,
   SemesterRequest,
 } from './types';
 
@@ -44,6 +47,8 @@ export const academicsKeys = {
   overview: (courseId: string) => ['academics', 'course-overview', courseId] as const,
   exams: (filter: { upcoming: boolean; courseId?: string }) => ['academics', 'exams', filter] as const,
   exam: (id: string) => ['academics', 'exam', id] as const,
+  timetable: (semesterId: string | null) => ['academics', 'timetable', semesterId] as const,
+  day: (date: string | null) => ['academics', 'timetable-day', date] as const,
 };
 
 function useInvalidateAcademics() {
@@ -456,5 +461,49 @@ export function useDeleteTopic() {
     mutationFn: ({ examId, topicId }) =>
       api<void>(`/exams/${examId}/topics/${topicId}`, { method: 'DELETE' }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: academicsKeys.all }),
+  });
+}
+
+// ───────────── Timetable ─────────────
+
+/** A semester's week (the current semester when {@code semesterId} is null). */
+export function useTimetable(semesterId: string | null, enabled = true) {
+  const query = semesterId ? `?semesterId=${encodeURIComponent(semesterId)}` : '';
+  return useQuery<TimetableEntry[], ApiError>({
+    queryKey: academicsKeys.timetable(semesterId),
+    queryFn: ({ signal }) => api<TimetableEntry[]>(`/timetable${query}`, { signal }),
+    enabled,
+  });
+}
+
+/** A date's classes with their attendance slot and marks (today in the user's timezone when null). */
+export function useTimetableDay(date: string | null = null) {
+  return useQuery<TimetableDay, ApiError>({
+    queryKey: academicsKeys.day(date),
+    queryFn: ({ signal }) => api<TimetableDay>(`/timetable/day${date ? `?date=${date}` : ''}`, { signal }),
+  });
+}
+
+export function useCreateEntry() {
+  const invalidate = useInvalidateAcademics();
+  return useMutation<TimetableEntry, ApiError, TimetableEntryRequest>({
+    mutationFn: (body) => api<TimetableEntry>('/timetable', { method: 'POST', body }),
+    onSuccess: invalidate,
+  });
+}
+
+export function useUpdateEntry() {
+  const invalidate = useInvalidateAcademics();
+  return useMutation<TimetableEntry, ApiError, { id: string; body: TimetableEntryRequest }>({
+    mutationFn: ({ id, body }) => api<TimetableEntry>(`/timetable/${id}`, { method: 'PUT', body }),
+    onSuccess: invalidate,
+  });
+}
+
+export function useDeleteEntry() {
+  const invalidate = useInvalidateAcademics();
+  return useMutation<void, ApiError, string>({
+    mutationFn: (id) => api<void>(`/timetable/${id}`, { method: 'DELETE' }),
+    onSuccess: invalidate,
   });
 }

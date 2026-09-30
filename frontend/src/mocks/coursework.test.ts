@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { formatMinutes } from '@/features/academics/assignmentText';
-import { applyProgress, normalizeLink, prepOf, urgencyOf, type StoredAssignment } from './coursework';
+import {
+  applyProgress,
+  normalizeLink,
+  overlapsOf,
+  prepOf,
+  slotNumbers,
+  urgencyOf,
+  type StoredAssignment,
+  type StoredEntry,
+} from './coursework';
 
 // The same cases as UrgencyTest.java: 2026-09-30 23:30 in India
 const LATE_EVENING_IST = new Date('2026-09-30T18:00:00Z');
@@ -92,5 +101,46 @@ describe('prep and links', () => {
     expect(formatMinutes(45)).toBe('45 min');
     expect(formatMinutes(120)).toBe('2 h');
     expect(formatMinutes(90)).toBe('1 h 30 min');
+  });
+});
+
+describe('timetable (port of TimetableRules.java)', () => {
+  const entry = (
+    id: string,
+    courseId: string,
+    dayOfWeek: number,
+    startsAt: string,
+    endsAt: string,
+  ): StoredEntry => ({
+    id,
+    courseId,
+    dayOfWeek,
+    startsAt,
+    endsAt,
+    kind: 'LECTURE',
+    location: null,
+    instructor: null,
+  });
+
+  it('flags same-day classes whose times intersect, not ones that only touch', () => {
+    const o = overlapsOf([
+      entry('lecture', 'db', 1, '09:00', '09:50'),
+      entry('lab', 'os', 1, '09:30', '11:00'),
+      entry('after', 'os', 1, '11:00', '12:00'),
+      entry('tuesday', 'db', 2, '09:00', '09:50'),
+    ]);
+    expect(o.get('lecture')).toEqual(['lab']);
+    expect(o.get('lab')).toEqual(['lecture']);
+    expect(o.get('after')).toEqual([]);
+    expect(o.get('tuesday')).toEqual([]);
+  });
+
+  it('numbers each course’s classes that day by start time', () => {
+    const slots = slotNumbers([
+      entry('lab', 'db', 1, '14:00', '16:00'),
+      entry('lecture', 'db', 1, '09:00', '09:50'),
+      entry('os', 'os', 1, '11:00', '11:50'),
+    ]);
+    expect(Object.fromEntries(slots)).toEqual({ lecture: 1, lab: 2, os: 1 });
   });
 });

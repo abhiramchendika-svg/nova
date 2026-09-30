@@ -24,6 +24,7 @@ import { ExamDialog } from './ExamDialog';
 import { daysUntilText, KIND_LABEL, prepText } from './examText';
 import { formatPercent } from './format';
 import { ResourceDialog } from './ResourceDialog';
+import { CLASS_KIND_LABEL, DAY_SHORT } from './timetableText';
 import type { Assignment, CourseOverview, CourseResource } from './types';
 
 const browserZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -257,6 +258,37 @@ function CourseView({ data, timezone }: { data: CourseOverview; timezone: string
 
         <div className="grid gap-4">
           <AttendancePanel data={data} />
+          <Panel
+            title="Weekly classes"
+            domain="academics"
+            action={
+              <Link
+                to={`/app/academics/timetable?semester=${course.semesterId}`}
+                className="text-[12.5px] font-medium text-ink-2 hover:text-ink"
+              >
+                Timetable
+              </Link>
+            }
+          >
+            {data.timetable.length === 0 ? (
+              <p className="text-[13px] text-ink-2">Not on your timetable yet.</p>
+            ) : (
+              <ul aria-label={`Weekly classes for ${course.name}`} className="grid gap-1.5 text-[13px]">
+                {data.timetable.map((e) => (
+                  <li key={e.id} className="flex flex-wrap gap-x-2">
+                    <span className="w-9 font-medium text-ink">{DAY_SHORT[e.dayOfWeek]}</span>
+                    <span className="font-mono tabular text-ink">
+                      {e.startsAt}–{e.endsAt}
+                    </span>
+                    <span className="text-ink-2">
+                      {CLASS_KIND_LABEL[e.kind]}
+                      {e.location && <> · {e.location}</>}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Panel>
           <LinksPanel courseId={course.id} resources={data.resources} />
         </div>
       </div>

@@ -53,6 +53,20 @@ describe('Course page', () => {
     expect(exams).toHaveTextContent('Mid-semester 1In 9 days');
     expect(exams).toHaveTextContent('2 of 4 topics ready (50%)');
 
+    const weekly = await panel('Weekly classes');
+    expect(
+      within(weekly)
+        .getAllByRole('listitem')
+        .map((li) => li.textContent),
+    ).toEqual([
+      'Mon09:00–09:50Lecture · Room 204',
+      'Tue11:00–11:50Lecture · Room 204',
+      'Wed09:00–09:50Lecture · Room 204',
+      'Wed15:00–15:50Tutorial · Room 110',
+      'Thu14:00–16:00Lab · Lab 3',
+      'Fri10:00–10:50Lecture · Room 204',
+    ]);
+
     const links = await panel('Links');
     const syllabus = within(links).getByRole('link', { name: /Syllabus/ });
     expect(syllabus).toHaveAttribute('href', 'https://example.edu/cse201/syllabus');

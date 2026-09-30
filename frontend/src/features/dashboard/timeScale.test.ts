@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatBriefDate } from './format';
+import { formatBriefDate, greetingFor } from './format';
 import { fitRange, formatMinutes, hourTicks, percentAt, toMinutes } from './timeScale';
 
 describe('toMinutes / formatMinutes', () => {
@@ -65,5 +65,14 @@ describe('formatBriefDate', () => {
     const instant = new Date('2026-09-29T19:00:00Z');
     expect(formatBriefDate(instant, 'en-US', 'Asia/Kolkata')).toBe('WED 30 SEP');
     expect(formatBriefDate(instant, 'en-US', 'UTC')).toBe('TUE 29 SEP');
+  });
+});
+
+describe('greetingFor', () => {
+  it('uses the clock in the user’s timezone', () => {
+    const instant = new Date('2026-09-30T05:00:00Z'); // 10:30 in India, 05:00 in UTC, 22:00 the day before in LA
+    expect(greetingFor(instant, 'Asia/Kolkata')).toBe('Good morning');
+    expect(greetingFor(new Date('2026-09-30T09:00:00Z'), 'Asia/Kolkata')).toBe('Good afternoon');
+    expect(greetingFor(instant, 'America/Los_Angeles')).toBe('Good evening');
   });
 });

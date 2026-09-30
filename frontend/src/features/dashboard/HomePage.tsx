@@ -1,46 +1,50 @@
 import { ArrowRight } from 'lucide-react';
 import { Link } from 'react-router';
 import { EmptyState } from '@/components/patterns/EmptyState';
-import { ButtonLink } from '@/components/ui/Button';
 import { DomainDot, type Domain } from '@/components/ui/DomainDot';
 import { Panel } from '@/components/ui/Panel';
+import { useTimetableDay } from '@/features/academics/api';
 import { useCurrentUser } from '@/features/auth/api';
+import { useSettings } from '@/features/settings/api';
+import { localParts } from '@/lib/dates';
 import { formatBriefDate, greetingFor } from './format';
+import { TodayClasses } from './TodayClasses';
+import { UpcomingExams } from './UpcomingExams';
 
 /**
- * Home — the Today view. Phase 1 ships the final layout with deliberate empty states;
- * each panel fills in as its feature lands (Academics in Phase 2, Planner in Phase 3,
- * Developer in Phase 4). Layout follows docs/ui-design.md §5.
+ * Home — the Today view. Phase 1 shipped the final layout with deliberate empty states; each
+ * panel fills in as its feature lands (today's classes and exams in Phase 2, planned work in
+ * Phase 3, developer activity in Phase 4). Layout follows docs/ui-design.md §5.
  */
 export function HomePage() {
   const { data: user } = useCurrentUser();
+  const settings = useSettings();
+  const timezone = settings.data?.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
   const now = new Date();
+  const nowTime = localParts(now.toISOString(), timezone).time;
   const firstName = user?.displayName.split(' ')[0] ?? '';
+  const day = useTimetableDay(); // shared with TodayClasses through the query cache
 
   return (
     <div className="animate-enter mx-auto grid max-w-[1360px] gap-5 px-4 py-6 lg:grid-cols-12 lg:px-6">
       <header className="flex flex-wrap items-end justify-between gap-4 lg:col-span-12">
         <div>
-          <p className="font-mono text-[12.5px] uppercase text-ink-3">{formatBriefDate(now)}</p>
-          <h1 className="mt-2 font-display text-[26px] font-semibold leading-tight tracking-[-0.015em] md:text-[30px]">
-            {greetingFor(now)}, {firstName}.
-          </h1>
-          <p className="mt-1.5 text-ink-2">
-            Add your semester and courses, and this page will tell you what needs you each day.
+          <p className="font-mono text-[12.5px] uppercase text-ink-3">
+            {formatBriefDate(now, 'en-US', timezone)}
           </p>
+          <h1 className="mt-2 font-display text-[26px] font-semibold leading-tight tracking-[-0.015em] md:text-[30px]">
+            {greetingFor(now, timezone)}, {firstName}.
+          </h1>
+          {day.data && !day.data.semesterId && (
+            <p className="mt-1.5 text-ink-2">
+              Add your semester and courses, and this page will tell you what needs you each day.
+            </p>
+          )}
         </div>
       </header>
 
       <Panel title="Today" className="lg:col-span-8">
-        <EmptyState
-          title="Your day is clear."
-          description="Once your timetable and tasks are in, today’s classes, planned work and due times line up here on one timeline."
-          action={
-            <ButtonLink to="/app/academics/timetable" size="sm">
-              Add your timetable
-            </ButtonLink>
-          }
-        />
+        <TodayClasses now={nowTime} />
       </Panel>
 
       <Panel title="Needs attention" className="lg:col-span-4">
@@ -86,12 +90,16 @@ export function HomePage() {
         />
       </Panel>
 
-      <Panel title="Exams" className="lg:col-span-4">
-        <EmptyState
-          compact
-          title="No exams scheduled."
-          description="Add an exam to see a countdown and track your preparation topic by topic."
-        />
+      <Panel
+        title="Exams"
+        className="lg:col-span-4"
+        action={
+          <Link to="/app/academics/exams" className="text-[12.5px] font-medium text-ink-2 hover:text-ink">
+            All exams
+          </Link>
+        }
+      >
+        <UpcomingExams />
       </Panel>
     </div>
   );
