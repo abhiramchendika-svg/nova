@@ -33,5 +33,7 @@ export default defineConfig({
     setupFiles: ['./src/test/setup.ts'],
     css: false,
     restoreMocks: true,
+    // Room for a lazy page's first load plus several waits (see src/test/setup.ts)
+    testTimeout: 15_000,
   },
 });

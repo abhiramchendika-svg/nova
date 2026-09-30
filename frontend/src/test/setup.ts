@@ -1,7 +1,11 @@
 import '@testing-library/jest-dom/vitest';
-import { cleanup } from '@testing-library/react';
+import { cleanup, configure } from '@testing-library/react';
 import { afterAll, afterEach, beforeAll, vi } from 'vitest';
 import { server } from './server';
+
+// Pages are lazy-loaded, so the first test to open one also waits for its code to load. The default
+// 1 s wait is too tight for that on slower machines and CI runners; 5 s still fails fast on real bugs.
+configure({ asyncUtilTimeout: 5000 });
 
 // jsdom lacks matchMedia; default to "light OS, narrow viewport". Tests can override per case.
 if (typeof window.matchMedia !== 'function') {
