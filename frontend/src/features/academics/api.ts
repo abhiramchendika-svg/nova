@@ -1,16 +1,23 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, type ApiError } from '@/services/http';
 import type {
+  Assignment,
+  AssignmentFilter,
+  AssignmentRequest,
+  AssignmentStatus,
   AttendanceMark,
   AttendanceRecord,
   Course,
   CourseAttendance,
+  CourseOverview,
   CourseRequest,
+  CourseResource,
   GradeKind,
   GradeOverride,
   GradesSummary,
   GradingScheme,
   Page,
+  ResourceRequest,
   SchemeRequest,
   Semester,
   SemesterRequest,
@@ -30,6 +37,8 @@ export const academicsKeys = {
   whatIf: (overrides: GradeOverride[]) => ['academics', 'grades', 'what-if', overrides] as const,
   attendance: (semesterId: string) => ['academics', 'attendance', semesterId] as const,
   history: (courseId: string, page: number) => ['academics', 'attendance-history', courseId, page] as const,
+  assignments: (filter: AssignmentFilter) => ['academics', 'assignments', filter] as const,
+  overview: (courseId: string) => ['academics', 'course-overview', courseId] as const,
 };
 
 function useInvalidateAcademics() {
@@ -261,6 +270,97 @@ export function useSetBaseline() {
   return useMutation<CourseAttendance, ApiError, { courseId: string; conducted: number; attended: number }>({
     mutationFn: ({ courseId, ...body }) =>
       api<CourseAttendance>(`/courses/${courseId}/attendance/baseline`, { method: 'PUT', body }),
+    onSuccess: invalidate,
+  });
+}
+
+// ───────────── Assignments ─────────────
+
+/** "?status=NOT_STARTED&status=IN_PROGRESS&courseId=…", in the backend's parameter names. */
+export function assignmentQuery(filter: AssignmentFilter): string {
+  const params = new URLSearchParams();
+  for (const status of filter.status ?? []) params.append('status', status);
+  if (filter.courseId) params.set('courseId', filter.courseId);
+  if (filter.priority) params.set('priority', filter.priority);
+  if (filter.sort) params.set('sort', filter.sort);
+  params.set('page', String(filter.page ?? 0));
+  params.set('size', String(filter.size ?? 20));
+  return params.toString();
+}
+
+export function useAssignments(filter: AssignmentFilter, enabled = true) {
+  return useQuery<Page<Assignment>, ApiError>({
+    queryKey: academicsKeys.assignments(filter),
+    queryFn: ({ signal }) => api<Page<Assignment>>(`/assignments?${assignmentQuery(filter)}`, { signal }),
+    enabled,
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function useCreateAssignment() {
+  const invalidate = useInvalidateAcademics();
+  return useMutation<Assignment, ApiError, AssignmentRequest>({
+    mutationFn: (body) => api<Assignment>('/assignments', { method: 'POST', body }),
+    onSuccess: invalidate,
+  });
+}
+
+export function useUpdateAssignment() {
+  const invalidate = useInvalidateAcademics();
+  return useMutation<Assignment, ApiError, { id: string; body: AssignmentRequest }>({
+    mutationFn: ({ id, body }) => api<Assignment>(`/assignments/${id}`, { method: 'PUT', body }),
+    onSuccess: invalidate,
+  });
+}
+
+export function useAssignmentProgress() {
+  const invalidate = useInvalidateAcademics();
+  return useMutation<Assignment, ApiError, { id: string; status?: AssignmentStatus; progressPct?: number }>({
+    mutationFn: ({ id, ...body }) =>
+      api<Assignment>(`/assignments/${id}/progress`, { method: 'PATCH', body }),
+    onSuccess: invalidate,
+  });
+}
+
+export function useDeleteAssignment() {
+  const invalidate = useInvalidateAcademics();
+  return useMutation<void, ApiError, string>({
+    mutationFn: (id) => api<void>(`/assignments/${id}`, { method: 'DELETE' }),
+    onSuccess: invalidate,
+  });
+}
+
+// ───────────── Course page ─────────────
+
+export function useCourseOverview(courseId: string) {
+  return useQuery<CourseOverview, ApiError>({
+    queryKey: academicsKeys.overview(courseId),
+    queryFn: ({ signal }) => api<CourseOverview>(`/courses/${courseId}/overview`, { signal }),
+  });
+}
+
+export function useAddResource() {
+  const invalidate = useInvalidateAcademics();
+  return useMutation<CourseResource, ApiError, { courseId: string; body: ResourceRequest }>({
+    mutationFn: ({ courseId, body }) =>
+      api<CourseResource>(`/courses/${courseId}/resources`, { method: 'POST', body }),
+    onSuccess: invalidate,
+  });
+}
+
+export function useUpdateResource() {
+  const invalidate = useInvalidateAcademics();
+  return useMutation<CourseResource, ApiError, { courseId: string; id: string; body: ResourceRequest }>({
+    mutationFn: ({ courseId, id, body }) =>
+      api<CourseResource>(`/courses/${courseId}/resources/${id}`, { method: 'PUT', body }),
+    onSuccess: invalidate,
+  });
+}
+
+export function useDeleteResource() {
+  const invalidate = useInvalidateAcademics();
+  return useMutation<void, ApiError, { courseId: string; id: string }>({
+    mutationFn: ({ courseId, id }) => api<void>(`/courses/${courseId}/resources/${id}`, { method: 'DELETE' }),
     onSuccess: invalidate,
   });
 }

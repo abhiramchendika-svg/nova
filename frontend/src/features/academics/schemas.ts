@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import type { CourseRequest, SchemeRequest, SemesterRequest } from './types';
+import { zonedToInstant } from '@/lib/dates';
+import type { AssignmentRequest, CourseRequest, SchemeRequest, SemesterRequest } from './types';
 
 /**
  * Form schemas, kept in step with the backend's Bean Validation (docs/api.md §2.2–2.4).
@@ -139,3 +140,47 @@ export function toSchemeRequest(v: SchemeValues): SchemeRequest {
 export function formFieldName(serverField: string): string {
   return serverField.replace(/\[(\d+)\]/g, '.$1');
 }
+
+// ───────────── Assignments and links (docs/api.md §2.4, §2.6) ─────────────
+
+export const assignmentSchema = z.object({
+  courseId: z.string().min(1, 'Choose a course.'),
+  title: z.string().trim().min(1, 'Give the assignment a title.').max(160, 'Keep it under 160 characters.'),
+  dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Choose the due date.'),
+  dueTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Choose a time, like 23:59.'),
+  priority: z.enum(['LOW', 'MEDIUM', 'HIGH']),
+  estimatedMinutes: z
+    .string()
+    .trim()
+    .refine(
+      (v) => v === '' || (/^\d{1,5}$/.test(v) && Number(v) >= 1 && Number(v) <= 10_000),
+      'Use whole minutes from 1 to 10000.',
+    ),
+  description: z.string().max(4000, 'Keep the description under 4000 characters.'),
+});
+
+export type AssignmentValues = z.infer<typeof assignmentSchema>;
+
+/** The due date and time are the student's wall clock, sent as one instant. */
+export function toAssignmentRequest(v: AssignmentValues, timezone: string): AssignmentRequest {
+  return {
+    courseId: v.courseId,
+    title: v.title.trim(),
+    description: v.description.trim() || null,
+    dueAt: zonedToInstant(v.dueDate, v.dueTime, timezone),
+    priority: v.priority,
+    estimatedMinutes: v.estimatedMinutes.trim() ? Number(v.estimatedMinutes) : null,
+  };
+}
+
+export const resourceSchema = z.object({
+  title: z.string().trim().min(1, 'Give the link a title.').max(120, 'Keep it under 120 characters.'),
+  url: z
+    .string()
+    .trim()
+    .min(1, 'Paste the link.')
+    .max(2048, 'That link is too long.')
+    .regex(/^https?:\/\/\S+$/i, 'Use a web link starting with http:// or https://.'),
+});
+
+export type ResourceValues = z.infer<typeof resourceSchema>;

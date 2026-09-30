@@ -1,6 +1,6 @@
 import { Pencil, Plus, Star, Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import { useSearchParams } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
 import { ConfirmDialog } from '@/components/patterns/ConfirmDialog';
 import { EmptyState } from '@/components/patterns/EmptyState';
 import { ErrorState } from '@/components/patterns/ErrorState';
@@ -265,7 +265,12 @@ function CourseList({
                 {course.code && (
                   <span className="mr-2 font-mono text-[12.5px] text-ink-3">{course.code}</span>
                 )}
-                {course.name}
+                <Link
+                  to={`/app/academics/courses/${course.id}`}
+                  className="hover:text-academics-text hover:underline"
+                >
+                  {course.name}
+                </Link>
               </p>
               <p className="text-[12.5px] text-ink-2">
                 <Credits value={course.credits} />

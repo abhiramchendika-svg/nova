@@ -9,6 +9,7 @@ import type {
   Semester,
 } from '@/features/academics/types';
 import type { StoredRecord } from './attendance';
+import type { StoredAssignment, StoredExam, StoredResource, StoredTopic } from './coursework';
 
 /**
  * In-memory academics store for the mock API (tests and `npm run dev:mock`).
@@ -89,10 +90,23 @@ export interface AcademicStore {
   semesters: Semester[];
   courses: StoredCourse[];
   records: StoredRecord[];
+  assignments: StoredAssignment[];
+  exams: StoredExam[];
+  topics: StoredTopic[];
+  resources: StoredResource[];
 }
 
 export function createAcademicStore(): AcademicStore {
-  return { schemes: [], semesters: [], courses: [], records: [] };
+  return {
+    schemes: [],
+    semesters: [],
+    courses: [],
+    records: [],
+    assignments: [],
+    exams: [],
+    topics: [],
+    resources: [],
+  };
 }
 
 export function visibleSchemes(store: AcademicStore): GradingScheme[] {

@@ -161,3 +161,97 @@ export interface Page<T> {
   totalItems: number;
   totalPages: number;
 }
+
+// ───────────── Assignments (docs/api.md §2.6) ─────────────
+
+export type AssignmentStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'SUBMITTED' | 'COMPLETED';
+export type AssignmentPriority = 'LOW' | 'MEDIUM' | 'HIGH';
+export type Urgency = 'OVERDUE' | 'DUE_TODAY' | 'DUE_TOMORROW' | 'THIS_WEEK' | 'LATER';
+
+export interface Assignment {
+  id: string;
+  courseId: string;
+  courseCode: string | null;
+  courseName: string;
+  title: string;
+  description: string | null;
+  /** An instant (ISO, UTC). Shown in the user's timezone. */
+  dueAt: string;
+  priority: AssignmentPriority;
+  status: AssignmentStatus;
+  estimatedMinutes: number | null;
+  progressPct: number;
+  submittedAt: string | null;
+  completedAt: string | null;
+  /** Null for submitted and completed work. */
+  urgency: Urgency | null;
+}
+
+export interface AssignmentRequest {
+  courseId: string;
+  title: string;
+  description: string | null;
+  dueAt: string;
+  priority: AssignmentPriority;
+  estimatedMinutes: number | null;
+}
+
+export interface AssignmentFilter {
+  status?: AssignmentStatus[];
+  courseId?: string;
+  priority?: AssignmentPriority;
+  sort?: 'dueAt,asc' | 'dueAt,desc' | 'createdAt,desc';
+  page?: number;
+  size?: number;
+}
+
+// ───────────── Exams (docs/api.md §2.7) ─────────────
+
+export type ExamKind = 'QUIZ' | 'MIDTERM' | 'FINAL' | 'LAB' | 'OTHER';
+
+export interface Prep {
+  done: number;
+  total: number;
+  /** Whole number; null while the checklist is empty. */
+  percentage: number | null;
+}
+
+export interface ExamSummary {
+  id: string;
+  courseId: string;
+  courseCode: string | null;
+  courseName: string;
+  title: string;
+  kind: ExamKind;
+  startsAt: string;
+  durationMinutes: number | null;
+  location: string | null;
+  /** Calendar days in the user's timezone: 0 today, negative once past. */
+  daysUntil: number;
+  prep: Prep;
+}
+
+// ───────────── Course links and overview (docs/api.md §2.4) ─────────────
+
+export interface CourseResource {
+  id: string;
+  courseId: string;
+  title: string;
+  url: string;
+  createdAt: string;
+}
+
+export interface ResourceRequest {
+  title: string;
+  url: string;
+}
+
+export interface CourseOverview {
+  course: Course;
+  attendance: CourseAttendance;
+  openAssignments: Assignment[];
+  openAssignmentCount: number;
+  overdueCount: number;
+  upcomingExams: ExamSummary[];
+  resources: CourseResource[];
+}

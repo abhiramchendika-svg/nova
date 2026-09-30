@@ -1,5 +1,8 @@
 import { http, HttpResponse, type HttpHandler } from 'msw';
 import type {
+  AssignmentPriority,
+  AssignmentRequest,
+  AssignmentStatus,
   AttendanceMark,
   CourseRequest,
   GradeKind,
@@ -18,6 +21,17 @@ import {
   type StoredCourse,
 } from './academics';
 import { courseAttendance, todayIn, type StoredRecord } from './attendance';
+import {
+  applyProgress,
+  assignmentProblem,
+  isOpen,
+  normalizeLink,
+  removeCourseWork,
+  toAssignment,
+  toExamSummary,
+  type StoredAssignment,
+  type StoredResource,
+} from './coursework';
 import type { SettingsRequest } from '@/features/settings/types';
 import { API, csrfOk, problem } from './http';
 
@@ -314,7 +328,7 @@ export function createAcademicsHandlers(
         store.semesters.splice(index, 1);
         const gone = new Set(store.courses.filter((c) => c.semesterId === params.id).map((c) => c.id));
         store.courses = store.courses.filter((c) => !gone.has(c.id));
-        store.records = store.records.filter((r) => !gone.has(r.courseId));
+        removeCourseWork(store, gone);
         return new HttpResponse(null, { status: 204 });
       }),
     ),
@@ -408,7 +422,7 @@ export function createAcademicsHandlers(
         const index = store.courses.findIndex((c) => c.id === params.id);
         if (index < 0) return notFound();
         const [removed] = store.courses.splice(index, 1);
-        store.records = store.records.filter((r) => r.courseId !== removed!.id);
+        removeCourseWork(store, new Set([removed!.id]));
         return new HttpResponse(null, { status: 204 });
       }),
     ),
@@ -605,5 +619,225 @@ export function createAcademicsHandlers(
         return HttpResponse.json(courseAttendance(store, course, settingsFor().defaultAttendanceTarget));
       }),
     ),
+
+    // Assignments (docs/api.md §2.6)
+    http.get(
+      `${API}/assignments`,
+      withStore(storeFor, (store, request) => {
+        const url = new URL(request.url);
+        const page = Number(url.searchParams.get('page') ?? '0');
+        const size = Number(url.searchParams.get('size') ?? '20');
+        if (!(page >= 0)) return invalid('page', 'Must be 0 or more.');
+        if (!(size >= 1 && size <= 100)) return invalid('size', 'Must be between 1 and 100.');
+        const statuses = url.searchParams.getAll('status') as AssignmentStatus[];
+        const courseId = url.searchParams.get('courseId');
+        const priority = url.searchParams.get('priority') as AssignmentPriority | null;
+        const [field, direction] = (url.searchParams.get('sort') ?? 'dueAt,asc').split(',');
+        if (!['dueAt', 'createdAt'].includes(field!) || !['asc', 'desc', undefined].includes(direction)) {
+          return invalid('sort', 'Sort by dueAt or createdAt, e.g. dueAt,asc.');
+        }
+        const sign = direction === 'desc' ? -1 : 1;
+        const key = (a: StoredAssignment) => (field === 'dueAt' ? Date.parse(a.dueAt) : a.createdAt);
+        const all = store.assignments
+          .filter((a) => statuses.length === 0 || statuses.includes(a.status))
+          .filter((a) => !courseId || a.courseId === courseId)
+          .filter((a) => !priority || a.priority === priority)
+          .sort((a, b) => sign * (key(a) - key(b)) || a.id.localeCompare(b.id));
+        const now = new Date();
+        const tz = settingsFor().timezone;
+        return HttpResponse.json({
+          items: all.slice(page * size, page * size + size).map((a) => toAssignment(store, a, now, tz)),
+          page,
+          size,
+          totalItems: all.length,
+          totalPages: Math.ceil(all.length / size),
+        });
+      }),
+    ),
+
+    http.get(
+      `${API}/assignments/:id`,
+      withStore(storeFor, (store, _request, params) => {
+        const a = store.assignments.find((x) => x.id === params.id);
+        return a ? HttpResponse.json(toAssignment(store, a, new Date(), settingsFor().timezone)) : notFound();
+      }),
+    ),
+
+    http.post(
+      `${API}/assignments`,
+      withStore(storeFor, async (store, request) => {
+        const body = (await request.json()) as Partial<AssignmentRequest>;
+        const error = assignmentProblem(store, body);
+        if (error) return invalid(...error);
+        const a: StoredAssignment = {
+          id: crypto.randomUUID(),
+          courseId: body.courseId!,
+          title: body.title!.trim(),
+          description: blankToNull(body.description),
+          dueAt: new Date(body.dueAt!).toISOString(),
+          priority: body.priority ?? 'MEDIUM',
+          status: 'NOT_STARTED',
+          estimatedMinutes: body.estimatedMinutes ?? null,
+          progressPct: 0,
+          submittedAt: null,
+          completedAt: null,
+          createdAt: Date.now(),
+        };
+        store.assignments.push(a);
+        return HttpResponse.json(toAssignment(store, a, new Date(), settingsFor().timezone), { status: 201 });
+      }),
+    ),
+
+    http.put(
+      `${API}/assignments/:id`,
+      withStore(storeFor, async (store, request, params) => {
+        const a = store.assignments.find((x) => x.id === params.id);
+        if (!a) return notFound();
+        const body = (await request.json()) as Partial<AssignmentRequest>;
+        const error = assignmentProblem(store, body);
+        if (error) return invalid(...error);
+        Object.assign(a, {
+          courseId: body.courseId!,
+          title: body.title!.trim(),
+          description: blankToNull(body.description),
+          dueAt: new Date(body.dueAt!).toISOString(),
+          priority: body.priority ?? 'MEDIUM',
+          estimatedMinutes: body.estimatedMinutes ?? null,
+        });
+        return HttpResponse.json(toAssignment(store, a, new Date(), settingsFor().timezone));
+      }),
+    ),
+
+    http.patch(
+      `${API}/assignments/:id/progress`,
+      withStore(storeFor, async (store, request, params) => {
+        const body = (await request.json()) as { status?: AssignmentStatus; progressPct?: number };
+        if (body.status === undefined && body.progressPct === undefined) {
+          return invalid('status', 'Send a status, a progress value, or both.');
+        }
+        const p = body.progressPct;
+        if (p !== undefined && (!Number.isInteger(p) || p < 0 || p > 100)) {
+          return invalid('progressPct', 'Must be between 0 and 100.');
+        }
+        const a = store.assignments.find((x) => x.id === params.id);
+        if (!a) return notFound();
+        applyProgress(a, body.status, p, new Date().toISOString());
+        return HttpResponse.json(toAssignment(store, a, new Date(), settingsFor().timezone));
+      }),
+    ),
+
+    http.delete(
+      `${API}/assignments/:id`,
+      withStore(storeFor, (store, _request, params) => {
+        const index = store.assignments.findIndex((x) => x.id === params.id);
+        if (index < 0) return notFound();
+        store.assignments.splice(index, 1);
+        return new HttpResponse(null, { status: 204 });
+      }),
+    ),
+
+    // Course links (docs/api.md §2.4)
+    http.get(
+      `${API}/courses/:id/resources`,
+      withStore(storeFor, (store, _request, params) => {
+        if (!store.courses.some((c) => c.id === params.id)) return notFound();
+        return HttpResponse.json(resourcesOf(store, params.id!));
+      }),
+    ),
+
+    http.post(
+      `${API}/courses/:id/resources`,
+      withStore(storeFor, async (store, request, params) => {
+        if (!store.courses.some((c) => c.id === params.id)) return notFound();
+        const body = (await request.json()) as { title?: string; url?: string };
+        const error = resourceProblem(body);
+        if (error) return invalid(...error);
+        if (store.resources.filter((r) => r.courseId === params.id).length >= 50) {
+          const message = 'A course can have up to 50 links.';
+          return problem(422, 'RULE_VIOLATION', message, { errors: [{ field: 'url', message }] });
+        }
+        const now = Date.now();
+        const resource: StoredResource = {
+          id: crypto.randomUUID(),
+          courseId: params.id!,
+          title: body.title!.trim(),
+          url: normalizeLink(body.url)!,
+          createdAt: new Date(now).toISOString(),
+          createdAtMs: now,
+        };
+        store.resources.push(resource);
+        const { createdAtMs: _m, ...response } = resource;
+        return HttpResponse.json(response, { status: 201 });
+      }),
+    ),
+
+    http.put(
+      `${API}/courses/:id/resources/:resourceId`,
+      withStore(storeFor, async (store, request, params) => {
+        const resource = store.resources.find((r) => r.id === params.resourceId && r.courseId === params.id);
+        if (!resource) return notFound();
+        const body = (await request.json()) as { title?: string; url?: string };
+        const error = resourceProblem(body);
+        if (error) return invalid(...error);
+        resource.title = body.title!.trim();
+        resource.url = normalizeLink(body.url)!;
+        const { createdAtMs: _m, ...response } = resource;
+        return HttpResponse.json(response);
+      }),
+    ),
+
+    http.delete(
+      `${API}/courses/:id/resources/:resourceId`,
+      withStore(storeFor, (store, _request, params) => {
+        const index = store.resources.findIndex(
+          (r) => r.id === params.resourceId && r.courseId === params.id,
+        );
+        if (index < 0) return notFound();
+        store.resources.splice(index, 1);
+        return new HttpResponse(null, { status: 204 });
+      }),
+    ),
+
+    // Course overview: the course page in one request
+    http.get(
+      `${API}/courses/:id/overview`,
+      withStore(storeFor, (store, _request, params) => {
+        const course = store.courses.find((c) => c.id === params.id);
+        if (!course) return notFound();
+        const now = new Date();
+        const tz = settingsFor().timezone;
+        const today = todayIn(tz, now);
+        const open = store.assignments
+          .filter((a) => a.courseId === course.id && isOpen(a.status))
+          .sort((a, b) => Date.parse(a.dueAt) - Date.parse(b.dueAt));
+        const exams = store.exams
+          .filter((e) => e.courseId === course.id && todayIn(tz, new Date(e.startsAt)) >= today)
+          .sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt));
+        return HttpResponse.json({
+          course: toCourse(store, course),
+          attendance: courseAttendance(store, course, settingsFor().defaultAttendanceTarget),
+          openAssignments: open.slice(0, 5).map((a) => toAssignment(store, a, now, tz)),
+          openAssignmentCount: open.length,
+          overdueCount: open.filter((a) => Date.parse(a.dueAt) < now.getTime()).length,
+          upcomingExams: exams.slice(0, 3).map((e) => toExamSummary(store, e, now, tz)),
+          resources: resourcesOf(store, course.id),
+        });
+      }),
+    ),
   ];
+}
+
+function resourcesOf(store: AcademicStore, courseId: string) {
+  return store.resources
+    .filter((r) => r.courseId === courseId)
+    .sort((a, b) => a.createdAtMs - b.createdAtMs)
+    .map(({ createdAtMs: _m, ...r }) => r);
+}
+
+function resourceProblem(body: { title?: string; url?: string }): [string, string] | null {
+  if (!body.title?.trim()) return ['title', 'Give the link a title.'];
+  if (body.title.length > 120) return ['title', 'Keep it under 120 characters.'];
+  if (!body.url?.trim()) return ['url', 'Paste the link.'];
+  if (!normalizeLink(body.url)) return ['url', 'Use a web link starting with http:// or https://.'];
+  return null;
 }
