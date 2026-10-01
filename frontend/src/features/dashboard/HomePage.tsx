@@ -1,20 +1,27 @@
 import { ArrowRight } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { Link, Navigate } from 'react-router';
-import { EmptyState } from '@/components/patterns/EmptyState';
 import { DomainDot, type Domain } from '@/components/ui/DomainDot';
 import { Panel } from '@/components/ui/Panel';
+import { Progress } from '@/components/ui/Progress';
 import { useTimetableDay } from '@/features/academics/api';
 import { useCurrentUser } from '@/features/auth/api';
 import { useSettings } from '@/features/settings/api';
-import { localParts } from '@/lib/dates';
+import { cn } from '@/lib/cn';
+import { localParts, todayIn } from '@/lib/dates';
+import { useDashboard } from './api';
 import { formatBriefDate, greetingFor } from './format';
+import { NeedsAttention } from './NeedsAttention';
+import { NextSevenDays } from './NextSevenDays';
 import { TodayClasses } from './TodayClasses';
+import { TodayTasks } from './TodayTasks';
+import type { AcademicsSummary, PlannerSummary } from './types';
 import { UpcomingExams } from './UpcomingExams';
 
 /**
- * Home — the Today view. Phase 1 shipped the final layout with deliberate empty states; each
- * panel fills in as its feature lands (today's classes and exams in Phase 2, planned work in
- * Phase 3, developer activity in Phase 4). Layout follows docs/ui-design.md §5.
+ * Home — the Today view (docs/ui-design.md §5): today's classes and tasks, what needs the user
+ * (ranked on the server), the academics and planner at a glance, the coming week and exams.
+ * Developer activity fills in with Phase 4.
  */
 export function HomePage() {
   const { data: user } = useCurrentUser();
@@ -23,7 +30,9 @@ export function HomePage() {
   const now = new Date();
   const nowTime = localParts(now.toISOString(), timezone).time;
   const firstName = user?.displayName.split(' ')[0] ?? '';
+  const today = todayIn(timezone);
   const day = useTimetableDay(); // shared with TodayClasses through the query cache
+  const dashboard = useDashboard(); // shared with NeedsAttention through the query cache
 
   // A new account goes through setup first (skipping it counts as done)
   if (user && !user.onboardingCompleted) return <Navigate to="/app/welcome" replace />;
@@ -47,35 +56,22 @@ export function HomePage() {
       </header>
 
       <Panel title="Today" className="lg:col-span-8">
-        <TodayClasses now={nowTime} />
+        <div className="grid gap-6">
+          <TodayClasses now={nowTime} />
+          <TodayTasks today={today} timezone={timezone} />
+        </div>
       </Panel>
 
       <Panel title="Needs attention" className="lg:col-span-4">
-        <EmptyState
-          compact
-          title="Nothing needs you right now."
-          description="Overdue work, close deadlines and attendance risks will be ranked here."
-        />
+        <NeedsAttention />
       </Panel>
 
       <section
         aria-label="Summaries"
         className="grid rounded-md border border-line bg-surface md:grid-cols-3 lg:col-span-12"
       >
-        <DomainSummary
-          domain="academics"
-          title="Academics"
-          text="Add your courses to track GPA, CGPA and attendance."
-          to="/app/academics/courses"
-          cta="Add courses"
-        />
-        <DomainSummary
-          domain="planner"
-          title="Planner"
-          text="Plan tasks for today and see your weekly completion."
-          to="/app/planner/tasks"
-          cta="Open tasks"
-        />
+        <AcademicsCard summary={dashboard.data?.academics ?? null} />
+        <PlannerCard summary={dashboard.data?.planner ?? null} />
         <DomainSummary
           domain="developer"
           title="Developer"
@@ -86,11 +82,7 @@ export function HomePage() {
       </section>
 
       <Panel title="Next 7 days" className="lg:col-span-8">
-        <EmptyState
-          compact
-          title="Nothing due yet. Enjoy the breathing room."
-          description="Assignments, exams and deadlines for the coming week will show here, with your busiest day highlighted."
-        />
+        <NextSevenDays today={today} />
       </Panel>
 
       <Panel
@@ -117,7 +109,7 @@ function DomainSummary({
 }: {
   domain: Domain;
   title: string;
-  text: string;
+  text: ReactNode;
   to: string;
   cta: string;
 }) {
@@ -127,7 +119,7 @@ function DomainSummary({
         <DomainDot domain={domain} />
         <h2 className="text-[14px] font-semibold">{title}</h2>
       </div>
-      <p className="text-[13px] text-ink-2">{text}</p>
+      <div className="grid gap-2 text-[13px] text-ink-2">{text}</div>
       <Link
         to={to}
         className="inline-flex w-fit items-center gap-1 rounded-sm text-[13px] font-medium text-ink underline-offset-4 hover:underline"
@@ -136,5 +128,103 @@ function DomainSummary({
         <ArrowRight size={14} aria-hidden />
       </Link>
     </div>
+  );
+}
+
+const gpa = (n: number | null) => (n === null ? '—' : n.toFixed(2));
+
+function AcademicsCard({ summary }: { summary: AcademicsSummary | null }) {
+  if (!summary) {
+    return (
+      <DomainSummary
+        domain="academics"
+        title="Academics"
+        text="Add your courses to track GPA, CGPA and attendance."
+        to="/app/academics/courses"
+        cta="Add courses"
+      />
+    );
+  }
+  const low = summary.lowestAttendance;
+  return (
+    <DomainSummary
+      domain="academics"
+      title="Academics"
+      text={
+        <>
+          <p>
+            <span className="font-medium text-ink">{summary.semesterName}</span> · {summary.credits} credits
+          </p>
+          <dl className="flex gap-6">
+            <div>
+              <dt className="text-[12px] text-ink-3">GPA</dt>
+              <dd className="font-mono text-[18px] tabular text-ink">{gpa(summary.gpa)}</dd>
+            </div>
+            <div>
+              <dt className="text-[12px] text-ink-3">CGPA</dt>
+              <dd className="font-mono text-[18px] tabular text-ink">{gpa(summary.cgpa)}</dd>
+            </div>
+          </dl>
+          {low && (
+            <p>
+              Lowest attendance: {low.courseName} at{' '}
+              <span
+                className={cn(
+                  'font-mono tabular',
+                  low.target !== null && low.percentage < low.target ? 'text-critical' : 'text-ink',
+                )}
+              >
+                {Number(low.percentage.toFixed(1))}%
+              </span>
+            </p>
+          )}
+        </>
+      }
+      to="/app/academics/grades"
+      cta="Open grades"
+    />
+  );
+}
+
+function PlannerCard({ summary }: { summary: PlannerSummary | null }) {
+  if (!summary || (summary.weekPlanned === 0 && summary.openToday === 0 && summary.doneToday === 0)) {
+    return (
+      <DomainSummary
+        domain="planner"
+        title="Planner"
+        text="Plan tasks for today and see your weekly completion."
+        to="/app/planner/tasks"
+        cta="Open tasks"
+      />
+    );
+  }
+  const pct = summary.weekPlanned === 0 ? 0 : (summary.weekDone / summary.weekPlanned) * 100;
+  return (
+    <DomainSummary
+      domain="planner"
+      title="Planner"
+      text={
+        <>
+          <p>
+            Today: {summary.openToday} open · {summary.doneToday} done
+          </p>
+          {summary.weekPlanned > 0 && (
+            <Progress
+              value={pct}
+              domain="planner"
+              label={`This week: ${summary.weekDone} of ${summary.weekPlanned} planned tasks done`}
+            />
+          )}
+          {summary.streakDays !== null && (
+            <p>
+              <span className="font-medium text-ink">{summary.streakDays}-day streak</span> of finishing
+              something
+            </p>
+          )}
+        </>
+      }
+      to="/app/planner/tasks"
+      cta="Open tasks"
+    />
   );
 }

@@ -37,7 +37,8 @@ describe('app shell', () => {
     await screen.findByRole('heading', { level: 1 });
     // Today's classes load from the timetable API, so the empty state arrives with the response
     expect(await screen.findByText('Your day is clear.')).toBeInTheDocument();
-    expect(screen.getByText('Nothing due yet. Enjoy the breathing room.')).toBeInTheDocument();
+    expect(await screen.findByText('Nothing due this week. Enjoy the breathing room.')).toBeInTheDocument();
+    expect(await screen.findByText('Nothing needs you right now.')).toBeInTheDocument();
     expect(await axeViolations(container)).toEqual([]);
   });
 });

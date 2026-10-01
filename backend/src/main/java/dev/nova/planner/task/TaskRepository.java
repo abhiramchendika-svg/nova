@@ -23,6 +23,9 @@ public interface TaskRepository extends JpaRepository<Task, UUID>, JpaSpecificat
     List<Task> findByUserIdAndStatusNotAndDueAtGreaterThanEqualAndDueAtLessThan(
             UUID userId, TaskStatus status, Instant from, Instant to);
 
+    /** Tasks not in {@code status} with a deadline before an instant, overdue ones included (Home). */
+    List<Task> findByUserIdAndStatusNotAndDueAtLessThan(UUID userId, TaskStatus status, Instant before);
+
     /** Open tasks planned for the day or earlier, or due before the day ends (overdue included). */
     @Query("select t from Task t where t.userId = :userId and t.status <> dev.nova.planner.task.TaskStatus.DONE"
             + " and ((t.plannedFor is not null and t.plannedFor <= :day)"

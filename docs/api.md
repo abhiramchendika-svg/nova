@@ -339,33 +339,38 @@ Legend: 🔓 public · everything else requires a session. **P** marks paginated
 - Items are ordered by day, untimed first, then start time, then type, then title.
 - `load` has one entry per day in the range: deadlines (assignments and tasks, including a deadline on a task's own planned day), exams, class minutes, and the estimates of open tasks planned that day.
 
-### 2.11 Dashboard (Phase 1 shell → filled in Phases 2–5)
+### 2.11 Dashboard (Phase 3; developer activity joins in Phase 4)
 
 | Method | Path | Purpose |
 |---|---|---|
-| GET | `/api/v1/dashboard?date=` | A single aggregate for Home, with sections omitted if hidden in the widget settings |
+| GET | `/api/v1/dashboard` | Home's aggregate for today in the user's timezone: what needs the user, ranked, and the academics and planner summary cards |
+
+Home also uses `/timetable/day` (today's classes), `/tasks/today` (today's tasks), `/calendar` (the next 7 days) and `/exams?upcoming=true`, so this endpoint only carries what isn't available elsewhere.
 
 ```json
 {
-  "date": "2026-09-26",
-  "brief": { "needsYouCount": 3, "sentence": "3 things need you today." },
-  "today": [ { "type": "CLASS", "start": "09:00", "end": "09:50", "title": "Data Structures", "location": "LH-101" },
-             { "type": "TASK", "start": null, "title": "Complete Java assignment", "estimatedMinutes": 90 } ],
-  "needsAttention": [ { "kind": "ASSIGNMENT_DUE", "title": "Database assignment", "reason": "Due tomorrow 23:59", "score": 87, "link": "/app/academics/assignments?focus=…" },
-                      { "kind": "ATTENDANCE_AT_RISK", "title": "Compilers", "reason": "76.5% · can miss 0 more (target 75%)", "score": 70, "link": "…" } ],
-  "academics": { "semesterName": "Semester 3", "gpa": 8.40, "cgpa": 8.62, "credits": 22.0, "lowestAttendance": { "courseName": "Compilers", "percentage": 76.47 } },
-  "deadlines": { "next7Days": [ … ], "load": [ … ] },
-  "exams": [ { "title": "Data Structures — Mid 1", "daysUntil": 12, "prepPct": 40 } ],
-  "productivity": { "doneToday": 2, "openToday": 3, "weekCompletion": { "done": 11, "planned": 15 }, "streakDays": 4 },
-  "developer": { "github": { "source": "GITHUB_API", "contributionsThisWeek": 7, "fetchedAt": "…", "stale": false },
-                 "activeProjects": 2, "topGoal": { "title": "Spring Boot", "pct": 64 } }
+  "date": "2026-10-01",
+  "needsAttention": [
+    { "kind": "ASSIGNMENT_OVERDUE", "refId": "…", "title": "Scheduler report", "courseCode": "CSE 203",
+      "reason": "Overdue by 2 days", "score": 85, "link": "/app/academics/assignments?course=…" },
+    { "kind": "ATTENDANCE_AT_RISK", "refId": "…", "title": "Compilers", "courseCode": "CSE 205",
+      "reason": "72.5% · below your 75% target; attend the next 3 classes", "score": 70, "link": "/app/academics/courses/…" }
+  ],
+  "academics": { "semesterId": "…", "semesterName": "Semester 3", "gpa": 8.40, "cgpa": 8.62, "credits": 22.0,
+                 "lowestAttendance": { "courseId": "…", "courseName": "Compilers", "percentage": 72.5, "target": 75 } },
+  "planner": { "openToday": 3, "doneToday": 2, "weekDone": 11, "weekPlanned": 15, "streakDays": 4 }
 }
 ```
 
-- **The `needsAttention` score is deterministic and documented** (0–100), for example:
-  `score = typeWeight + urgencyWeight(hoursUntilDue) + priorityWeight`
-  The weights are constants in `PriorityScorer`, and each item carries a human `reason`, so the ranking is explainable.
-- `streakDays` = consecutive days (ending today or yesterday) with ≥1 completed task. It only appears once there's ≥3 days of history, per the brief's "streak where meaningful".
+- **`needsAttention`** (at most 8, highest score first, then by title) holds: open assignments and open tasks that are overdue or due within 48 hours (`*_OVERDUE`, `*_DUE_SOON`); current-semester courses whose attendance is below target or at risk (`ATTENDANCE_AT_RISK`); and exams within 7 days with under half of a non-empty checklist done (`EXAM_PREP`). Each item has a plain `reason` and an in-app `link`.
+- **The score is deterministic and documented** (0–100), from `PriorityScorer`, where every weight is a named constant:
+  - Overdue work: 60, plus priority, plus 5 per full day overdue (up to 25).
+  - Due within 48 hours: 40, plus priority, plus 25 (6 hours or less left), 15 (24 hours or less) or 5.
+  - Attendance below target: 55, plus 5 per percentage point short, rounded up (up to 25). At target but able to miss no more classes: 45. Able to miss only one more: 35.
+  - An exam within 7 days with prep under 50%: 30, plus 4 per day closer than 7, plus 1 per 5 points of prep missing below 50%.
+  - Priority adds 15 (high), 8 (medium) or 0 (low).
+- **`academics`** is `null` without a current semester. `gpa`/`cgpa` are `null` until there are grades. `lowestAttendance` is the current semester's course with the lowest percentage among those with classes held.
+- **`planner`**: `openToday`/`doneToday` match `/tasks/today`. `weekPlanned` counts tasks planned in the current week (by the user's week start), and `weekDone` counts how many of those are done. `streakDays` = consecutive days (ending today, or yesterday if nothing is finished yet today) with at least one completed task, looking back up to 60 days; it is `null` until the streak reaches 3.
 
 ### 2.12 Projects, learning, hackathons, internships (Phase 4)
 

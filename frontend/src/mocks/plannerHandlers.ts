@@ -5,6 +5,7 @@ import { addDays, daysBetween, localParts, todayIn, zonedToInstant } from '@/lib
 import type { AcademicStore } from './academics';
 import { invalid, notFound, withStore, type StoreFor } from './academicsHandlers';
 import { buildCalendar } from './calendar';
+import { buildDashboard } from './dashboard';
 import { API, problem } from './http';
 import {
   isOpenTask,
@@ -111,6 +112,11 @@ export function createPlannerHandlers(storeFor: StoreFor, settingsFor: () => Set
     });
 
   return [
+    http.get(
+      `${API}/dashboard`,
+      withStore(storeFor, (store) => HttpResponse.json(buildDashboard(store, settingsFor()))),
+    ),
+
     http.get(
       `${API}/calendar`,
       withStore(storeFor, (store, request) => {

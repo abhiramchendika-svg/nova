@@ -18,6 +18,10 @@ public interface AssignmentRepository extends JpaRepository<Assignment, UUID>, J
     List<Assignment> findByUserIdAndStatusInAndDueAtGreaterThanEqualAndDueAtLessThan(
             UUID userId, Collection<AssignmentStatus> statuses, Instant from, Instant to);
 
+    /** Assignments with the given statuses due before an instant, overdue ones included (Home). */
+    List<Assignment> findByUserIdAndStatusInAndDueAtLessThan(
+            UUID userId, Collection<AssignmentStatus> statuses, Instant before);
+
     List<Assignment> findByCourseIdAndUserIdAndStatusInOrderByDueAtAsc(
             UUID courseId, UUID userId, Collection<AssignmentStatus> statuses, Pageable limit);
 

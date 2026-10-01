@@ -1,0 +1,298 @@
+package dev.nova.dashboard;
+
+import dev.nova.academics.assignment.Assignment;
+import dev.nova.academics.assignment.AssignmentRepository;
+import dev.nova.academics.assignment.AssignmentStatus;
+import dev.nova.academics.attendance.AttendanceCalculator.Status;
+import dev.nova.academics.attendance.AttendanceDtos.CourseAttendance;
+import dev.nova.academics.attendance.AttendanceService;
+import dev.nova.academics.course.Course;
+import dev.nova.academics.course.CourseRepository;
+import dev.nova.academics.exam.ExamDtos.ExamSummary;
+import dev.nova.academics.exam.ExamService;
+import dev.nova.academics.grades.GradesDtos.GradesSummaryResponse;
+import dev.nova.academics.grades.GradesDtos.SemesterGrades;
+import dev.nova.academics.grades.GradesService;
+import dev.nova.dashboard.DashboardDtos.AcademicsSummary;
+import dev.nova.dashboard.DashboardDtos.AttentionItem;
+import dev.nova.dashboard.DashboardDtos.AttentionKind;
+import dev.nova.dashboard.DashboardDtos.DashboardResponse;
+import dev.nova.dashboard.DashboardDtos.LowestAttendance;
+import dev.nova.dashboard.DashboardDtos.PlannerSummary;
+import dev.nova.planner.task.Task;
+import dev.nova.planner.task.TaskDtos.TodayResponse;
+import dev.nova.planner.task.TaskRepository;
+import dev.nova.planner.task.TaskService;
+import dev.nova.planner.task.TaskStatus;
+import dev.nova.user.UserClock;
+import dev.nova.user.UserSettings;
+import dev.nova.user.UserSettingsRepository;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.DayOfWeek;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
+import java.time.temporal.TemporalAdjusters;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+/**
+ * Home's aggregate (docs/api.md §2.11): what needs the user, ranked by {@link PriorityScorer}, and
+ * the academics and planner summary cards. Today's classes, tasks and the next 7 days come from
+ * their own endpoints.
+ */
+@Service
+public class DashboardService {
+
+    static final int MAX_ATTENTION = 8;
+    /** How far back the streak looks. */
+    static final int STREAK_LOOKBACK_DAYS = 60;
+
+    private static final Set<AssignmentStatus> OPEN =
+            Set.of(AssignmentStatus.NOT_STARTED, AssignmentStatus.IN_PROGRESS);
+    private static final DateTimeFormatter HH_MM = DateTimeFormatter.ofPattern("HH:mm");
+    private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("EEE d MMM", Locale.ENGLISH);
+
+    private final AssignmentRepository assignments;
+    private final TaskRepository tasks;
+    private final CourseRepository courses;
+    private final ExamService exams;
+    private final AttendanceService attendance;
+    private final GradesService grades;
+    private final TaskService taskService;
+    private final UserSettingsRepository settings;
+    private final UserClock userClock;
+
+    public DashboardService(
+            AssignmentRepository assignments,
+            TaskRepository tasks,
+            CourseRepository courses,
+            ExamService exams,
+            AttendanceService attendance,
+            GradesService grades,
+            TaskService taskService,
+            UserSettingsRepository settings,
+            UserClock userClock) {
+        this.assignments = assignments;
+        this.tasks = tasks;
+        this.courses = courses;
+        this.exams = exams;
+        this.attendance = attendance;
+        this.grades = grades;
+        this.taskService = taskService;
+        this.settings = settings;
+        this.userClock = userClock;
+    }
+
+    @Transactional(readOnly = true)
+    public DashboardResponse dashboard(UUID userId) {
+        ZoneId zone = userClock.zoneOf(userId);
+        LocalDate today = userClock.today(userId);
+        Instant now = userClock.now();
+
+        GradesSummaryResponse gradeSummary = grades.summary(userId);
+        SemesterGrades current = gradeSummary.semesters().stream()
+                .filter(SemesterGrades::current)
+                .findFirst()
+                .orElse(null);
+        List<CourseAttendance> attendanceRows =
+                current == null ? List.of() : attendance.forSemester(userId, current.id());
+
+        List<AttentionItem> attention = new ArrayList<>();
+        addDeadlines(userId, attention, now, today, zone);
+        addAttendance(attention, attendanceRows);
+        addExams(userId, attention);
+        List<AttentionItem> ranked = attention.stream()
+                .sorted(Comparator.comparingInt(AttentionItem::score).reversed().thenComparing(AttentionItem::title))
+                .limit(MAX_ATTENTION)
+                .toList();
+
+        AcademicsSummary academics = current == null
+                ? null
+                : new AcademicsSummary(
+                        current.id(),
+                        current.name(),
+                        current.gpa(),
+                        gradeSummary.cgpa(),
+                        current.credits(),
+                        attendanceRows.stream()
+                                .filter(a -> a.percentage() != null && a.conducted() > 0)
+                                .min(Comparator.comparing(CourseAttendance::percentage))
+                                .map(a -> new LowestAttendance(
+                                        a.courseId(), a.courseName(), a.percentage(), a.target()))
+                                .orElse(null));
+
+        return new DashboardResponse(today, ranked, academics, planner(userId, today, zone));
+    }
+
+    // ───────────── needs attention ─────────────
+
+    private void addDeadlines(UUID userId, List<AttentionItem> out, Instant now, LocalDate today, ZoneId zone) {
+        Instant horizon = now.plus(PriorityScorer.DUE_SOON_WINDOW);
+        List<Assignment> due = assignments.findByUserIdAndStatusInAndDueAtLessThan(userId, OPEN, horizon);
+        List<Task> taskDue = tasks.findByUserIdAndStatusNotAndDueAtLessThan(userId, TaskStatus.DONE, horizon);
+
+        Set<UUID> courseIds = new HashSet<>();
+        due.forEach(a -> courseIds.add(a.getCourseId()));
+        taskDue.stream().map(Task::getCourseId).filter(Objects::nonNull).forEach(courseIds::add);
+        Map<UUID, Course> courseById = courseIds.isEmpty()
+                ? Map.of()
+                : courses.findAllById(courseIds).stream()
+                        .collect(Collectors.toMap(Course::getId, Function.identity()));
+        Function<UUID, String> code = id -> {
+            Course c = id == null ? null : courseById.get(id);
+            return c == null ? null : c.getCode() != null ? c.getCode() : c.getName();
+        };
+
+        for (Assignment a : due) {
+            boolean overdue = a.getDueAt().isBefore(now);
+            String priority = a.getPriority().name();
+            out.add(new AttentionItem(
+                    overdue ? AttentionKind.ASSIGNMENT_OVERDUE : AttentionKind.ASSIGNMENT_DUE_SOON,
+                    a.getId(),
+                    a.getTitle(),
+                    code.apply(a.getCourseId()),
+                    deadlineReason(a.getDueAt(), overdue, today, zone),
+                    overdue
+                            ? PriorityScorer.overdue(priority, Duration.between(a.getDueAt(), now))
+                            : PriorityScorer.dueSoon(priority, Duration.between(now, a.getDueAt())),
+                    "/app/academics/assignments?course=" + a.getCourseId()));
+        }
+        for (Task t : taskDue) {
+            boolean overdue = t.getDueAt().isBefore(now);
+            String priority = t.getPriority().name();
+            out.add(new AttentionItem(
+                    overdue ? AttentionKind.TASK_OVERDUE : AttentionKind.TASK_DUE_SOON,
+                    t.getId(),
+                    t.getTitle(),
+                    code.apply(t.getCourseId()),
+                    deadlineReason(t.getDueAt(), overdue, today, zone),
+                    overdue
+                            ? PriorityScorer.overdue(priority, Duration.between(t.getDueAt(), now))
+                            : PriorityScorer.dueSoon(priority, Duration.between(now, t.getDueAt())),
+                    "/app/planner/tasks"));
+        }
+    }
+
+    /** "Was due today at 18:00", "Was due yesterday", "Overdue by 3 days"; "Due tomorrow at 09:00". */
+    static String deadlineReason(Instant dueAt, boolean overdue, LocalDate today, ZoneId zone) {
+        LocalDateTime local = LocalDateTime.ofInstant(dueAt, zone);
+        LocalDate day = local.toLocalDate();
+        String time = local.format(HH_MM);
+        if (overdue) {
+            long late = ChronoUnit.DAYS.between(day, today);
+            if (late <= 0) {
+                return "Was due today at " + time;
+            }
+            return late == 1 ? "Was due yesterday" : "Overdue by " + late + " days";
+        }
+        if (day.equals(today)) {
+            return "Due today at " + time;
+        }
+        if (day.equals(today.plusDays(1))) {
+            return "Due tomorrow at " + time;
+        }
+        return "Due " + day.format(DAY) + " at " + time;
+    }
+
+    private void addAttendance(List<AttentionItem> out, List<CourseAttendance> rows) {
+        for (CourseAttendance a : rows) {
+            if (a.status() != Status.BELOW && a.status() != Status.AT_RISK) {
+                continue;
+            }
+            String pct = percent(a.percentage());
+            int score;
+            String reason;
+            if (a.status() == Status.BELOW) {
+                score = PriorityScorer.belowTarget(a.percentage(), a.target());
+                int need = a.needToAttend() == null ? 0 : a.needToAttend();
+                reason = pct + " · below your " + percent(a.target()) + " target; attend the next "
+                        + (need == 1 ? "class" : need + " classes");
+            } else {
+                int canMiss = a.canMiss() == null ? 0 : a.canMiss();
+                score = PriorityScorer.atRisk(canMiss);
+                reason = pct + (canMiss <= 0 ? " · can’t miss another class" : " · can miss only 1 more");
+            }
+            out.add(new AttentionItem(
+                    AttentionKind.ATTENDANCE_AT_RISK,
+                    a.courseId(),
+                    a.courseName(),
+                    a.courseCode(),
+                    reason,
+                    score,
+                    "/app/academics/courses/" + a.courseId()));
+        }
+    }
+
+    private void addExams(UUID userId, List<AttentionItem> out) {
+        for (ExamSummary e : exams.list(userId, true, null)) {
+            Integer pct = e.prep().percentage();
+            if (!PriorityScorer.examNeedsPrep(e.daysUntil(), pct)) {
+                continue;
+            }
+            String when = e.daysUntil() == 0
+                    ? "Today"
+                    : e.daysUntil() == 1 ? "Tomorrow" : "In " + e.daysUntil() + " days";
+            out.add(new AttentionItem(
+                    AttentionKind.EXAM_PREP,
+                    e.id(),
+                    e.title(),
+                    e.courseCode() != null ? e.courseCode() : e.courseName(),
+                    when + " · " + e.prep().done() + " of " + e.prep().total() + " topics ready",
+                    PriorityScorer.exam(e.daysUntil(), pct),
+                    "/app/academics/exams/" + e.id()));
+        }
+    }
+
+    /** 72.5 → "72.5%", 75.00 → "75%". */
+    static String percent(BigDecimal value) {
+        BigDecimal rounded = value.setScale(1, RoundingMode.HALF_UP).stripTrailingZeros();
+        return rounded.toPlainString() + "%";
+    }
+
+    // ───────────── planner card ─────────────
+
+    private PlannerSummary planner(UUID userId, LocalDate today, ZoneId zone) {
+        TodayResponse todayTasks = taskService.today(userId, today);
+
+        UserSettings.WeekStart weekStart = settings.findById(userId)
+                .map(UserSettings::getWeekStart)
+                .orElse(UserSettings.WeekStart.MON);
+        DayOfWeek first = weekStart == UserSettings.WeekStart.SUN ? DayOfWeek.SUNDAY : DayOfWeek.MONDAY;
+        LocalDate weekFrom = today.with(TemporalAdjusters.previousOrSame(first));
+        List<Task> week = tasks.findByUserIdAndPlannedForBetween(userId, weekFrom, weekFrom.plusDays(6));
+        int weekDone = (int) week.stream().filter(t -> t.getStatus() == TaskStatus.DONE).count();
+
+        Instant since = today.minusDays(STREAK_LOOKBACK_DAYS - 1L).atStartOfDay(zone).toInstant();
+        Instant until = today.plusDays(1).atStartOfDay(zone).toInstant();
+        Set<LocalDate> doneDays = tasks
+                .findByUserIdAndStatusAndCompletedAtGreaterThanEqualAndCompletedAtLessThanOrderByCompletedAtDesc(
+                        userId, TaskStatus.DONE, since, until)
+                .stream()
+                .map(t -> LocalDate.ofInstant(t.getCompletedAt(), zone))
+                .collect(Collectors.toSet());
+
+        return new PlannerSummary(
+                todayTasks.tasks().size(),
+                todayTasks.completed().size(),
+                weekDone,
+                week.size(),
+                Streaks.streak(doneDays, today));
+    }
+}
