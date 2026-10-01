@@ -1,9 +1,11 @@
 package dev.nova.planner.task;
 
 import dev.nova.academics.assignment.Urgency;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -38,6 +40,14 @@ public final class TaskDtos {
             Recurrence recurrence,
             UUID courseId,
             UUID examId) {}
+
+    /** Several tasks created together, all or none (an exam's revision plan). */
+    public record BatchRequest(
+            @NotEmpty(message = "Add at least one task.")
+                    @Size(max = TaskService.MAX_BATCH, message = "Add at most 30 tasks at once.")
+                    List<@Valid @NotNull(message = "Fill in this task.") TaskRequest> tasks) {}
+
+    public record BatchResponse(List<TaskResponse> tasks) {}
 
     public record StatusRequest(@NotNull(message = "Choose a status.") TaskStatus status) {}
 

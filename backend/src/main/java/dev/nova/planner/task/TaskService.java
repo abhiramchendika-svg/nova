@@ -48,6 +48,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class TaskService {
 
     static final int MAX_UPCOMING_DAYS = 62;
+    static final int MAX_BATCH = 30;
     private static final DateTimeFormatter HH_MM = DateTimeFormatter.ofPattern("HH:mm");
     private static final Set<String> SORTABLE = Set.of("plannedFor", "dueAt", "createdAt");
 
@@ -162,6 +163,31 @@ public class TaskService {
         apply(userId, task, request);
         tasks.saveAndFlush(task);
         return responsesFor(userId, List.of(task)).of(task);
+    }
+
+    /**
+     * Creates every task or none. A problem with one task is reported on {@code tasks[i].field}, the
+     * same path bean validation uses for the list.
+     */
+    @Transactional
+    public List<TaskResponse> createAll(UUID userId, List<TaskRequest> requests) {
+        List<Task> created = new ArrayList<>();
+        for (int i = 0; i < requests.size(); i++) {
+            Task task = new Task(userId);
+            try {
+                apply(userId, task, requests.get(i));
+            } catch (ApiException e) {
+                if (e.getFieldProblems().size() != 1) {
+                    throw e;
+                }
+                ApiException.FieldProblem problem = e.getFieldProblems().getFirst();
+                throw ApiException.invalidField("tasks[" + i + "]." + problem.field(), problem.message());
+            }
+            created.add(task);
+        }
+        tasks.saveAllAndFlush(created);
+        Responses r = responsesFor(userId, created);
+        return created.stream().map(r::of).toList();
     }
 
     @Transactional

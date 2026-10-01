@@ -16,6 +16,7 @@ import type {
 } from '@/features/academics/types';
 import { daysBetween, todayIn } from '@/lib/dates';
 import type { AcademicStore } from './academics';
+import { unlinkTasks } from './planner';
 
 /**
  * Assignments, exams and course links for the mock API: ports of Urgency.java,
@@ -250,6 +251,7 @@ export function removeCourseWork(store: AcademicStore, courseIds: Set<string>): 
   store.topics = store.topics.filter((t) => !examIds.has(t.examId));
   store.resources = store.resources.filter((r) => !courseIds.has(r.courseId));
   store.timetable = store.timetable.filter((e) => !courseIds.has(e.courseId));
+  unlinkTasks(store, courseIds, examIds);
 }
 
 // ───────────── Timetable (ports of TimetableRules.java) ─────────────

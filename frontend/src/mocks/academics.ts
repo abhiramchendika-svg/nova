@@ -10,6 +10,7 @@ import type {
 } from '@/features/academics/types';
 import type { StoredRecord } from './attendance';
 import type { StoredAssignment, StoredEntry, StoredExam, StoredResource, StoredTopic } from './coursework';
+import type { StoredTask } from './planner';
 
 /**
  * In-memory academics store for the mock API (tests and `npm run dev:mock`).
@@ -95,6 +96,8 @@ export interface AcademicStore {
   topics: StoredTopic[];
   resources: StoredResource[];
   timetable: StoredEntry[];
+  /** Planner tasks (they link to courses and exams, so they live with them). */
+  tasks: StoredTask[];
 }
 
 export function createAcademicStore(): AcademicStore {
@@ -108,6 +111,7 @@ export function createAcademicStore(): AcademicStore {
     topics: [],
     resources: [],
     timetable: [],
+    tasks: [],
   };
 }
 

@@ -1,6 +1,8 @@
 package dev.nova.planner.task;
 
 import dev.nova.common.web.PageResponse;
+import dev.nova.planner.task.TaskDtos.BatchRequest;
+import dev.nova.planner.task.TaskDtos.BatchResponse;
 import dev.nova.planner.task.TaskDtos.StatusRequest;
 import dev.nova.planner.task.TaskDtos.StatusResponse;
 import dev.nova.planner.task.TaskDtos.TaskRequest;
@@ -15,6 +17,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -83,6 +86,14 @@ public class TaskController {
             @AuthenticationPrincipal NovaUserDetails me, @Valid @RequestBody TaskRequest body) {
         TaskResponse created = service.create(me.id(), body);
         return ResponseEntity.created(URI.create("/api/v1/tasks/" + created.id())).body(created);
+    }
+
+    /** All or nothing; used by an exam's "Plan my revision". */
+    @PostMapping("/batch")
+    public ResponseEntity<BatchResponse> createAll(
+            @AuthenticationPrincipal NovaUserDetails me, @Valid @RequestBody BatchRequest body) {
+        BatchResponse created = new BatchResponse(service.createAll(me.id(), body.tasks()));
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     @PutMapping("/{id}")

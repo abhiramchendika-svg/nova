@@ -1,4 +1,5 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { plannerKeys } from '@/features/planner/api';
 import { api, type ApiError } from '@/services/http';
 import type {
   Assignment,
@@ -51,9 +52,14 @@ export const academicsKeys = {
   day: (date: string | null) => ['academics', 'timetable-day', date] as const,
 };
 
+/** Academic changes also refresh the planner: tasks show course and exam names. */
 function useInvalidateAcademics() {
   const queryClient = useQueryClient();
-  return () => queryClient.invalidateQueries({ queryKey: academicsKeys.all });
+  return () =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: academicsKeys.all }),
+      queryClient.invalidateQueries({ queryKey: plannerKeys.all }),
+    ]);
 }
 
 // ───────────── Grading schemes ─────────────
@@ -404,10 +410,13 @@ function useExamWrite<V>(request: (vars: V) => Promise<ExamDetail>) {
     mutationFn: request,
     onSuccess: async (exam) => {
       queryClient.setQueryData(academicsKeys.exam(exam.id), exam);
-      await queryClient.invalidateQueries({
-        queryKey: academicsKeys.all,
-        predicate: (q) => !(q.queryKey[1] === 'exam' && q.queryKey[2] === exam.id),
-      });
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: academicsKeys.all,
+          predicate: (q) => !(q.queryKey[1] === 'exam' && q.queryKey[2] === exam.id),
+        }),
+        queryClient.invalidateQueries({ queryKey: plannerKeys.all }),
+      ]);
     },
   });
 }
@@ -428,7 +437,10 @@ export function useDeleteExam() {
     mutationFn: (id) => api<void>(`/exams/${id}`, { method: 'DELETE' }),
     onSuccess: async (_v, id) => {
       queryClient.removeQueries({ queryKey: academicsKeys.exam(id) });
-      await queryClient.invalidateQueries({ queryKey: academicsKeys.all });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: academicsKeys.all }),
+        queryClient.invalidateQueries({ queryKey: plannerKeys.all }),
+      ]);
     },
   });
 }

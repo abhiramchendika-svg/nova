@@ -2,6 +2,7 @@ import { http, HttpResponse, type HttpHandler } from 'msw';
 import { API, CSRF_TOKEN, csrfOk, problem } from './http';
 import type { CurrentUser } from '@/features/auth/types';
 import { createAcademicsHandlers } from './academicsHandlers';
+import { createPlannerHandlers } from './plannerHandlers';
 import { createAcademicStore, type AcademicStore } from './academics';
 import type { Settings, SettingsRequest } from '@/features/settings/types';
 
@@ -63,6 +64,22 @@ export function createHandlers(db: MockDb): HttpHandler[] {
     ...(db.settings.get(user.id) ?? DEFAULT_SETTINGS),
     onboardingCompleted: user.onboardingCompleted,
   });
+
+  /** The logged-in user's academic store (created on first use), or null when logged out. */
+  const storeFor = () => {
+    const user = currentUser();
+    if (!user) return null;
+    let store = db.academics.get(user.id);
+    if (!store) {
+      store = createAcademicStore();
+      db.academics.set(user.id, store);
+    }
+    return store;
+  };
+  const settingsFor = () => {
+    const user = currentUser();
+    return user ? (db.settings.get(user.id) ?? DEFAULT_SETTINGS) : DEFAULT_SETTINGS;
+  };
 
   return [
     http.get(`${API}/health`, () => HttpResponse.json({ status: 'UP', version: 'mock' })),
@@ -155,21 +172,7 @@ export function createHandlers(db: MockDb): HttpHandler[] {
       return HttpResponse.json(settingsOf(user));
     }),
 
-    ...createAcademicsHandlers(
-      () => {
-        const user = currentUser();
-        if (!user) return null;
-        let store = db.academics.get(user.id);
-        if (!store) {
-          store = createAcademicStore();
-          db.academics.set(user.id, store);
-        }
-        return store;
-      },
-      () => {
-        const user = currentUser();
-        return user ? (db.settings.get(user.id) ?? DEFAULT_SETTINGS) : DEFAULT_SETTINGS;
-      },
-    ),
+    ...createAcademicsHandlers(storeFor, settingsFor),
+    ...createPlannerHandlers(storeFor, settingsFor),
   ];
 }

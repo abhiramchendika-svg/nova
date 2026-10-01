@@ -21,6 +21,7 @@ export const pageLoaders = {
   GradesPage: () => import('@/features/academics/GradesPage').then((m) => ({ default: m.GradesPage })),
   GradingSchemesPage: () =>
     import('@/features/academics/GradingSchemesPage').then((m) => ({ default: m.GradingSchemesPage })),
+  TasksPage: () => import('@/features/planner/TasksPage').then((m) => ({ default: m.TasksPage })),
   SettingsPage: () => import('@/features/settings/SettingsPage').then((m) => ({ default: m.SettingsPage })),
   OnboardingPage: () =>
     import('@/features/onboarding/OnboardingPage').then((m) => ({ default: m.OnboardingPage })),

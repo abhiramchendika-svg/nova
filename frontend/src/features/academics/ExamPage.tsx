@@ -12,6 +12,7 @@ import { Field } from '@/components/ui/Field';
 import { IconButton } from '@/components/ui/IconButton';
 import { Panel } from '@/components/ui/Panel';
 import { Progress } from '@/components/ui/Progress';
+import { ExamStudyPlan } from '@/features/planner/ExamStudyPlan';
 import { useSettings } from '@/features/settings/api';
 import { cn } from '@/lib/cn';
 import { formatDateTime } from '@/lib/dates';
@@ -133,6 +134,7 @@ function ExamView({ exam, timezone }: { exam: ExamDetail; timezone: string }) {
       </header>
 
       <Checklist exam={exam} />
+      <ExamStudyPlan exam={exam} timezone={timezone} />
 
       <ExamDialog
         open={editing}

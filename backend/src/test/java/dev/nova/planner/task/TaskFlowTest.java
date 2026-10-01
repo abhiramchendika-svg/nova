@@ -152,6 +152,42 @@ class TaskFlowTest extends AcademicsTestSupport {
     }
 
     @Test
+    void createsARevisionPlanAllOrNothing() throws Exception {
+        Cookie session = registerAndGetSession(uniqueEmail("task-batch"));
+        String dbms = createCourse(session, "Database Systems");
+        String exam = createExam(session, dbms, "Mid-semester 1");
+
+        postJson(session, "/api/v1/tasks/batch", """
+                        {"tasks":[
+                          {"title":"Study: Normalization","examId":"%s","plannedFor":"%s","estimatedMinutes":60},
+                          {"title":"Study: Indexing","examId":"%s","plannedFor":"%s","estimatedMinutes":60}]}"""
+                        .formatted(exam, TODAY.plusDays(1), exam, TODAY.plusDays(2)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.tasks", hasSize(2)))
+                .andExpect(jsonPath("$.tasks[0].examTitle").value("Mid-semester 1"))
+                .andExpect(jsonPath("$.tasks[0].courseId").value(dbms))
+                .andExpect(jsonPath("$.tasks[1].plannedFor").value(TODAY.plusDays(2).toString()));
+
+        // One bad task: nothing is created, and the error names it
+        postJson(session, "/api/v1/tasks/batch", """
+                        {"tasks":[{"title":"Fine"},{"title":"   "}]}""")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].field").value("tasks[1].title"));
+        postJson(session, "/api/v1/tasks/batch", """
+                        {"tasks":[{"title":"Fine"},{"title":"Start","plannedStart":"07:00"}]}""")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].field").value("tasks[1].plannedStart"));
+        postJson(session, "/api/v1/tasks/batch", """
+                        {"tasks":[]}""")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].field").value("tasks"));
+
+        mvc.perform(get("/api/v1/tasks").param("examId", exam).cookie(session))
+                .andExpect(jsonPath("$.totalItems").value(2));
+        mvc.perform(get("/api/v1/tasks").cookie(session)).andExpect(jsonPath("$.totalItems").value(2));
+    }
+
+    @Test
     void todayShowsWhatNeedsDoingInOrder() throws Exception {
         Cookie session = registerAndGetSession(uniqueEmail("task-today"));
         create(session, """

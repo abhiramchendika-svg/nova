@@ -3,7 +3,7 @@
 > **Your student life, organized in one place.**
 > NOVA brings classes, deadlines, grades and developer growth into one calm dashboard, so every morning starts with a clear answer to *what now?*
 
-**Status:** early development (Phase 3 of 8). Accounts, login, first-run setup and settings work end to end; semesters, courses, grading schemes, GPA/CGPA, what-if grades and attendance have their API and pages (Courses, Attendance, Grades); assignments have their API and page, and each course has its own page (attendance, open work, upcoming exams, links), exams have countdown cards and a prep checklist per exam, and the weekly timetable feeds Home, where today’s classes can be marked in one tap. The planner’s tasks API (today, upcoming, repeats) is in; its pages and the calendar come next, and developer features arrive in Phase 4. Nothing here is production-ready yet.
+**Status:** early development (Phase 3 of 8). Accounts, login, first-run setup and settings work end to end; semesters, courses, grading schemes, GPA/CGPA, what-if grades and attendance have their API and pages (Courses, Attendance, Grades); assignments have their API and page, and each course has its own page (attendance, open work, upcoming exams, links), exams have countdown cards and a prep checklist per exam, and the weekly timetable feeds Home, where today’s classes can be marked in one tap. Tasks have their API and page (Today, Upcoming, Done, repeating tasks), and each exam has a study plan that can spread unfinished topics over the days before it; the calendar and a fuller Home come next, and developer features arrive in Phase 4. Nothing here is production-ready yet.
 
 ## The problem
 

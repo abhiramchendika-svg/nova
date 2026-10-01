@@ -300,6 +300,7 @@ Legend: 🔓 public · everything else requires a session. **P** marks paginated
 | GET | `/api/v1/tasks/completed` **P** | Done tasks, most recently completed first |
 | GET | `/api/v1/tasks` **P** | Filters: `category`, `status` (repeatable), `courseId`, `examId`; `sort=plannedFor\|dueAt\|createdAt[,asc\|desc]` (default newest first; anything else `400` on `sort`) |
 | POST | `/api/v1/tasks` | Create → `201`: `{ "title", "description?", "category?", "priority?", "plannedFor?", "plannedStart?", "dueAt?", "estimatedMinutes?", "recurrence?", "courseId?", "examId?" }` |
+| POST | `/api/v1/tasks/batch` | `{ "tasks": [ …1–30 task bodies… ] }` → `201 { "tasks": [...] }`. All or nothing; a problem with one is reported on `tasks[i].field` (e.g. `tasks[1].title`). Used by an exam's "Plan my revision". |
 | GET / PUT / DELETE | `/api/v1/tasks/{id}` | Read / full replace (same body, status excluded) / delete → `204`. `DELETE ?series=true` also deletes the open repeats planned on or after this one. |
 | PATCH | `/api/v1/tasks/{id}/status` | `{ "status": "TODO" \| "IN_PROGRESS" \| "DONE" }` → `{ "task", "nextInstance" }` |
 

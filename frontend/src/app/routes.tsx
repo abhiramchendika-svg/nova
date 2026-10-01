@@ -19,6 +19,7 @@ const ExamPage = lazy(pageLoaders.ExamPage);
 const TimetablePage = lazy(pageLoaders.TimetablePage);
 const GradesPage = lazy(pageLoaders.GradesPage);
 const GradingSchemesPage = lazy(pageLoaders.GradingSchemesPage);
+const TasksPage = lazy(pageLoaders.TasksPage);
 const SettingsPage = lazy(pageLoaders.SettingsPage);
 const OnboardingPage = lazy(pageLoaders.OnboardingPage);
 const SectionPlaceholder = lazy(pageLoaders.SectionPlaceholder);
@@ -61,6 +62,7 @@ export const routes: RouteObject[] = [
       { path: 'academics/exams', element: <ExamsPage /> },
       { path: 'academics/exams/:examId', element: <ExamPage /> },
       { path: 'academics/timetable', element: <TimetablePage /> },
+      { path: 'planner/tasks', element: <TasksPage /> },
       { path: 'settings', element: <SettingsPage /> },
       { path: 'academics/attendance', element: <AttendancePage /> },
       { path: 'academics/grades', element: <GradesPage /> },

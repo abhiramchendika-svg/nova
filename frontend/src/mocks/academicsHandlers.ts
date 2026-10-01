@@ -45,22 +45,23 @@ import {
 } from './coursework';
 import type { SettingsRequest } from '@/features/settings/types';
 import { API, csrfOk, problem } from './http';
+import { unlinkTasks } from './planner';
 
 /**
  * Mock academics API (docs/api.md §2.2–2.4): the same routes, status codes and error shapes as
  * the Spring Boot controllers, backed by an in-memory store per user.
  */
 
-type StoreFor = () => AcademicStore | null;
+export type StoreFor = () => AcademicStore | null;
 
-function invalid(field: string, message: string) {
+export function invalid(field: string, message: string) {
   return problem(400, 'VALIDATION_FAILED', 'Some fields need attention', { errors: [{ field, message }] });
 }
 
-const notFound = () => problem(404, 'NOT_FOUND', 'We couldn’t find that');
+export const notFound = () => problem(404, 'NOT_FOUND', 'We couldn’t find that');
 
 /** Runs a handler with the user's store, enforcing login (and CSRF for writes). */
-function withStore(
+export function withStore(
   storeFor: StoreFor,
   handler: (
     store: AcademicStore,
@@ -930,6 +931,7 @@ export function createAcademicsHandlers(
         if (index < 0) return notFound();
         store.exams.splice(index, 1);
         store.topics = store.topics.filter((t) => t.examId !== params.id);
+        unlinkTasks(store, new Set(), new Set([params.id!]));
         return new HttpResponse(null, { status: 204 });
       }),
     ),
