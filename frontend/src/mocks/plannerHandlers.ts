@@ -4,6 +4,7 @@ import type { SettingsRequest } from '@/features/settings/types';
 import { addDays, daysBetween, localParts, todayIn, zonedToInstant } from '@/lib/dates';
 import type { AcademicStore } from './academics';
 import { invalid, notFound, withStore, type StoreFor } from './academicsHandlers';
+import { buildCalendar } from './calendar';
 import { API, problem } from './http';
 import {
   isOpenTask,
@@ -110,6 +111,22 @@ export function createPlannerHandlers(storeFor: StoreFor, settingsFor: () => Set
     });
 
   return [
+    http.get(
+      `${API}/calendar`,
+      withStore(storeFor, (store, request) => {
+        const url = new URL(request.url);
+        const from = url.searchParams.get('from');
+        const to = url.searchParams.get('to');
+        const date = /^\d{4}-\d{2}-\d{2}$/;
+        if (!from || !date.test(from)) return problem(400, 'MALFORMED_REQUEST', 'Missing or bad "from"');
+        if (!to || !date.test(to)) return problem(400, 'MALFORMED_REQUEST', 'Missing or bad "to"');
+        if (to < from) return invalid('to', 'The end date can’t be before the start date.');
+        if (daysBetween(from, to) + 1 > MAX_UPCOMING_DAYS)
+          return invalid('to', 'Show at most 62 days at once.');
+        return HttpResponse.json(buildCalendar(store, from, to, tz()));
+      }),
+    ),
+
     // Specific paths first: MSW takes the first matching handler, and "today" would match ":id"
     http.get(
       `${API}/tasks/today`,

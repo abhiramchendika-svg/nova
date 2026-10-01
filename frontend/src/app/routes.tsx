@@ -20,6 +20,7 @@ const TimetablePage = lazy(pageLoaders.TimetablePage);
 const GradesPage = lazy(pageLoaders.GradesPage);
 const GradingSchemesPage = lazy(pageLoaders.GradingSchemesPage);
 const TasksPage = lazy(pageLoaders.TasksPage);
+const CalendarPage = lazy(pageLoaders.CalendarPage);
 const SettingsPage = lazy(pageLoaders.SettingsPage);
 const OnboardingPage = lazy(pageLoaders.OnboardingPage);
 const SectionPlaceholder = lazy(pageLoaders.SectionPlaceholder);
@@ -27,7 +28,6 @@ const SectionPlaceholder = lazy(pageLoaders.SectionPlaceholder);
 /** Sections that exist in the navigation but ship in a later phase (docs/architecture.md §18). */
 const PLANNED: { path: string; phase: string }[] = [
   { path: 'academics/*', phase: 'Phase 2' },
-  { path: 'planner/*', phase: 'Phase 3' },
   { path: 'developer/*', phase: 'Phase 4' },
   { path: 'insights', phase: 'Phase 5' },
   { path: 'settings/*', phase: 'Phase 2' },
@@ -63,6 +63,7 @@ export const routes: RouteObject[] = [
       { path: 'academics/exams/:examId', element: <ExamPage /> },
       { path: 'academics/timetable', element: <TimetablePage /> },
       { path: 'planner/tasks', element: <TasksPage /> },
+      { path: 'planner/calendar', element: <CalendarPage /> },
       { path: 'settings', element: <SettingsPage /> },
       { path: 'academics/attendance', element: <AttendancePage /> },
       { path: 'academics/grades', element: <GradesPage /> },

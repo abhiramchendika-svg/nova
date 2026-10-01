@@ -14,6 +14,10 @@ public interface AssignmentRepository extends JpaRepository<Assignment, UUID>, J
 
     Optional<Assignment> findByIdAndUserId(UUID id, UUID userId);
 
+    /** Assignments with the given statuses due within [from, to) (the calendar). */
+    List<Assignment> findByUserIdAndStatusInAndDueAtGreaterThanEqualAndDueAtLessThan(
+            UUID userId, Collection<AssignmentStatus> statuses, Instant from, Instant to);
+
     List<Assignment> findByCourseIdAndUserIdAndStatusInOrderByDueAtAsc(
             UUID courseId, UUID userId, Collection<AssignmentStatus> statuses, Pageable limit);
 

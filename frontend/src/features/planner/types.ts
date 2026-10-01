@@ -78,3 +78,45 @@ export interface TaskFilter {
 }
 
 export type TaskPage = Page<Task>;
+
+// ───────────── Calendar (docs/api.md §2.10) ─────────────
+
+export type CalendarItemType = 'CLASS' | 'EXAM' | 'ASSIGNMENT_DUE' | 'TASK' | 'TASK_DUE';
+
+/**
+ * One thing on one day. Times are "HH:mm" on the user's wall clock: a block has both (endTime
+ * "24:00" if it runs past midnight), a deadline only startTime, an untimed task neither.
+ */
+export interface CalendarItem {
+  key: string;
+  type: CalendarItemType;
+  refId: string;
+  title: string;
+  date: string;
+  startTime: string | null;
+  endTime: string | null;
+  done: boolean;
+  courseId: string | null;
+  courseCode: string | null;
+  courseName: string | null;
+  colorHue: number | null;
+  location: string | null;
+  kind: string | null;
+  priority: TaskPriority | null;
+}
+
+export interface DayLoad {
+  date: string;
+  deadlines: number;
+  exams: number;
+  classMinutes: number;
+  plannedTaskMinutes: number;
+}
+
+export interface CalendarRange {
+  from: string;
+  to: string;
+  timezone: string;
+  items: CalendarItem[];
+  load: DayLoad[];
+}

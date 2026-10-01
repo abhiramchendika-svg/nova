@@ -1,6 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, type ApiError } from '@/services/http';
 import type {
+  CalendarRange,
   StatusResult,
   Task,
   TaskFilter,
@@ -22,6 +23,8 @@ export const plannerKeys = {
   upcoming: (days: number) => ['planner', 'upcoming', days] as const,
   completed: (page: number) => ['planner', 'completed', page] as const,
   list: (filter: TaskFilter) => ['planner', 'list', filter] as const,
+  task: (id: string) => ['planner', 'task', id] as const,
+  calendar: (from: string, to: string) => ['planner', 'calendar', from, to] as const,
 };
 
 function useInvalidatePlanner() {
@@ -72,6 +75,23 @@ export function useTasks(filter: TaskFilter, enabled = true) {
     queryKey: plannerKeys.list(filter),
     queryFn: ({ signal }) => api<TaskPage>(`/tasks?${taskQuery(filter)}`, { signal }),
     enabled,
+  });
+}
+
+export function useTask(id: string | null) {
+  return useQuery<Task, ApiError>({
+    queryKey: plannerKeys.task(id ?? ''),
+    queryFn: ({ signal }) => api<Task>(`/tasks/${id}`, { signal }),
+    enabled: id !== null,
+  });
+}
+
+/** Classes, exams, deadlines and tasks from {@code from} to {@code to} (inclusive, at most 62 days). */
+export function useCalendar(from: string, to: string) {
+  return useQuery<CalendarRange, ApiError>({
+    queryKey: plannerKeys.calendar(from, to),
+    queryFn: ({ signal }) => api<CalendarRange>(`/calendar?from=${from}&to=${to}`, { signal }),
+    placeholderData: keepPreviousData,
   });
 }
 

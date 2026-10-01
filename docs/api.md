@@ -317,21 +317,27 @@ Legend: 🔓 public · everything else requires a session. **P** marks paginated
 
 | Method | Path | Purpose |
 |---|---|---|
-| GET | `/api/v1/calendar?from=2026-09-28&to=2026-10-04` | Unified, read-only feed (max 62-day range → otherwise `400`) |
+| GET | `/api/v1/calendar?from=2026-09-28&to=2026-10-04` | One read-only feed over the timetable, exams, assignments and tasks. Both dates inclusive, in the user's timezone; `to` before `from`, or more than 62 days, is `400` on `to`. |
 
 ```json
 {
+  "from": "2026-09-28", "to": "2026-10-04", "timezone": "Asia/Kolkata",
   "items": [
-    { "type": "CLASS", "id": "tt_…", "title": "Database Systems", "start": "…T09:00+05:30", "end": "…T09:50+05:30", "domain": "ACADEMICS", "ref": { "kind": "course", "id": "…" }, "meta": { "location": "LH-204" } },
-    { "type": "ASSIGNMENT_DUE", "id": "…", "title": "ER diagram", "start": "…T23:59+05:30", "allDay": false, "domain": "ACADEMICS", "urgency": "THIS_WEEK" },
-    { "type": "EXAM", … }, { "type": "TASK", … }, { "type": "HACKATHON", … }, { "type": "INTERNSHIP_DEADLINE", … }
+    { "key": "class:…:2026-09-28", "type": "CLASS", "refId": "…", "title": "Database Systems", "date": "2026-09-28",
+      "startTime": "09:00", "endTime": "09:50", "done": false, "courseId": "…", "courseCode": "CSE 201",
+      "courseName": "Database Systems", "colorHue": 210, "location": "LH-204", "kind": "LECTURE", "priority": null },
+    { "key": "assignment:…", "type": "ASSIGNMENT_DUE", "title": "ER diagram", "date": "2026-09-30", "startTime": "23:59", "endTime": null, "priority": "HIGH", "…": "…" },
+    { "key": "task:…", "type": "TASK", "title": "Read notes", "date": "2026-10-01", "startTime": null, "endTime": null, "…": "…" }
   ],
-  "load": [ { "date": "2026-09-30", "deadlines": 3, "exams": 0, "classMinutes": 250, "plannedTaskMinutes": 90 } ]
+  "load": [ { "date": "2026-09-28", "deadlines": 1, "exams": 0, "classMinutes": 250, "plannedTaskMinutes": 90 } ]
 }
 ```
 
-- Class instances are **expanded server-side** from timetable slots within the semester's date range.
-- `load` powers the "workload at a glance" bar.
+- `type`: `CLASS` (a weekly timetable entry on each matching date inside the current semester's `startsOn`–`endsOn`), `EXAM`, `ASSIGNMENT_DUE` (open assignments only), `TASK` (planned on that day, open or done; `done` says which) and `TASK_DUE` (an open task's deadline, unless the task is planned for that same day). Hackathons and internship deadlines join in Phase 4.
+- Times are `"HH:mm"` on the user's wall clock. A block (class, exam with a duration, timed task) has both times, with `endTime` `"24:00"` when it runs past midnight; a deadline has only `startTime`; an untimed task has neither. A timed task is as long as its estimate, or 30 minutes without one.
+- `key` is unique in the response (a weekly class appears once per date); `refId` is the timetable entry, exam, assignment or task it comes from. The title of a class is its course's name.
+- Items are ordered by day, untimed first, then start time, then type, then title.
+- `load` has one entry per day in the range: deadlines (assignments and tasks, including a deadline on a task's own planned day), exams, class minutes, and the estimates of open tasks planned that day.
 
 ### 2.11 Dashboard (Phase 1 shell → filled in Phases 2–5)
 
