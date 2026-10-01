@@ -40,6 +40,18 @@ public final class DashboardDtos {
      */
     public record PlannerSummary(int openToday, int doneToday, int weekDone, int weekPlanned, Integer streakDays) {}
 
+    public record NextMilestone(UUID projectId, String projectName, String title, LocalDate dueOn, boolean overdue) {}
+
+    /**
+     * Projects in development, projects that aren't completed or archived, and the soonest open
+     * milestone with a due date among those. GitHub activity joins in slice 4e.
+     */
+    public record DeveloperSummary(int inDevelopment, int activeProjects, NextMilestone nextMilestone) {}
+
     public record DashboardResponse(
-            LocalDate date, List<AttentionItem> needsAttention, AcademicsSummary academics, PlannerSummary planner) {}
+            LocalDate date,
+            List<AttentionItem> needsAttention,
+            AcademicsSummary academics,
+            PlannerSummary planner,
+            DeveloperSummary developer) {}
 }

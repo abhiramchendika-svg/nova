@@ -29,6 +29,8 @@ export interface Task {
   courseName: string | null;
   examId: string | null;
   examTitle: string | null;
+  projectId: string | null;
+  projectName: string | null;
   overdue: boolean;
   urgency: Urgency | null;
 }
@@ -46,6 +48,7 @@ export interface TaskRequest {
   recurrence: Recurrence;
   courseId: string | null;
   examId: string | null;
+  projectId: string | null;
 }
 
 export interface StatusResult {
@@ -72,6 +75,7 @@ export interface TaskFilter {
   category?: TaskCategory;
   courseId?: string;
   examId?: string;
+  projectId?: string;
   sort?: string;
   page?: number;
   size?: number;
@@ -81,7 +85,7 @@ export type TaskPage = Page<Task>;
 
 // ───────────── Calendar (docs/api.md §2.10) ─────────────
 
-export type CalendarItemType = 'CLASS' | 'EXAM' | 'ASSIGNMENT_DUE' | 'TASK' | 'TASK_DUE';
+export type CalendarItemType = 'CLASS' | 'EXAM' | 'ASSIGNMENT_DUE' | 'TASK' | 'TASK_DUE' | 'MILESTONE';
 
 /**
  * One thing on one day. Times are "HH:mm" on the user's wall clock: a block has both (endTime
@@ -103,6 +107,9 @@ export interface CalendarItem {
   location: string | null;
   kind: string | null;
   priority: TaskPriority | null;
+  /** For a milestone, its project (refId is the project too). */
+  projectId: string | null;
+  projectName: string | null;
 }
 
 export interface DayLoad {

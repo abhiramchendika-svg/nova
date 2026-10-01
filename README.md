@@ -3,7 +3,7 @@
 > **Your student life, organized in one place.**
 > NOVA brings classes, deadlines, grades and developer growth into one calm dashboard, so every morning starts with a clear answer to *what now?*
 
-**Status:** early development (Phase 3 of 8 complete). Accounts, login, first-run setup and settings work end to end; semesters, courses, grading schemes, GPA/CGPA, what-if grades and attendance have their API and pages (Courses, Attendance, Grades); assignments have their API and page, and each course has its own page (attendance, open work, upcoming exams, links), exams have countdown cards and a prep checklist per exam, and the weekly timetable feeds Home, where today’s classes can be marked in one tap. Tasks have their API and page (Today, Upcoming, Done, repeating tasks), and each exam has a study plan that can spread unfinished topics over the days before it; a week and month calendar brings classes, exams, deadlines and tasks together with how full each day is; and Home ranks what needs you (overdue work, close deadlines, attendance at risk, under-prepared exams) with a reason for each. Developer features arrive in Phase 4. Nothing here is production-ready yet.
+**Status:** early development (Phase 3 of 8 complete). Accounts, login, first-run setup and settings work end to end; semesters, courses, grading schemes, GPA/CGPA, what-if grades and attendance have their API and pages (Courses, Attendance, Grades); assignments have their API and page, and each course has its own page (attendance, open work, upcoming exams, links), exams have countdown cards and a prep checklist per exam, and the weekly timetable feeds Home, where today’s classes can be marked in one tap. Tasks have their API and page (Today, Upcoming, Done, repeating tasks), and each exam has a study plan that can spread unfinished topics over the days before it; a week and month calendar brings classes, exams, deadlines and tasks together with how full each day is; and Home ranks what needs you (overdue work, close deadlines, attendance at risk, under-prepared exams) with a reason for each. Phase 4 (developer growth) has begun with projects: milestones drive progress, tasks link to projects, and dated milestones join the calendar and Home. Nothing here is production-ready yet.
 
 ## The problem
 
@@ -134,7 +134,7 @@ Tests never call a real external API. Backend integration tests start a throwawa
 | 1 | Foundation: frontend shell, design system, accounts and login, settings API, CI | Done |
 | 2 | Academics: semesters, courses, grading, GPA/CGPA, attendance, assignments, exams, timetable | Done |
 | 3 | Planner: tasks, calendar, Today view | Done |
-| 4 | Developer growth: projects, learning goals, hackathons, internships, GitHub | Planned |
+| 4 | Developer growth: projects, learning goals, hackathons, internships, GitHub | In progress |
 | 5 | Insights and notifications | Planned |
 | 6 | UI polish and accessibility audit | Planned |
 | 7 | Open-source readiness and live demo | Planned |

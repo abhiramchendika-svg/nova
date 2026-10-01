@@ -14,7 +14,8 @@ public final class CalendarDtos {
         EXAM,
         ASSIGNMENT_DUE,
         TASK,
-        TASK_DUE
+        TASK_DUE,
+        MILESTONE
     }
 
     /**
@@ -22,7 +23,7 @@ public final class CalendarDtos {
      * task) has both times, with {@code endTime} "24:00" if it runs past midnight; a deadline has
      * only {@code startTime}; an untimed task has neither. {@code key} is unique within a response
      * (a weekly class appears once per date); {@code refId} is the class entry, exam, assignment or
-     * task it comes from.
+     * task it comes from, and for a milestone its project (the milestone itself is in {@code key}).
      */
     public record CalendarItem(
             String key,
@@ -39,9 +40,14 @@ public final class CalendarDtos {
             Integer colorHue,
             String location,
             String kind,
-            String priority) {}
+            String priority,
+            UUID projectId,
+            String projectName) {}
 
-    /** How full a day is: deadlines (assignments and tasks), exams, class time and planned task time. */
+    /**
+     * How full a day is: deadlines (assignments, tasks and project milestones), exams, class time and
+     * planned task time.
+     */
     public record DayLoad(LocalDate date, int deadlines, int exams, int classMinutes, int plannedTaskMinutes) {}
 
     public record CalendarResponse(

@@ -41,6 +41,7 @@ const TONE: Record<CalendarItemType, string> = {
   ASSIGNMENT_DUE: 'bg-surface border-dashed border-academics/60 text-ink',
   TASK: 'tint-planner border-planner/35 text-planner-text',
   TASK_DUE: 'bg-surface border-dashed border-planner/60 text-ink',
+  MILESTONE: 'bg-surface border-dashed border-developer/60 text-developer-text',
 };
 
 /**
@@ -235,6 +236,7 @@ function Legend() {
     { label: 'Exam', tone: TONE.EXAM },
     { label: 'Deadline', tone: TONE.ASSIGNMENT_DUE },
     { label: 'Task', tone: TONE.TASK },
+    { label: 'Milestone', tone: TONE.MILESTONE },
   ];
   return (
     <ul aria-label="Legend" className="ml-auto flex flex-wrap gap-3 text-[12px] text-ink-2">

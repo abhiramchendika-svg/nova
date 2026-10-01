@@ -2,6 +2,7 @@ import { http, HttpResponse, type HttpHandler } from 'msw';
 import { API, CSRF_TOKEN, csrfOk, problem } from './http';
 import type { CurrentUser } from '@/features/auth/types';
 import { createAcademicsHandlers } from './academicsHandlers';
+import { createDeveloperHandlers } from './developerHandlers';
 import { createPlannerHandlers } from './plannerHandlers';
 import { createAcademicStore, type AcademicStore } from './academics';
 import type { Settings, SettingsRequest } from '@/features/settings/types';
@@ -174,5 +175,6 @@ export function createHandlers(db: MockDb): HttpHandler[] {
 
     ...createAcademicsHandlers(storeFor, settingsFor),
     ...createPlannerHandlers(storeFor, settingsFor),
+    ...createDeveloperHandlers(storeFor, settingsFor),
   ];
 }

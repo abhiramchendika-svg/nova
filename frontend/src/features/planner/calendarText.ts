@@ -7,6 +7,7 @@ export const ITEM_LABEL: Record<CalendarItemType, string> = {
   ASSIGNMENT_DUE: 'Assignment due',
   TASK: 'Task',
   TASK_DUE: 'Task due',
+  MILESTONE: 'Milestone',
 };
 
 /** Where an item lives; tasks open in a dialog instead (null). */
@@ -16,6 +17,8 @@ export function itemHref(item: CalendarItem): string | null {
       return item.courseId ? `/app/academics/courses/${item.courseId}` : null;
     case 'EXAM':
       return `/app/academics/exams/${item.refId}`;
+    case 'MILESTONE':
+      return `/app/developer/projects/${item.refId}`;
     case 'ASSIGNMENT_DUE':
       return item.courseId
         ? `/app/academics/assignments?course=${item.courseId}`
@@ -37,6 +40,7 @@ export function itemDescription(item: CalendarItem): string {
   const parts = [`${ITEM_LABEL[item.type]}: ${item.title}`];
   if (item.type !== 'CLASS' && (item.courseCode ?? item.courseName))
     parts.push(item.courseCode ?? item.courseName!);
+  if (item.projectName) parts.push(item.projectName);
   const time = itemTime(item);
   if (time) parts.push(time);
   if (item.location) parts.push(item.location);

@@ -44,9 +44,24 @@ export interface PlannerSummary {
   streakDays: number | null;
 }
 
+/** Projects at a glance; GitHub activity joins in slice 4e. */
+export interface DeveloperSummary {
+  inDevelopment: number;
+  /** Not completed or archived. */
+  activeProjects: number;
+  nextMilestone: {
+    projectId: string;
+    projectName: string;
+    title: string;
+    dueOn: string;
+    overdue: boolean;
+  } | null;
+}
+
 export interface Dashboard {
   date: string;
   needsAttention: AttentionItem[];
   academics: AcademicsSummary | null;
   planner: PlannerSummary;
+  developer: DeveloperSummary;
 }

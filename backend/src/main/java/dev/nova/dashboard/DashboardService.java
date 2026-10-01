@@ -17,8 +17,15 @@ import dev.nova.dashboard.DashboardDtos.AcademicsSummary;
 import dev.nova.dashboard.DashboardDtos.AttentionItem;
 import dev.nova.dashboard.DashboardDtos.AttentionKind;
 import dev.nova.dashboard.DashboardDtos.DashboardResponse;
+import dev.nova.dashboard.DashboardDtos.DeveloperSummary;
+import dev.nova.dashboard.DashboardDtos.NextMilestone;
 import dev.nova.dashboard.DashboardDtos.LowestAttendance;
 import dev.nova.dashboard.DashboardDtos.PlannerSummary;
+import dev.nova.developer.project.Milestone;
+import dev.nova.developer.project.MilestoneRepository;
+import dev.nova.developer.project.Project;
+import dev.nova.developer.project.ProjectRepository;
+import dev.nova.developer.project.ProjectStatus;
 import dev.nova.planner.task.Task;
 import dev.nova.planner.task.TaskDtos.TodayResponse;
 import dev.nova.planner.task.TaskRepository;
@@ -77,6 +84,8 @@ public class DashboardService {
     private final GradesService grades;
     private final TaskService taskService;
     private final UserSettingsRepository settings;
+    private final ProjectRepository projects;
+    private final MilestoneRepository milestones;
     private final UserClock userClock;
 
     public DashboardService(
@@ -88,6 +97,8 @@ public class DashboardService {
             GradesService grades,
             TaskService taskService,
             UserSettingsRepository settings,
+            ProjectRepository projects,
+            MilestoneRepository milestones,
             UserClock userClock) {
         this.assignments = assignments;
         this.tasks = tasks;
@@ -97,6 +108,8 @@ public class DashboardService {
         this.grades = grades;
         this.taskService = taskService;
         this.settings = settings;
+        this.projects = projects;
+        this.milestones = milestones;
         this.userClock = userClock;
     }
 
@@ -138,7 +151,32 @@ public class DashboardService {
                                         a.courseId(), a.courseName(), a.percentage(), a.target()))
                                 .orElse(null));
 
-        return new DashboardResponse(today, ranked, academics, planner(userId, today, zone));
+        return new DashboardResponse(
+                today, ranked, academics, planner(userId, today, zone), developer(userId, today));
+    }
+
+    // ───────────── developer card ─────────────
+
+    private DeveloperSummary developer(UUID userId, LocalDate today) {
+        Map<UUID, Project> active = projects
+                .findByUserIdAndStatusInOrderByCreatedAtDesc(
+                        userId, Set.of(ProjectStatus.IDEA, ProjectStatus.PLANNING, ProjectStatus.DEVELOPMENT))
+                .stream()
+                .collect(Collectors.toMap(Project::getId, Function.identity()));
+        int inDevelopment = (int) active.values().stream()
+                .filter(p -> p.getStatus() == ProjectStatus.DEVELOPMENT)
+                .count();
+        NextMilestone next = milestones.findByUserIdAndDoneAtIsNullAndDueOnIsNotNullOrderByDueOnAsc(userId).stream()
+                .filter(m -> active.containsKey(m.getProjectId()))
+                .findFirst()
+                .map(m -> nextMilestone(m, active.get(m.getProjectId()), today))
+                .orElse(null);
+        return new DeveloperSummary(inDevelopment, active.size(), next);
+    }
+
+    private static NextMilestone nextMilestone(Milestone m, Project project, LocalDate today) {
+        return new NextMilestone(
+                project.getId(), project.getName(), m.getTitle(), m.getDueOn(), m.getDueOn().isBefore(today));
     }
 
     // ───────────── needs attention ─────────────

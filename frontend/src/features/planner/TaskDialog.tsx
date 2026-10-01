@@ -9,6 +9,8 @@ import { SelectField } from '@/components/ui/SelectField';
 import { TextAreaField } from '@/components/ui/TextAreaField';
 import { useCourses, useExams, useSemesters } from '@/features/academics/api';
 import { pickSemester } from '@/features/academics/selection';
+import { useProjects } from '@/features/developer/api';
+import type { ProjectStatus } from '@/features/developer/types';
 import { localParts } from '@/lib/dates';
 import { errorMessage } from '@/services/http';
 import { useCreateTask, useUpdateTask } from './api';
@@ -29,7 +31,11 @@ const SERVER_FIELDS: Record<string, keyof TaskValues> = {
   recurrence: 'recurrence',
   courseId: 'courseId',
   examId: 'examId',
+  projectId: 'projectId',
 };
+
+/** Projects a new task can join; a task's existing link is kept as a choice even if it's finished. */
+const ACTIVE_PROJECTS: ProjectStatus[] = ['IDEA', 'PLANNING', 'DEVELOPMENT'];
 
 const RECURRENCES: Recurrence[] = ['NONE', 'DAILY', 'WEEKDAYS', 'WEEKLY'];
 
@@ -46,6 +52,7 @@ const EMPTY: TaskValues = {
   recurrence: 'NONE',
   courseId: '',
   examId: '',
+  projectId: '',
 };
 
 function valuesOf(task: Task, timezone: string): TaskValues {
@@ -63,6 +70,7 @@ function valuesOf(task: Task, timezone: string): TaskValues {
     recurrence: task.recurrence,
     courseId: task.courseId ?? '',
     examId: task.examId ?? '',
+    projectId: task.projectId ?? '',
   };
 }
 
@@ -77,6 +85,8 @@ export interface TaskDialogProps {
   initial?: Partial<TaskValues>;
   /** An exam to always offer (e.g. the exam page's own, which may already be past). */
   examChoice?: { id: string; courseId: string; title: string };
+  /** A project to always offer (e.g. the project page's own, which may be completed). */
+  projectChoice?: { id: string; name: string };
   /** Called with the saved task's title, for an announcement. */
   onSaved?: (title: string) => void;
 }
@@ -88,6 +98,7 @@ export function TaskDialog({
   task,
   initial,
   examChoice,
+  projectChoice,
   onSaved,
 }: TaskDialogProps) {
   const create = useCreateTask();
@@ -97,6 +108,7 @@ export function TaskDialog({
   const current = pickSemester(semesters.data ?? [], null);
   const courses = useCourses(current?.id);
   const exams = useExams({ upcoming: true }, open);
+  const projects = useProjects(ACTIVE_PROJECTS, open);
 
   const defaults = () => (task ? valuesOf(task, timezone) : { ...EMPTY, ...initial });
   const {
@@ -125,8 +137,9 @@ export function TaskDialog({
     if (open) {
       setValue('courseId', getValues('courseId'));
       setValue('examId', getValues('examId'));
+      setValue('projectId', getValues('projectId'));
     }
-  }, [open, courses.data, exams.data, setValue, getValues]);
+  }, [open, courses.data, exams.data, projects.data, setValue, getValues]);
 
   const courseId = useWatch({ control, name: 'courseId' });
   const plannedFor = useWatch({ control, name: 'plannedFor' });
@@ -145,6 +158,13 @@ export function TaskDialog({
   }
   if (task?.examId && !allExams.some((e) => e.id === task.examId)) {
     allExams.push({ id: task.examId, courseId: task.courseId ?? '', label: task.examTitle ?? 'Linked exam' });
+  }
+  const projectChoices = (projects.data ?? []).map((p) => ({ id: p.id, label: p.name }));
+  for (const extra of [
+    projectChoice && { id: projectChoice.id, label: projectChoice.name },
+    task?.projectId && { id: task.projectId, label: task.projectName ?? 'Linked project' },
+  ]) {
+    if (extra && !projectChoices.some((p) => p.id === extra.id)) projectChoices.push(extra);
   }
   const examChoices = courseId ? allExams.filter((e) => e.courseId === courseId) : allExams;
 
@@ -270,8 +290,20 @@ export function TaskDialog({
         </div>
         <div className="grid items-start gap-4 sm:grid-cols-2">
           <SelectField
+            label="Project (optional)"
+            error={errors.projectId?.message}
+            {...register('projectId')}
+          >
+            <option value="">None</option>
+            {projectChoices.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.label}
+              </option>
+            ))}
+          </SelectField>
+          <SelectField
             label="Category"
-            hint="Automatic: Academic with a course, else Personal"
+            hint="Automatic: Academic with a course, Project with a project, else Personal"
             error={errors.category?.message}
             {...register('category')}
           >
@@ -282,6 +314,8 @@ export function TaskDialog({
               </option>
             ))}
           </SelectField>
+        </div>
+        <div className="grid items-start gap-4 sm:grid-cols-2">
           <Field
             label="Estimate in minutes (optional)"
             inputMode="numeric"

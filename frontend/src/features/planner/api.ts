@@ -27,9 +27,14 @@ export const plannerKeys = {
   calendar: (from: string, to: string) => ['planner', 'calendar', from, to] as const,
 };
 
+/** Task changes also refresh projects (open task counts); ['developer'] is developerKeys.all. */
 function useInvalidatePlanner() {
   const queryClient = useQueryClient();
-  return () => queryClient.invalidateQueries({ queryKey: plannerKeys.all });
+  return () =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: plannerKeys.all }),
+      queryClient.invalidateQueries({ queryKey: ['developer'] }),
+    ]);
 }
 
 export function useTodayTasks(date: string | null = null) {
@@ -64,6 +69,7 @@ export function taskQuery(filter: TaskFilter): string {
   if (filter.category) params.set('category', filter.category);
   if (filter.courseId) params.set('courseId', filter.courseId);
   if (filter.examId) params.set('examId', filter.examId);
+  if (filter.projectId) params.set('projectId', filter.projectId);
   if (filter.sort) params.set('sort', filter.sort);
   params.set('page', String(filter.page ?? 0));
   params.set('size', String(filter.size ?? 20));

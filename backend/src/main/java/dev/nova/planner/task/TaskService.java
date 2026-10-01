@@ -7,6 +7,8 @@ import dev.nova.academics.exam.Exam;
 import dev.nova.academics.exam.ExamRepository;
 import dev.nova.common.web.ApiException;
 import dev.nova.common.web.PageResponse;
+import dev.nova.developer.project.Project;
+import dev.nova.developer.project.ProjectRepository;
 import dev.nova.planner.task.TaskDtos.StatusResponse;
 import dev.nova.planner.task.TaskDtos.TaskRequest;
 import dev.nova.planner.task.TaskDtos.TaskResponse;
@@ -56,16 +58,24 @@ public class TaskService {
     private final CourseRepository courses;
     private final ExamRepository exams;
     private final UserClock userClock;
+    private final ProjectRepository projects;
 
-    public TaskService(TaskRepository tasks, CourseRepository courses, ExamRepository exams, UserClock userClock) {
+    public TaskService(
+            TaskRepository tasks,
+            CourseRepository courses,
+            ExamRepository exams,
+            UserClock userClock,
+            ProjectRepository projects) {
         this.tasks = tasks;
+        this.projects = projects;
         this.courses = courses;
         this.exams = exams;
         this.userClock = userClock;
     }
 
     /** Filters for the generic list; null means "don't filter on this". */
-    public record Filter(TaskCategory category, Collection<TaskStatus> statuses, UUID courseId, UUID examId) {}
+    public record Filter(
+            TaskCategory category, Collection<TaskStatus> statuses, UUID courseId, UUID examId, UUID projectId) {}
 
     // ───────────── views ─────────────
 
@@ -141,6 +151,9 @@ public class TaskService {
             }
             if (filter.examId() != null) {
                 where.add(cb.equal(root.get("examId"), filter.examId()));
+            }
+            if (filter.projectId() != null) {
+                where.add(cb.equal(root.get("projectId"), filter.projectId()));
             }
             return cb.and(where.toArray(Predicate[]::new));
         };
@@ -260,6 +273,10 @@ public class TaskService {
             throw ApiException.invalidField("examId", "That exam belongs to another course.");
         }
         UUID courseId = course != null ? course.getId() : exam != null ? exam.getCourseId() : null;
+        Project project = request.projectId() == null
+                ? null
+                : projects.findByIdAndUserId(request.projectId(), userId)
+                        .orElseThrow(() -> ApiException.invalidField("projectId", "Choose one of your projects."));
 
         Recurrence recurrence = request.recurrence() == null ? Recurrence.NONE : request.recurrence();
         if (request.plannedStart() != null && request.plannedFor() == null) {
@@ -268,9 +285,16 @@ public class TaskService {
         if (recurrence != Recurrence.NONE && request.plannedFor() == null) {
             throw ApiException.invalidField("plannedFor", "A repeating task needs a day to start from.");
         }
-        TaskCategory category = request.category() != null
-                ? request.category()
-                : courseId != null ? TaskCategory.ACADEMIC : TaskCategory.PERSONAL;
+        TaskCategory category;
+        if (request.category() != null) {
+            category = request.category();
+        } else if (courseId != null) {
+            category = TaskCategory.ACADEMIC;
+        } else if (project != null) {
+            category = TaskCategory.PROJECT;
+        } else {
+            category = TaskCategory.PERSONAL;
+        }
 
         task.edit(
                 request.title().strip(),
@@ -283,7 +307,8 @@ public class TaskService {
                 request.estimatedMinutes(),
                 recurrence,
                 courseId,
-                exam == null ? null : exam.getId());
+                exam == null ? null : exam.getId(),
+                project == null ? null : project.getId());
     }
 
     /** "plannedFor,asc" style, allow-listed; default newest first. Ties break on id for stable paging. */
@@ -311,7 +336,7 @@ public class TaskService {
         return all;
     }
 
-    /** One course lookup, one exam lookup and one timezone lookup for a batch. */
+    /** One course, exam and project lookup, and one timezone lookup, for a batch. */
     private Responses responsesFor(UUID userId, List<Task> batch) {
         Set<UUID> courseIds = batch.stream().map(Task::getCourseId).filter(Objects::nonNull).collect(Collectors.toSet());
         Set<UUID> examIds = batch.stream().map(Task::getExamId).filter(Objects::nonNull).collect(Collectors.toSet());
@@ -321,14 +346,22 @@ public class TaskService {
         Map<UUID, Exam> examById = examIds.isEmpty()
                 ? Map.of()
                 : exams.findAllById(examIds).stream().collect(Collectors.toMap(Exam::getId, Function.identity()));
-        return new Responses(courseById, examById, userClock.now(), userClock.zoneOf(userId));
+        Set<UUID> projectIds =
+                batch.stream().map(Task::getProjectId).filter(Objects::nonNull).collect(Collectors.toSet());
+        Map<UUID, Project> projectById = projectIds.isEmpty()
+                ? Map.of()
+                : projects.findAllById(projectIds).stream()
+                        .collect(Collectors.toMap(Project::getId, Function.identity()));
+        return new Responses(courseById, examById, projectById, userClock.now(), userClock.zoneOf(userId));
     }
 
-    private record Responses(Map<UUID, Course> courses, Map<UUID, Exam> exams, Instant now, ZoneId zone) {
+    private record Responses(
+            Map<UUID, Course> courses, Map<UUID, Exam> exams, Map<UUID, Project> projects, Instant now, ZoneId zone) {
 
         TaskResponse of(Task t) {
             Course course = t.getCourseId() == null ? null : courses.get(t.getCourseId());
             Exam exam = t.getExamId() == null ? null : exams.get(t.getExamId());
+            Project project = t.getProjectId() == null ? null : projects.get(t.getProjectId());
             boolean open = t.getStatus().isOpen();
             return new TaskResponse(
                     t.getId(),
@@ -349,6 +382,8 @@ public class TaskService {
                     course == null ? null : course.getName(),
                     t.getExamId(),
                     exam == null ? null : exam.getTitle(),
+                    t.getProjectId(),
+                    project == null ? null : project.getName(),
                     open && t.getDueAt() != null && t.getDueAt().isBefore(now),
                     open && t.getDueAt() != null ? Urgency.of(t.getDueAt(), now, zone) : null);
         }

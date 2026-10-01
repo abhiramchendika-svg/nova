@@ -21,6 +21,7 @@ export function TaskItem({
   timezone,
   showPlannedDay = true,
   showExam = true,
+  showProject = true,
   onEdit,
   onDelete,
   onChanged,
@@ -33,6 +34,8 @@ export function TaskItem({
   showPlannedDay?: boolean;
   /** The exam page lists only its own tasks, so it leaves the exam out. */
   showExam?: boolean;
+  /** Likewise the project page. */
+  showProject?: boolean;
   onEdit: (t: Task) => void;
   onDelete: (t: Task) => void;
   /** Called with a sentence to announce after a status change. */
@@ -77,6 +80,7 @@ export function TaskItem({
   const course = t.courseCode ?? t.courseName;
   if (course) parts.push({ key: 'course', node: course });
   if (showExam && t.examTitle) parts.push({ key: 'exam', node: t.examTitle });
+  if (showProject && t.projectName) parts.push({ key: 'project', node: t.projectName });
   if (t.estimatedMinutes !== null)
     parts.push({ key: 'estimate', node: `about ${formatMinutes(t.estimatedMinutes)}` });
   if (t.recurrence !== 'NONE') {

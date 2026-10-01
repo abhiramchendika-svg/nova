@@ -200,5 +200,30 @@ export function buildDashboard(
       weekPlanned: week.length,
       streakDays: streak(doneDays, today),
     },
+    developer: developerSummary(store, today),
+  };
+}
+
+/** DashboardService.developer: active projects and the soonest open, dated milestone among them. */
+function developerSummary(store: AcademicStore, today: string): Dashboard['developer'] {
+  const active = store.projects.filter((p) => ['IDEA', 'PLANNING', 'DEVELOPMENT'].includes(p.status));
+  const ids = new Set(active.map((p) => p.id));
+  const next = store.milestones
+    .filter((m) => m.doneAt === null && m.dueOn !== null && ids.has(m.projectId))
+    .sort((a, b) => (a.dueOn! < b.dueOn! ? -1 : a.dueOn! > b.dueOn! ? 1 : 0))[0];
+  const project = next && active.find((p) => p.id === next.projectId)!;
+  return {
+    inDevelopment: active.filter((p) => p.status === 'DEVELOPMENT').length,
+    activeProjects: active.length,
+    nextMilestone:
+      next && project
+        ? {
+            projectId: project.id,
+            projectName: project.name,
+            title: next.title,
+            dueOn: next.dueOn!,
+            overdue: next.dueOn! < today,
+          }
+        : null,
   };
 }

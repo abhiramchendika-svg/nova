@@ -17,7 +17,7 @@ import java.util.UUID;
 
 /**
  * A planner task: an optional do date (and start time, read in the user's timezone), an optional
- * deadline, and optional links to a course and an exam. Status and completedAt move together.
+ * deadline, and optional links to a course, an exam and a project. Status and completedAt move together.
  */
 @Entity
 @Table(name = "tasks")
@@ -76,6 +76,9 @@ public class Task extends AuditedEntity {
     @Column(name = "exam_id")
     private UUID examId;
 
+    @Column(name = "project_id")
+    private UUID projectId;
+
     protected Task() {}
 
     public Task(UUID userId) {
@@ -94,7 +97,8 @@ public class Task extends AuditedEntity {
             Integer estimatedMinutes,
             Recurrence recurrence,
             UUID courseId,
-            UUID examId) {
+            UUID examId,
+            UUID projectId) {
         if (plannedStart != null && plannedFor == null) {
             throw new IllegalArgumentException("A start time needs a planned day");
         }
@@ -115,6 +119,7 @@ public class Task extends AuditedEntity {
         }
         this.courseId = courseId;
         this.examId = examId;
+        this.projectId = projectId;
     }
 
     /** DONE records when; anything else clears it. Completing again keeps the first time. */
@@ -148,7 +153,8 @@ public class Task extends AuditedEntity {
                 estimatedMinutes,
                 recurrence,
                 courseId,
-                examId);
+                examId,
+                projectId);
         return next;
     }
 
@@ -214,5 +220,9 @@ public class Task extends AuditedEntity {
 
     public UUID getExamId() {
         return examId;
+    }
+
+    public UUID getProjectId() {
+        return projectId;
     }
 }

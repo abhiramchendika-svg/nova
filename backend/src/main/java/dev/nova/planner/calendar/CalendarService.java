@@ -12,6 +12,10 @@ import dev.nova.academics.semester.SemesterRepository;
 import dev.nova.academics.timetable.TimetableEntry;
 import dev.nova.academics.timetable.TimetableRepository;
 import dev.nova.common.web.ApiException;
+import dev.nova.developer.project.Milestone;
+import dev.nova.developer.project.MilestoneRepository;
+import dev.nova.developer.project.Project;
+import dev.nova.developer.project.ProjectRepository;
 import dev.nova.planner.calendar.CalendarDtos.CalendarItem;
 import dev.nova.planner.calendar.CalendarDtos.CalendarResponse;
 import dev.nova.planner.calendar.CalendarDtos.DayLoad;
@@ -39,7 +43,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * One read-only feed over the timetable, exams, assignments and tasks (architecture.md: the
+ * One read-only feed over the timetable, exams, assignments, tasks and project milestones (architecture.md: the
  * calendar is a view, not a table). Everything is placed on the user's calendar days (UserClock).
  */
 @Service
@@ -54,6 +58,8 @@ public class CalendarService {
     private final ExamRepository exams;
     private final AssignmentRepository assignments;
     private final TaskRepository tasks;
+    private final MilestoneRepository milestones;
+    private final ProjectRepository projects;
     private final UserClock userClock;
 
     public CalendarService(
@@ -63,6 +69,8 @@ public class CalendarService {
             ExamRepository exams,
             AssignmentRepository assignments,
             TaskRepository tasks,
+            MilestoneRepository milestones,
+            ProjectRepository projects,
             UserClock userClock) {
         this.semesters = semesters;
         this.courses = courses;
@@ -70,6 +78,8 @@ public class CalendarService {
         this.exams = exams;
         this.assignments = assignments;
         this.tasks = tasks;
+        this.milestones = milestones;
+        this.projects = projects;
         this.userClock = userClock;
     }
 
@@ -172,6 +182,35 @@ public class CalendarService {
                     t.getPriority().name());
         }
 
+        List<Milestone> dueMilestones = milestones.findByUserIdAndDoneAtIsNullAndDueOnBetween(userId, from, to);
+        Map<UUID, Project> projectById = dueMilestones.isEmpty()
+                ? Map.of()
+                : projects.findAllById(dueMilestones.stream().map(Milestone::getProjectId).distinct().toList())
+                        .stream()
+                        .collect(Collectors.toMap(Project::getId, Function.identity()));
+        for (Milestone m : dueMilestones) {
+            Project project = projectById.get(m.getProjectId());
+            items.list.add(new CalendarItem(
+                    "milestone:" + m.getId(),
+                    ItemType.MILESTONE,
+                    m.getProjectId(),
+                    m.getTitle(),
+                    m.getDueOn(),
+                    null,
+                    null,
+                    false,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    m.getProjectId(),
+                    project == null ? null : project.getName()));
+            load.get(m.getDueOn())[0]++;
+        }
+
         List<CalendarItem> sorted = items.list.stream().sorted(CalendarRules.ORDER).toList();
         List<DayLoad> loads = load.entrySet().stream()
                 .map(e -> new DayLoad(e.getKey(), e.getValue()[0], e.getValue()[1], e.getValue()[2], e.getValue()[3]))
@@ -206,7 +245,9 @@ public class CalendarService {
                     course == null ? null : course.getColorHue(),
                     location,
                     kind,
-                    priority));
+                    priority,
+                    null,
+                    null));
         }
     }
 }

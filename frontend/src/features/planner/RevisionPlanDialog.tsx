@@ -116,6 +116,7 @@ function PlanForm({
         recurrence: 'NONE',
         courseId: exam.courseId,
         examId: exam.id,
+        projectId: null,
       })),
       { onSuccess: () => onDone(chosen.length) },
     );

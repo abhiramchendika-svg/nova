@@ -35,6 +35,7 @@ export const taskSchema = z
     recurrence: z.enum(['NONE', 'DAILY', 'WEEKDAYS', 'WEEKLY']),
     courseId: z.string(),
     examId: z.string(),
+    projectId: z.string(),
   })
   .superRefine((v, ctx) => {
     if (v.plannedStart && !v.plannedFor) {
@@ -67,5 +68,6 @@ export function toTaskRequest(v: TaskValues, timezone: string): TaskRequest {
     recurrence: v.recurrence,
     courseId: v.courseId || null,
     examId: v.examId || null,
+    projectId: v.projectId || null,
   };
 }

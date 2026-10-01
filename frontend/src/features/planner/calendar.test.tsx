@@ -29,6 +29,7 @@ function task(id: string, title: string, changes: Partial<StoredTask>): StoredTa
     seriesId: null,
     courseId: null,
     examId: null,
+    projectId: null,
     createdAt: 1,
     ...changes,
   };

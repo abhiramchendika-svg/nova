@@ -8,14 +8,14 @@ import { useTimetableDay } from '@/features/academics/api';
 import { useCurrentUser } from '@/features/auth/api';
 import { useSettings } from '@/features/settings/api';
 import { cn } from '@/lib/cn';
-import { localParts, todayIn } from '@/lib/dates';
+import { formatDay, localParts, todayIn } from '@/lib/dates';
 import { useDashboard } from './api';
 import { formatBriefDate, greetingFor } from './format';
 import { NeedsAttention } from './NeedsAttention';
 import { NextSevenDays } from './NextSevenDays';
 import { TodayClasses } from './TodayClasses';
 import { TodayTasks } from './TodayTasks';
-import type { AcademicsSummary, PlannerSummary } from './types';
+import type { AcademicsSummary, DeveloperSummary, PlannerSummary } from './types';
 import { UpcomingExams } from './UpcomingExams';
 
 /**
@@ -72,13 +72,7 @@ export function HomePage() {
       >
         <AcademicsCard summary={dashboard.data?.academics ?? null} />
         <PlannerCard summary={dashboard.data?.planner ?? null} />
-        <DomainSummary
-          domain="developer"
-          title="Developer"
-          text="Track projects, learning goals and your GitHub activity."
-          to="/app/developer/projects"
-          cta="Add a project"
-        />
+        <DeveloperCard summary={dashboard.data?.developer ?? null} />
       </section>
 
       <Panel title="Next 7 days" className="lg:col-span-8">
@@ -225,6 +219,45 @@ function PlannerCard({ summary }: { summary: PlannerSummary | null }) {
       }
       to="/app/planner/tasks"
       cta="Open tasks"
+    />
+  );
+}
+
+function DeveloperCard({ summary }: { summary: DeveloperSummary | null }) {
+  if (!summary || summary.activeProjects === 0) {
+    return (
+      <DomainSummary
+        domain="developer"
+        title="Developer"
+        text="Track projects, learning goals and your GitHub activity."
+        to="/app/developer/projects"
+        cta="Add a project"
+      />
+    );
+  }
+  const next = summary.nextMilestone;
+  return (
+    <DomainSummary
+      domain="developer"
+      title="Developer"
+      text={
+        <>
+          <p>
+            {summary.inDevelopment} in development · {summary.activeProjects} active{' '}
+            {summary.activeProjects === 1 ? 'project' : 'projects'}
+          </p>
+          {next && (
+            <p>
+              Next milestone: <span className="font-medium text-ink">{next.title}</span> ({next.projectName}),{' '}
+              <span className={cn(next.overdue && 'text-critical')}>
+                {next.overdue ? 'was due' : 'due'} {formatDay(next.dueOn)}
+              </span>
+            </p>
+          )}
+        </>
+      }
+      to="/app/developer/projects"
+      cta="Open projects"
     />
   );
 }

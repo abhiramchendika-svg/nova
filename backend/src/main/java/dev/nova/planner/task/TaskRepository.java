@@ -2,6 +2,7 @@ package dev.nova.planner.task;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -66,4 +67,10 @@ public interface TaskRepository extends JpaRepository<Task, UUID>, JpaSpecificat
             + " and t.status <> dev.nova.planner.task.TaskStatus.DONE and t.plannedFor >= :from")
     List<Task> openInSeriesFrom(
             @Param("userId") UUID userId, @Param("seriesId") UUID seriesId, @Param("from") LocalDate from);
+
+    /** [projectId, count] of tasks that aren't done, per project (the project list). */
+    @Query("select t.projectId, count(t) from Task t where t.userId = :userId and t.projectId in :projectIds"
+            + " and t.status <> dev.nova.planner.task.TaskStatus.DONE group by t.projectId")
+    List<Object[]> countOpenByProject(
+            @Param("userId") UUID userId, @Param("projectIds") Collection<UUID> projectIds);
 }

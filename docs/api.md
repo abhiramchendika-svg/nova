@@ -298,16 +298,16 @@ Legend: 🔓 public · everything else requires a session. **P** marks paginated
 | GET | `/api/v1/tasks/today?date=` | `{ "date", "tasks", "completed" }`: open tasks planned for the date or earlier, or due before it ends (overdue included), in "what now?" order; plus tasks completed that date, newest first. Date defaults to today in the user's timezone. |
 | GET | `/api/v1/tasks/upcoming?days=14` | `{ "from", "to", "days": [{ "date", "tasks" }], "unscheduled" }`: open tasks after today, up to `days` (1–62, else `400` on `days`) |
 | GET | `/api/v1/tasks/completed` **P** | Done tasks, most recently completed first |
-| GET | `/api/v1/tasks` **P** | Filters: `category`, `status` (repeatable), `courseId`, `examId`; `sort=plannedFor\|dueAt\|createdAt[,asc\|desc]` (default newest first; anything else `400` on `sort`) |
-| POST | `/api/v1/tasks` | Create → `201`: `{ "title", "description?", "category?", "priority?", "plannedFor?", "plannedStart?", "dueAt?", "estimatedMinutes?", "recurrence?", "courseId?", "examId?" }` |
+| GET | `/api/v1/tasks` **P** | Filters: `category`, `status` (repeatable), `courseId`, `examId`, `projectId`; `sort=plannedFor\|dueAt\|createdAt[,asc\|desc]` (default newest first; anything else `400` on `sort`) |
+| POST | `/api/v1/tasks` | Create → `201`: `{ "title", "description?", "category?", "priority?", "plannedFor?", "plannedStart?", "dueAt?", "estimatedMinutes?", "recurrence?", "courseId?", "examId?", "projectId?" }` |
 | POST | `/api/v1/tasks/batch` | `{ "tasks": [ …1–30 task bodies… ] }` → `201 { "tasks": [...] }`. All or nothing; a problem with one is reported on `tasks[i].field` (e.g. `tasks[1].title`). Used by an exam's "Plan my revision". |
 | GET / PUT / DELETE | `/api/v1/tasks/{id}` | Read / full replace (same body, status excluded) / delete → `204`. `DELETE ?series=true` also deletes the open repeats planned on or after this one. |
 | PATCH | `/api/v1/tasks/{id}/status` | `{ "status": "TODO" \| "IN_PROGRESS" \| "DONE" }` → `{ "task", "nextInstance" }` |
 
-- Task: `{ "id", "title", "description", "category", "priority", "status", "plannedFor", "plannedStart", "dueAt", "estimatedMinutes", "completedAt", "recurrence", "seriesId", "courseId", "courseCode", "courseName", "examId", "examTitle", "overdue", "urgency" }`.
+- Task: `{ "id", "title", "description", "category", "priority", "status", "plannedFor", "plannedStart", "dueAt", "estimatedMinutes", "completedAt", "recurrence", "seriesId", "courseId", "courseCode", "courseName", "examId", "examTitle", "projectId", "projectName", "overdue", "urgency" }`.
 - **Two kinds of date.** `plannedFor` is the day you mean to do it (optionally at `plannedStart`, `"HH:mm"` on your wall clock); `dueAt` is a hard deadline (an instant). Either, both or neither. With neither, a task is "unscheduled" and appears in `upcoming.unscheduled`.
-- `category`: `ACADEMIC`, `CODING`, `PERSONAL`, `INTERNSHIP`, `OPEN_SOURCE`, `PROJECT`; defaults to `ACADEMIC` when a course or exam is linked, else `PERSONAL`. `priority`: `LOW`, `MEDIUM` (default), `HIGH`. `estimatedMinutes` 1–1440.
-- **Links:** the course and exam must be yours (`400` on `courseId` / `examId`); an exam from a different course than `courseId` is `400` on `examId`; linking only an exam links its course too. Deleting the course or exam keeps the task and clears the link. (Project links arrive in Phase 4.)
+- `category`: `ACADEMIC`, `CODING`, `PERSONAL`, `INTERNSHIP`, `OPEN_SOURCE`, `PROJECT`; defaults to `ACADEMIC` when a course or exam is linked, else `PROJECT` when a project is, else `PERSONAL`. `priority`: `LOW`, `MEDIUM` (default), `HIGH`. `estimatedMinutes` 1–1440.
+- **Links:** the course and exam must be yours (`400` on `courseId` / `examId`); an exam from a different course than `courseId` is `400` on `examId`; linking only an exam links its course too. The project must be yours (`400` on `projectId`). Deleting the course, exam or project keeps the task and clears the link.
 - **Today's order:** overdue → due today → priority (high first) → start time (untimed last) → deadline → oldest. Upcoming groups by `plannedFor`, or by the deadline's local day when there's no plan; within a day by start time, then priority.
 - `overdue` is `true` for an open task past `dueAt`; `urgency` (as for assignments) is null without a deadline or once done. `completedAt` is set exactly while `status` is `DONE`; completing again keeps the first time.
 - **Repeats** (`recurrence`: `NONE`, `DAILY`, `WEEKDAYS`, `WEEKLY`) need `plannedFor` (`400` on `plannedFor`); `plannedStart` needs `plannedFor` too (`400` on `plannedStart`). A repeating task gets a `seriesId`. Completing it creates the next instance (same details; the deadline moves by the same number of days in your timezone) and returns it as `nextInstance`. If that day's instance already exists (e.g. completed, reopened, completed again) `nextInstance` is `null`, and reopening never deletes a generated instance. Two repeats in a series can't share a day (`409`).
@@ -333,11 +333,11 @@ Legend: 🔓 public · everything else requires a session. **P** marks paginated
 }
 ```
 
-- `type`: `CLASS` (a weekly timetable entry on each matching date inside the current semester's `startsOn`–`endsOn`), `EXAM`, `ASSIGNMENT_DUE` (open assignments only), `TASK` (planned on that day, open or done; `done` says which) and `TASK_DUE` (an open task's deadline, unless the task is planned for that same day). Hackathons and internship deadlines join in Phase 4.
+- `type`: `CLASS` (a weekly timetable entry on each matching date inside the current semester's `startsOn`–`endsOn`), `EXAM`, `ASSIGNMENT_DUE` (open assignments only), `TASK` (planned on that day, open or done; `done` says which) `TASK_DUE` (an open task's deadline, unless the task is planned for that same day) and `MILESTONE` (an open project milestone on its due day, untimed; its `refId` is the project, with `projectId` and `projectName` set). Hackathons and internship deadlines join later in Phase 4.
 - Times are `"HH:mm"` on the user's wall clock. A block (class, exam with a duration, timed task) has both times, with `endTime` `"24:00"` when it runs past midnight; a deadline has only `startTime`; an untimed task has neither. A timed task is as long as its estimate, or 30 minutes without one.
 - `key` is unique in the response (a weekly class appears once per date); `refId` is the timetable entry, exam, assignment or task it comes from. The title of a class is its course's name.
 - Items are ordered by day, untimed first, then start time, then type, then title.
-- `load` has one entry per day in the range: deadlines (assignments and tasks, including a deadline on a task's own planned day), exams, class minutes, and the estimates of open tasks planned that day.
+- `load` has one entry per day in the range: deadlines (assignments, tasks (including a deadline on a task's own planned day) and milestones), exams, class minutes, and the estimates of open tasks planned that day.
 
 ### 2.11 Dashboard (Phase 3; developer activity joins in Phase 4)
 
@@ -358,7 +358,9 @@ Home also uses `/timetable/day` (today's classes), `/tasks/today` (today's tasks
   ],
   "academics": { "semesterId": "…", "semesterName": "Semester 3", "gpa": 8.40, "cgpa": 8.62, "credits": 22.0,
                  "lowestAttendance": { "courseId": "…", "courseName": "Compilers", "percentage": 72.5, "target": 75 } },
-  "planner": { "openToday": 3, "doneToday": 2, "weekDone": 11, "weekPlanned": 15, "streakDays": 4 }
+  "planner": { "openToday": 3, "doneToday": 2, "weekDone": 11, "weekPlanned": 15, "streakDays": 4 },
+  "developer": { "inDevelopment": 1, "activeProjects": 2,
+                 "nextMilestone": { "projectId": "…", "projectName": "Bus tracker", "title": "Map shows buses", "dueOn": "2026-10-04", "overdue": false } }
 }
 ```
 
@@ -370,15 +372,19 @@ Home also uses `/timetable/day` (today's classes), `/tasks/today` (today's tasks
   - An exam within 7 days with prep under 50%: 30, plus 4 per day closer than 7, plus 1 per 5 points of prep missing below 50%.
   - Priority adds 15 (high), 8 (medium) or 0 (low).
 - **`academics`** is `null` without a current semester. `gpa`/`cgpa` are `null` until there are grades. `lowestAttendance` is the current semester's course with the lowest percentage among those with classes held.
+- **`developer`**: `activeProjects` counts projects that are an idea, planning or in development; `nextMilestone` is the soonest open milestone with a due date among them (`null` if none). GitHub activity joins in 4e.
 - **`planner`**: `openToday`/`doneToday` match `/tasks/today`. `weekPlanned` counts tasks planned in the current week (by the user's week start), and `weekDone` counts how many of those are done. `streakDays` = consecutive days (ending today, or yesterday if nothing is finished yet today) with at least one completed task, looking back up to 60 days; it is `null` until the streak reaches 3.
 
 ### 2.12 Projects, learning, hackathons, internships (Phase 4)
 
 | Method | Path | Notes |
 |---|---|---|
-| GET/POST | `/api/v1/projects` | `?status=`; each item has computed `progressPct` + `progressSource` (`MILESTONES` \| `MANUAL`) |
-| GET/PUT/DELETE | `/api/v1/projects/{id}` | Detail includes milestones, linked tasks and hackathons |
-| POST/PATCH/DELETE | `/api/v1/projects/{id}/milestones[/{mid}]` | `{ "title", "dueOn?" }`, `{ "done": true }` |
+| GET / POST | `/api/v1/projects` | List, newest first (`?status=` may repeat; none means all) / create → `201` |
+| GET / PUT / DELETE | `/api/v1/projects/{id}` | Read / full replace / delete → `204` (milestones go too; linked tasks stay and lose the link) |
+| POST | `/api/v1/projects/{id}/milestones` | `{ "title", "dueOn?" }` → `201` with the whole project |
+| PUT | `/api/v1/projects/{id}/milestones/{mid}` | Replace title and due date (`null` clears it) → the project |
+| PATCH | `/api/v1/projects/{id}/milestones/{mid}` | `{ "done"?, "position"? }` (at least one); `position` moves it and renumbers the rest → the project |
+| DELETE | `/api/v1/projects/{id}/milestones/{mid}` | → the project, renumbered |
 | GET/POST | `/api/v1/learning-goals` | Each with `progress: { done, total, pct }` |
 | GET/PUT/DELETE | `/api/v1/learning-goals/{id}` | |
 | POST/PATCH/DELETE | `/api/v1/learning-goals/{id}/topics[/{tid}]` | Reorder with `{ "position" }` |
@@ -388,6 +394,15 @@ Home also uses `/timetable/day` (today's classes), `/tasks/today` (today's tasks
 | GET/PUT/DELETE | `/api/v1/internships/{id}` | |
 | PATCH | `/api/v1/internships/{id}/status` | `{ "status": "INTERVIEW" }` → appends to the status history |
 | GET | `/api/v1/internships/analytics?month=2026-09` | `{ "applied": 9, "interviews": 2, "offers": 0, "responseRate": { "value": 33.3, "formula": "responded / applied", "responded": 3, "applied": 9 } }` |
+
+**Projects (Phase 4a).** Body: `{ "name", "description?", "techStack?": [..], "repoUrl?", "demoUrl?", "status?", "startedOn?", "targetOn?" }`.
+
+- Project: `{ "id", "name", "description", "techStack", "repoUrl", "demoUrl", "status", "startedOn", "targetOn", "progress": { "done", "total", "percentage" }, "nextMilestone", "openTasks", "milestones": [...], "createdAt" }`; milestone: `{ "id", "title", "dueOn", "position", "done", "doneAt", "overdue" }`.
+- `status`: `IDEA` (default), `PLANNING`, `DEVELOPMENT`, `COMPLETED`, `ARCHIVED`.
+- **Progress comes only from milestones** (done of total, a whole percentage rounded half-up, `null` with no milestones); it is never stored or set by hand. `nextMilestone` is the first open milestone in checklist order; `overdue` means open and due before today in the user's timezone. `openTasks` counts linked tasks that aren't done.
+- `techStack`: trimmed, blanks dropped, case-insensitive duplicates removed (first spelling kept), up to 15 of up to 30 characters (`400` on `techStack`). Links must be full `http(s)://` addresses with a host (`400` on `repoUrl` / `demoUrl`); empty means none. `targetOn` can't be before `startedOn` (`400` on `targetOn`).
+- Milestones are kept in a dense 0…n−1 order, like exam topics. Up to 100 projects per user and 100 milestones per project (`422`). Another user's project or milestone is `404`.
+- Tasks link to a project with `projectId` (§2.9). Open milestones with a due date appear on the calendar (§2.10) and Home (§2.11).
 
 ### 2.13 GitHub (Phase 4)
 

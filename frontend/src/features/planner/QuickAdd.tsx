@@ -41,6 +41,7 @@ export function QuickAdd({
         recurrence: 'NONE',
         courseId: null,
         examId: null,
+        projectId: null,
       },
       {
         onSuccess: () => {

@@ -21,6 +21,8 @@ const GradesPage = lazy(pageLoaders.GradesPage);
 const GradingSchemesPage = lazy(pageLoaders.GradingSchemesPage);
 const TasksPage = lazy(pageLoaders.TasksPage);
 const CalendarPage = lazy(pageLoaders.CalendarPage);
+const ProjectsPage = lazy(pageLoaders.ProjectsPage);
+const ProjectPage = lazy(pageLoaders.ProjectPage);
 const SettingsPage = lazy(pageLoaders.SettingsPage);
 const OnboardingPage = lazy(pageLoaders.OnboardingPage);
 const SectionPlaceholder = lazy(pageLoaders.SectionPlaceholder);
@@ -64,6 +66,8 @@ export const routes: RouteObject[] = [
       { path: 'academics/timetable', element: <TimetablePage /> },
       { path: 'planner/tasks', element: <TasksPage /> },
       { path: 'planner/calendar', element: <CalendarPage /> },
+      { path: 'developer/projects', element: <ProjectsPage /> },
+      { path: 'developer/projects/:projectId', element: <ProjectPage /> },
       { path: 'settings', element: <SettingsPage /> },
       { path: 'academics/attendance', element: <AttendancePage /> },
       { path: 'academics/grades', element: <GradesPage /> },

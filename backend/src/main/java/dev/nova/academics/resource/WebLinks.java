@@ -11,14 +11,14 @@ import java.util.Optional;
  * file: links (and look-alikes such as "https:/x" or " javascript:…") never get through. The
  * database has the same scheme check as a backstop.
  */
-final class WebLinks {
+public final class WebLinks {
 
     static final int MAX_LENGTH = 2048;
 
     private WebLinks() {}
 
     /** The trimmed URL if it's acceptable; empty otherwise. */
-    static Optional<String> normalize(String raw) {
+    public static Optional<String> normalize(String raw) {
         if (raw == null) {
             return Optional.empty();
         }

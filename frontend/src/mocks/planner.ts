@@ -24,6 +24,7 @@ export interface StoredTask {
   seriesId: string | null;
   courseId: string | null;
   examId: string | null;
+  projectId: string | null;
   createdAt: number;
 }
 
@@ -89,12 +90,14 @@ export const localDay = (iso: string, timezone: string) => localParts(iso, timez
 export function toTask(store: AcademicStore, t: StoredTask, now: Date, timezone: string): Task {
   const course = t.courseId ? store.courses.find((c) => c.id === t.courseId) : undefined;
   const exam = t.examId ? store.exams.find((e) => e.id === t.examId) : undefined;
+  const project = t.projectId ? store.projects.find((p) => p.id === t.projectId) : undefined;
   const open = isOpenTask(t);
   return {
     ...t,
     courseCode: course?.code ?? null,
     courseName: course?.name ?? null,
     examTitle: exam?.title ?? null,
+    projectName: project?.name ?? null,
     overdue: open && t.dueAt !== null && Date.parse(t.dueAt) < now.getTime(),
     urgency: open && t.dueAt !== null ? urgencyOf(t.dueAt, now, timezone) : null,
   };
@@ -137,6 +140,7 @@ export function seedDemoTasks(store: AcademicStore, now: Date = new Date()): voi
       seriesId: null,
       courseId: null,
       examId: null,
+      projectId: null,
       createdAt: n,
       ...t,
     });

@@ -10,6 +10,7 @@ import type {
 } from '@/features/academics/types';
 import type { StoredRecord } from './attendance';
 import type { StoredAssignment, StoredEntry, StoredExam, StoredResource, StoredTopic } from './coursework';
+import type { StoredMilestone, StoredProject } from './developer';
 import type { StoredTask } from './planner';
 
 /**
@@ -98,6 +99,9 @@ export interface AcademicStore {
   timetable: StoredEntry[];
   /** Planner tasks (they link to courses and exams, so they live with them). */
   tasks: StoredTask[];
+  /** Developer projects and their milestones. */
+  projects: StoredProject[];
+  milestones: StoredMilestone[];
 }
 
 export function createAcademicStore(): AcademicStore {
@@ -112,6 +116,8 @@ export function createAcademicStore(): AcademicStore {
     resources: [],
     timetable: [],
     tasks: [],
+    projects: [],
+    milestones: [],
   };
 }
 

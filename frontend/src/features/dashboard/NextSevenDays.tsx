@@ -10,8 +10,8 @@ import type { CalendarItem } from '@/features/planner/types';
 import { cn } from '@/lib/cn';
 import { addDays, formatDay } from '@/lib/dates';
 
-/** Deadlines and exams; classes and planned tasks only count towards how full a day is. */
-const SHOWN = new Set(['ASSIGNMENT_DUE', 'EXAM', 'TASK_DUE']);
+/** Deadlines, exams and milestones; classes and planned tasks only count towards how full a day is. */
+const SHOWN = new Set(['ASSIGNMENT_DUE', 'EXAM', 'TASK_DUE', 'MILESTONE']);
 
 /** The coming week's deadlines and exams by day, with the busiest day marked (from the calendar feed). */
 export function NextSevenDays({ today }: { today: string }) {

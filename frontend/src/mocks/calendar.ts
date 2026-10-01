@@ -7,7 +7,7 @@ import { isOpen } from './coursework';
 /** The calendar feed for the mock API: a port of CalendarService.java and CalendarRules.java. */
 
 const DEFAULT_TASK_MINUTES = 30;
-const TYPE_ORDER: CalendarItemType[] = ['CLASS', 'EXAM', 'ASSIGNMENT_DUE', 'TASK', 'TASK_DUE'];
+const TYPE_ORDER: CalendarItemType[] = ['CLASS', 'EXAM', 'ASSIGNMENT_DUE', 'TASK', 'TASK_DUE', 'MILESTONE'];
 
 /** Java's String order (by code unit), not the locale's. */
 const text = (x: string, y: string) => (x < y ? -1 : x > y ? 1 : 0);
@@ -65,7 +65,14 @@ export function buildCalendar(
       colorHue: course?.colorHue ?? null,
     });
   };
-  const base = { done: false, location: null, kind: null, priority: null } as const;
+  const base = {
+    done: false,
+    location: null,
+    kind: null,
+    priority: null,
+    projectId: null,
+    projectName: null,
+  } as const;
 
   const term = store.semesters.find((s) => s.current);
   if (term) {
@@ -158,6 +165,29 @@ export function buildCalendar(
       courseId: t.courseId,
       priority: t.priority,
     });
+  }
+
+  for (const m of store.milestones.filter(
+    (x) => x.doneAt === null && x.dueOn !== null && x.dueOn >= from && x.dueOn <= to,
+  )) {
+    const project = store.projects.find((p) => p.id === m.projectId);
+    items.push({
+      ...base,
+      key: `milestone:${m.id}`,
+      type: 'MILESTONE',
+      refId: m.projectId,
+      title: m.title,
+      date: m.dueOn!,
+      startTime: null,
+      endTime: null,
+      courseId: null,
+      courseCode: null,
+      courseName: null,
+      colorHue: null,
+      projectId: m.projectId,
+      projectName: project?.name ?? null,
+    });
+    load.get(m.dueOn!)!.deadlines += 1;
   }
 
   // CalendarRules.ORDER: day, untimed first, start time, type, title, key
