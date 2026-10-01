@@ -295,13 +295,22 @@ Legend: 🔓 public · everything else requires a session. **P** marks paginated
 
 | Method | Path | Purpose |
 |---|---|---|
-| GET | `/api/v1/tasks/today?date=` | Open tasks planned for that date, due that date, or overdue, plus tasks completed that date. Ordered by priority score. |
-| GET | `/api/v1/tasks/upcoming?days=14` | Open tasks with a future plan or due date, grouped by day |
-| GET | `/api/v1/tasks/completed` **P** | Newest first |
-| GET | `/api/v1/tasks` **P** | Generic filters: `category`, `status`, `courseId`, `projectId`, `examId` |
-| POST | `/api/v1/tasks` | `{ "title", "description?", "category", "priority", "plannedFor?", "dueAt?", "estimatedMinutes?", "recurrence", "courseId?", "examId?", "projectId?" }` |
-| GET / PUT / DELETE | `/api/v1/tasks/{id}` | `DELETE ?series=true` deletes future open instances of a recurring task |
-| PATCH | `/api/v1/tasks/{id}/status` | `{ "status": "DONE" }`. Completing a recurring task **creates the next instance** and returns `{ "task": …, "nextInstance": … }`. Re-opening does not delete the generated instance. |
+| GET | `/api/v1/tasks/today?date=` | `{ "date", "tasks", "completed" }`: open tasks planned for the date or earlier, or due before it ends (overdue included), in "what now?" order; plus tasks completed that date, newest first. Date defaults to today in the user's timezone. |
+| GET | `/api/v1/tasks/upcoming?days=14` | `{ "from", "to", "days": [{ "date", "tasks" }], "unscheduled" }`: open tasks after today, up to `days` (1–62, else `400` on `days`) |
+| GET | `/api/v1/tasks/completed` **P** | Done tasks, most recently completed first |
+| GET | `/api/v1/tasks` **P** | Filters: `category`, `status` (repeatable), `courseId`, `examId`; `sort=plannedFor\|dueAt\|createdAt[,asc\|desc]` (default newest first; anything else `400` on `sort`) |
+| POST | `/api/v1/tasks` | Create → `201`: `{ "title", "description?", "category?", "priority?", "plannedFor?", "plannedStart?", "dueAt?", "estimatedMinutes?", "recurrence?", "courseId?", "examId?" }` |
+| GET / PUT / DELETE | `/api/v1/tasks/{id}` | Read / full replace (same body, status excluded) / delete → `204`. `DELETE ?series=true` also deletes the open repeats planned on or after this one. |
+| PATCH | `/api/v1/tasks/{id}/status` | `{ "status": "TODO" \| "IN_PROGRESS" \| "DONE" }` → `{ "task", "nextInstance" }` |
+
+- Task: `{ "id", "title", "description", "category", "priority", "status", "plannedFor", "plannedStart", "dueAt", "estimatedMinutes", "completedAt", "recurrence", "seriesId", "courseId", "courseCode", "courseName", "examId", "examTitle", "overdue", "urgency" }`.
+- **Two kinds of date.** `plannedFor` is the day you mean to do it (optionally at `plannedStart`, `"HH:mm"` on your wall clock); `dueAt` is a hard deadline (an instant). Either, both or neither. With neither, a task is "unscheduled" and appears in `upcoming.unscheduled`.
+- `category`: `ACADEMIC`, `CODING`, `PERSONAL`, `INTERNSHIP`, `OPEN_SOURCE`, `PROJECT`; defaults to `ACADEMIC` when a course or exam is linked, else `PERSONAL`. `priority`: `LOW`, `MEDIUM` (default), `HIGH`. `estimatedMinutes` 1–1440.
+- **Links:** the course and exam must be yours (`400` on `courseId` / `examId`); an exam from a different course than `courseId` is `400` on `examId`; linking only an exam links its course too. Deleting the course or exam keeps the task and clears the link. (Project links arrive in Phase 4.)
+- **Today's order:** overdue → due today → priority (high first) → start time (untimed last) → deadline → oldest. Upcoming groups by `plannedFor`, or by the deadline's local day when there's no plan; within a day by start time, then priority.
+- `overdue` is `true` for an open task past `dueAt`; `urgency` (as for assignments) is null without a deadline or once done. `completedAt` is set exactly while `status` is `DONE`; completing again keeps the first time.
+- **Repeats** (`recurrence`: `NONE`, `DAILY`, `WEEKDAYS`, `WEEKLY`) need `plannedFor` (`400` on `plannedFor`); `plannedStart` needs `plannedFor` too (`400` on `plannedStart`). A repeating task gets a `seriesId`. Completing it creates the next instance (same details; the deadline moves by the same number of days in your timezone) and returns it as `nextInstance`. If that day's instance already exists (e.g. completed, reopened, completed again) `nextInstance` is `null`, and reopening never deletes a generated instance. Two repeats in a series can't share a day (`409`).
+- Another user's task is `404`.
 
 ### 2.10 Calendar (Phase 3)
 

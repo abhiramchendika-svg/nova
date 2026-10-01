@@ -3,7 +3,7 @@
 > **Your student life, organized in one place.**
 > NOVA brings classes, deadlines, grades and developer growth into one calm dashboard, so every morning starts with a clear answer to *what now?*
 
-**Status:** early development (Phase 2 of 8). Accounts, login, first-run setup and settings work end to end; semesters, courses, grading schemes, GPA/CGPA, what-if grades and attendance have their API and pages (Courses, Attendance, Grades); assignments have their API and page, and each course has its own page (attendance, open work, upcoming exams, links), exams have countdown cards and a prep checklist per exam, and the weekly timetable feeds Home, where today’s classes can be marked in one tap. Planner and developer features arrive in Phases 3–4. Nothing here is production-ready yet.
+**Status:** early development (Phase 3 of 8). Accounts, login, first-run setup and settings work end to end; semesters, courses, grading schemes, GPA/CGPA, what-if grades and attendance have their API and pages (Courses, Attendance, Grades); assignments have their API and page, and each course has its own page (attendance, open work, upcoming exams, links), exams have countdown cards and a prep checklist per exam, and the weekly timetable feeds Home, where today’s classes can be marked in one tap. The planner’s tasks API (today, upcoming, repeats) is in; its pages and the calendar come next, and developer features arrive in Phase 4. Nothing here is production-ready yet.
 
 ## The problem
 
@@ -132,8 +132,8 @@ Tests never call a real external API. Backend integration tests start a throwawa
 |---|---|---|
 | 0 | Product & technical blueprint | Done |
 | 1 | Foundation: frontend shell, design system, accounts and login, settings API, CI | Done |
-| 2 | Academics: semesters, courses, grading, GPA/CGPA, attendance, assignments, exams, timetable | In progress |
-| 3 | Planner: tasks, calendar, Today view | Planned |
+| 2 | Academics: semesters, courses, grading, GPA/CGPA, attendance, assignments, exams, timetable | Done |
+| 3 | Planner: tasks, calendar, Today view | In progress |
 | 4 | Developer growth: projects, learning goals, hackathons, internships, GitHub | Planned |
 | 5 | Insights and notifications | Planned |
 | 6 | UI polish and accessibility audit | Planned |

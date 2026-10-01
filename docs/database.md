@@ -24,6 +24,7 @@
 | `V5__create_assignments_exams_resources.sql` | `course_resources`, `assignments`, `exams`, `exam_topics` | 2.3 |
 | `V6__create_timetable_entries.sql` | `timetable_entries` | 2.4 |
 | `V7__complete_onboarding_for_existing_users.sql` | data only: `user_settings.onboarding_completed_at` for accounts that already have a semester | 2.4 |
+| `V8__create_tasks.sql` | `tasks` (without `project_id`, which Phase 4 adds) | 3a |
 >
 > Differences from the draft in V3: `ordinal`, `position` and `color_hue` are `integer` rather than `smallint` (simpler Java mapping, same checks); `notes` is `varchar(2000)`; `grade_definitions` has a unique `(scheme_id, position)` too, and both of its unique constraints are **deferred to commit** so a scheme edit can swap labels or order between grades in one transaction; `courses.grade_definition_id` has its own index. V3 was applied to PostgreSQL 16 and its constraints were exercised directly (cross-tenant course, second current semester, duplicate ordinal, half-set grade, deleting an in-use scheme, label swap at commit, cascades): all behaved as designed.
 >
@@ -34,6 +35,8 @@
 > V6: `day_of_week` is `integer` (ISO, 1 = Monday) and `kind` is `varchar(8)`; constraints are named, and `ix_timetable_course` is added for course-page lookups and cascades. Applied to PostgreSQL 16 and exercised (cross-tenant entry, day 8, end before start, bad kind, cascade on course delete).
 >
 > V7 changes no schema. Checked on PostgreSQL 16 with three accounts: one with semesters (marked onboarded), one without (left for onboarding) and one already onboarded (its original timestamp kept).
+>
+> V8: adds `planned_start time` (a start time on the planned day, which needs `planned_for`) and `recurrence_series_id` with a unique `(recurrence_series_id, planned_for)` index, so one series can't have two repeats on a day. Checks tie `completed_at` to `DONE`, and require `planned_for` for a start time or a repeat and a series id for a repeat. `course_id` and `exam_id` use composite FKs to `(id, user_id)` with `on delete set null (course_id)` / `(exam_id)`, which clears only the link column (PostgreSQL 15+). Partial indexes: `ix_tasks_open_planned`, `ix_tasks_open_due`, `ix_tasks_done`, plus `ix_tasks_course` and `ix_tasks_exam`. `project_id` and its FK come with projects in Phase 4. Applied to PostgreSQL 16 and exercised (cross-tenant course/exam, done without timestamp, start time or repeat without a day, repeat without series, duplicate series day, estimate out of range, and set-null on course and exam delete).
 
 ## 1. Design principles
 
