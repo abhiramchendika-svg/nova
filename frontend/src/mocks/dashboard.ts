@@ -5,6 +5,7 @@ import { addDays, daysBetween, formatDay, localParts, todayIn, zonedToInstant } 
 import { summarize, type AcademicStore } from './academics';
 import { courseAttendance } from './attendance';
 import { isOpen, toExamSummary } from './coursework';
+import { githubSummary } from './github';
 import { toHackathon } from './hackathons';
 import { deadlineMatters, stepMatters } from './internships';
 import { toGoal } from './learning';
@@ -338,6 +339,7 @@ function developerSummary(
     .filter((h) => h.startsOn !== null)
     .sort((a, b) => (a.startsOn! < b.startsOn! ? -1 : a.startsOn! > b.startsOn! ? 1 : 0))[0];
   return {
+    github: githubSummary(store.github, today),
     activeApplications: applications.filter((a) => a.status !== 'SAVED').length,
     nextInternshipStep: step
       ? {

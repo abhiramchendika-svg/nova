@@ -377,7 +377,7 @@ Home also uses `/timetable/day` (today's classes), `/tasks/today` (today's tasks
   - An apply-by date within 48 hours: as medium-priority work due soon. Passed (within 7 days): 40.
   - Priority adds 15 (high), 8 (medium) or 0 (low).
 - **`academics`** is `null` without a current semester. `gpa`/`cgpa` are `null` until there are grades. `lowestAttendance` is the current semester's course with the lowest percentage among those with classes held.
-- **`developer`**: `activeProjects` counts projects that are an idea, planning or in development; `nextMilestone` is the soonest open milestone with a due date among them (`null` if none). `activeGoals` counts `ACTIVE` learning goals; `focusGoal` is the active goal with the nearest target date (undated goals after dated ones, then the newest), with its progress `percentage` (`null` without topics) and `nextTopic` (`null` when none is open), or `null` with no active goal. `upcomingHackathons` counts hackathons that aren't past; `nextHackathon` (`hackathonId`, `name`, `startsOn`, `endsOn`, `daysUntil`, `status`) is the one among them with the earliest start date, or `null`. `activeApplications` counts applications that are sent and still in play (applied, assessment, interview, offer); `nextInternshipStep` (`internshipId`, `company`, `role`, `step`, `at`) is the soonest upcoming next step among applications still in play, or `null`. GitHub activity joins in 4e.
+- **`developer`**: `activeProjects` counts projects that are an idea, planning or in development; `nextMilestone` is the soonest open milestone with a due date among them (`null` if none). `activeGoals` counts `ACTIVE` learning goals; `focusGoal` is the active goal with the nearest target date (undated goals after dated ones, then the newest), with its progress `percentage` (`null` without topics) and `nextTopic` (`null` when none is open), or `null` with no active goal. `upcomingHackathons` counts hackathons that aren't past; `nextHackathon` (`hackathonId`, `name`, `startsOn`, `endsOn`, `daysUntil`, `status`) is the one among them with the earliest start date, or `null`. `activeApplications` counts applications that are sent and still in play (applied, assessment, interview, offer); `nextInternshipStep` (`internshipId`, `company`, `role`, `step`, `at`) is the soonest upcoming next step among applications still in play, or `null`. `github` (`username`, `contributionsThisMonth`, `lastPushRepo`, `lastPushAt`, `fetchedAt`) comes from NOVA's saved copy only (Home never waits on GitHub); `contributionsThisMonth` is `null` without the calendar, and `github` is `null` without a username.
 - **`planner`**: `openToday`/`doneToday` match `/tasks/today`. `weekPlanned` counts tasks planned in the current week (by the user's week start), and `weekDone` counts how many of those are done. `streakDays` = consecutive days (ending today, or yesterday if nothing is finished yet today) with at least one completed task, looking back up to 60 days; it is `null` until the streak reaches 3.
 
 ### 2.12 Projects, learning, hackathons, internships (Phase 4)
@@ -443,20 +443,22 @@ Home also uses `/timetable/day` (today's classes), `/tasks/today` (today's tasks
 - Company and role 1–120 characters; location and next step up to 120, source and resume version 60, notes 4000. `jobUrl` must be a full `http(s)://` address (`400` on `jobUrl`). Up to 1000 applications per user (`422`). Another user's application is `404`.
 - **Prep tasks** link with `internshipId` (§2.9). Apply-by dates and next steps are on the calendar (§2.10); apply-by dates, the count in play and the next step are on Home (§2.11).
 
-### 2.13 GitHub (Phase 4)
+### 2.13 GitHub (Phase 4e: public mode)
 
 | Method | Path | Purpose |
 |---|---|---|
-| PUT | `/api/v1/github/account` | Public mode: `{ "username": "abhiram-c" }`. The server validates the user exists → `400` if not. |
-| GET | `/api/v1/github/oauth/start` | Redirects to GitHub (scope `read:user`, CSRF-safe `state` stored in the session) |
-| GET | `/api/v1/github/oauth/callback` | Exchanges the code, encrypts the token, redirects to `/app/developer/github?connected=1`. On error: `?error=denied`. |
-| DELETE | `/api/v1/github/account` | Disconnects: revokes the token and deletes the account and its snapshots |
-| GET | `/api/v1/github/overview` | Profile, top repos, language breakdown, contributions (weekly/monthly) |
-| POST | `/api/v1/github/refresh` | Forces a refresh (throttled → `429`) |
+| GET | `/api/v1/github/overview` | Everything for the GitHub page; parts that are due are refreshed first. `{ "connected": false }` (other fields `null`) without a username. |
+| PUT | `/api/v1/github/account` | `{ "username": "octocat" }`. Checked with GitHub first: a bad format or unknown user → `400` on `username`; GitHub down or rate limited → `502 UPSTREAM_UNAVAILABLE` (nothing saved). Replaces any earlier username and its data. → the overview |
+| DELETE | `/api/v1/github/account` | Forgets the username and everything fetched for it → `204` |
+| POST | `/api/v1/github/refresh` | Fetches everything again now → the overview. At most once every 5 minutes per user (`429` with `Retry-After`); `404` without a username. |
+| — | OAuth (`/github/oauth/start`, `/callback`) | Later: an optional connect for private-contribution counts, with the token encrypted at rest. |
 
-- **Every GitHub response** includes `"source": "GITHUB_API"`, `fetchedAt` and `stale: boolean`.
-- **Derived values** sit in a separate `"novaMetrics": { … }` block, each with a `formula` string.
-- If GitHub is unavailable and a snapshot exists, the response is `200` with `stale: true`. If there's no snapshot, it's `502 UPSTREAM_UNAVAILABLE`.
+- **Overview:** `{ "connected", "source": "GITHUB_API", "username", "fetchedAt", "stale", "retryAt", "profile", "repos", "languages", "contributions", "novaMetrics" }`.
+  - `profile` (`login`, `name`, `avatarUrl`, `htmlUrl`, `publicRepos`, `followers`, `following`, `createdAt`) and `repos` (`name`, `fullName`, `htmlUrl`, `description`, `language`, `stars`, `forks`, `fork`, `archived`, `pushedAt`; most recently pushed first) are **from GitHub**, unchanged.
+  - `contributions`: `{ "available", "reason", "total", "fetchedAt", "days": [{ "date", "count" }] }` from GitHub's public contribution calendar for the last 365 days. It needs GraphQL, which always needs a token: without `GITHUB_SERVER_TOKEN` on the server, `available` is `false`, `reason` says why, and nothing is shown as zero.
+  - **NOVA metrics** carry the formula they were computed with: `languages` (`{ "formula", "shares": [{ "language", "repos", "share" }] }`: each primary language's share of the user's own, non-fork repositories that have one, by count of repositories, not lines of code) and `novaMetrics` (only with the calendar): `thisMonth`, `lastMonth`, `change` (`(this month so far − last month) ÷ last month × 100`, one decimal; `null` when last month is 0), `currentStreak` (days in a row with a contribution, ending today or yesterday), `longestStreak` (in the calendar) and `activeWeeks` (of the last 12 seven-day weeks ending today), each `{ "value", "formula" }`.
+- **Caching and rate limits:** NOVA serves its saved copy and fetches a part again only when it's older than its TTL (profile and repositories 6 hours, with ETags so an unchanged answer costs nothing; the calendar 1 hour). Repositories are read 100 per page, up to 3 pages. When GitHub is unreachable or rate limited, the saved copy is returned with `stale: true` (and `retryAt`, GitHub's reset time, during which NOVA makes no calls); `fetchedAt` is the oldest part shown.
+- **Public mode only reads public data** with NOVA's own (optional) server token; NOVA never asks for a password or access to private code. Tests use a fake GitHub (MockRestServiceServer for the HTTP client, an in-memory client for full-stack tests) and never call the real one.
 
 ### 2.14 Insights, notifications, search (Phase 5)
 
@@ -488,7 +490,7 @@ Each rule has a minimum-data guard. For example, "task completion rate" needs �
 
 Onboarding reuses the endpoints above (settings, grading schemes, semesters, courses, timetable, learning goals, GitHub account) and ends with `POST /settings/onboarding/complete`. There's no special onboarding API, which means no duplicated logic.
 
-- **Phase 2 flow** (`/app/welcome`): You (time zone, university, attendance target → `PUT /settings`) → Semester (`POST /semesters`) → Courses (`POST /courses`, one per row) → Timetable (`POST /timetable`, skippable) → Goals (one learning goal with starter topics, `POST /learning-goals`, skippable; Phase 4b) → `POST /settings/onboarding/complete` → Home. "Skip setup" calls the same completion endpoint. A GitHub step joins in 4e.
+- **Phase 2 flow** (`/app/welcome`): You (time zone, university, attendance target → `PUT /settings`) → Semester (`POST /semesters`) → Courses (`POST /courses`, one per row) → Timetable (`POST /timetable`, skippable) → Goals (one learning goal with starter topics, `POST /learning-goals`, skippable; Phase 4b) → GitHub (the username, `PUT /github/account`, skippable; Phase 4e) → `POST /settings/onboarding/complete` → Home. "Skip setup" calls the same completion endpoint.
 - Home sends an account whose `onboardingCompleted` is `false` (from `/auth/me`) to `/app/welcome`; deep links into the app are never redirected.
 - Resuming uses saved data, not a stored step: no current semester → the first step (pre-filled); a semester without courses → Courses; otherwise → Timetable.
 - Migration V7 marks accounts that already had a semester before onboarding shipped as onboarded, so existing users never see it.

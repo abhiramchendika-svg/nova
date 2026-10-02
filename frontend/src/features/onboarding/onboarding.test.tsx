@@ -9,7 +9,24 @@ import { installMockApi, TEST_USER } from '@/test/server';
 /** The user id createMockDb gives the logged-in test user. */
 const USER_ID = '00000000-0000-4000-8000-000000000001';
 
+/** The one GitHub user the mock knows in these tests. */
+function knowGitHub(store: AcademicStore) {
+  store.githubWorld['octo-student'] = {
+    login: 'octo-student',
+    name: null,
+    avatarUrl: null,
+    htmlUrl: 'https://github.com/octo-student',
+    publicRepos: 0,
+    followers: 0,
+    following: 0,
+    createdAt: '2024-01-01T00:00:00Z',
+    repos: [],
+    calendar: null,
+  };
+}
+
 function setup(store: AcademicStore = createAcademicStore()): MockDb {
+  knowGitHub(store);
   const db = createMockDb({ loggedInAs: TEST_USER, onboarding: 'pending' });
   db.academics.set(USER_ID, store);
   db.settings.set(USER_ID, { ...DEFAULT_SETTINGS });
@@ -64,7 +81,7 @@ describe('Onboarding', () => {
     expect(currentStep()).toHaveTextContent('You');
   });
 
-  it('walks through all five steps and lands on Home', async () => {
+  it('walks through all six steps and lands on Home', async () => {
     const db = setup();
     const { user, router } = renderRoute('/app/welcome');
 
@@ -114,18 +131,29 @@ describe('Onboarding', () => {
     // 5. Goals: topics without a name are caught; then the goal is saved with its topics
     await screen.findByRole('heading', { level: 1, name: 'Something you’re learning' });
     expect(currentStep()).toHaveTextContent('Goals');
-    expect(screen.getByRole('button', { name: 'Skip and finish' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Skip' })).toBeInTheDocument();
     await user.type(
       screen.getByLabelText('Topics (optional)'),
       'Dependency injection{Enter}{Enter}Spring Data JPA',
     );
-    await user.click(screen.getByRole('button', { name: 'Save and finish' }));
+    await user.click(screen.getByRole('button', { name: 'Save and continue' }));
     expect(await screen.findByText('Name what you’re learning.')).toBeInTheDocument();
     expect(onboarded(db)).toBe(false);
     await user.type(screen.getByLabelText('What you’re learning'), 'Spring Boot');
-    await user.click(screen.getByRole('button', { name: 'Save and finish' }));
+    await user.click(screen.getByRole('button', { name: 'Save and continue' }));
+
+    // 6. GitHub: checked with (the mock) GitHub, then setup finishes
+    await screen.findByRole('heading', { level: 1, name: 'Your GitHub' });
+    expect(currentStep()).toHaveTextContent('GitHub');
+    await user.type(screen.getByLabelText('GitHub username'), 'nobody-here');
+    await user.click(screen.getByRole('button', { name: 'Connect and finish' }));
+    expect(await screen.findByText('We couldn’t find that GitHub user.')).toBeInTheDocument();
+    await user.clear(screen.getByLabelText('GitHub username'));
+    await user.type(screen.getByLabelText('GitHub username'), 'octo-student');
+    await user.click(screen.getByRole('button', { name: 'Connect and finish' }));
 
     await waitFor(() => expect(router.state.location.pathname).toBe('/app'));
+    expect(store.github?.user.login).toBe('octo-student');
     expect(await screen.findByRole('heading', { level: 1, name: /Abhi\./ })).toBeInTheDocument();
     expect(onboarded(db)).toBe(true);
     expect(store.learningGoals.map((g) => g.title)).toEqual(['Spring Boot']);
@@ -135,17 +163,20 @@ describe('Onboarding', () => {
     ]);
   });
 
-  it('lets the goals step be skipped', async () => {
+  it('lets the goals and GitHub steps be skipped', async () => {
     const store = withCourse(storeWithSemester());
     const db = setup(store);
     const { user, router } = renderRoute('/app/welcome');
     await screen.findByRole('heading', { level: 1, name: 'Your weekly classes' });
     await user.click(screen.getByRole('button', { name: 'Skip' }));
     await screen.findByRole('heading', { level: 1, name: 'Something you’re learning' });
+    await user.click(screen.getByRole('button', { name: 'Skip' }));
+    await screen.findByRole('heading', { level: 1, name: 'Your GitHub' });
     await user.click(screen.getByRole('button', { name: 'Skip and finish' }));
     await waitFor(() => expect(router.state.location.pathname).toBe('/app'));
     expect(onboarded(db)).toBe(true);
     expect(store.learningGoals).toEqual([]);
+    expect(store.github).toBeNull();
   });
 
   it('can be skipped, and then stays out of the way', async () => {

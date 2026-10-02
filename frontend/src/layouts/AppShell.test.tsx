@@ -17,9 +17,9 @@ describe('app shell', () => {
 
   it('shows an honest placeholder for sections from later phases', async () => {
     installMockApi(createMockDb({ loggedInAs: TEST_USER }));
-    renderRoute('/app/developer/github');
-    expect(await screen.findByRole('heading', { name: 'GitHub' })).toBeInTheDocument();
-    expect(screen.getByText(/planned for Phase 4/)).toBeInTheDocument();
+    renderRoute('/app/insights');
+    expect(await screen.findByRole('heading', { name: 'Insights' })).toBeInTheDocument();
+    expect(screen.getByText(/planned for Phase 5/)).toBeInTheDocument();
   });
 
   it('opens "More" on mobile with every section', async () => {

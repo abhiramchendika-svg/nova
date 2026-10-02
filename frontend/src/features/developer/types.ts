@@ -251,3 +251,63 @@ export interface InternshipAnalytics {
     withdrawn: number;
   };
 }
+
+// ───────────── GitHub (docs/api.md §2.13) ─────────────
+
+/** A number NOVA derived, with the formula it used. */
+export interface NovaMetric {
+  value: number | null;
+  formula: string;
+}
+
+export interface GitHubRepo {
+  name: string;
+  fullName: string;
+  htmlUrl: string;
+  description: string | null;
+  language: string | null;
+  stars: number;
+  forks: number;
+  fork: boolean;
+  archived: boolean;
+  pushedAt: string | null;
+}
+
+export interface GitHubOverview {
+  connected: boolean;
+  source: 'GITHUB_API';
+  username: string | null;
+  /** The oldest part shown. */
+  fetchedAt: string | null;
+  /** A refresh that was due failed; older data is shown. */
+  stale: boolean;
+  /** GitHub's rate limit resets then. */
+  retryAt: string | null;
+  profile: {
+    login: string;
+    name: string | null;
+    avatarUrl: string | null;
+    htmlUrl: string | null;
+    publicRepos: number | null;
+    followers: number | null;
+    following: number | null;
+    createdAt: string | null;
+  } | null;
+  repos: GitHubRepo[] | null;
+  languages: { formula: string; shares: { language: string; repos: number; share: number }[] } | null;
+  contributions: {
+    available: boolean;
+    reason: string | null;
+    total: number | null;
+    fetchedAt: string | null;
+    days: { date: string; count: number }[];
+  } | null;
+  novaMetrics: {
+    thisMonth: NovaMetric;
+    lastMonth: NovaMetric;
+    change: NovaMetric;
+    currentStreak: NovaMetric;
+    longestStreak: NovaMetric;
+    activeWeeks: NovaMetric;
+  } | null;
+}

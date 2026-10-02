@@ -11,6 +11,7 @@ import type {
 import type { StoredRecord } from './attendance';
 import type { StoredAssignment, StoredEntry, StoredExam, StoredResource, StoredTopic } from './coursework';
 import type { StoredMilestone, StoredProject } from './developer';
+import type { MockGitHubUser, StoredGitHub } from './github';
 import type { StoredHackathon } from './hackathons';
 import type { StoredInternship, StoredInternshipEvent } from './internships';
 import type {
@@ -118,6 +119,9 @@ export interface AcademicStore {
   /** Internship applications and their status history. */
   internships: StoredInternship[];
   internshipEvents: StoredInternshipEvent[];
+  /** The GitHub username's saved data, and the GitHub users this mock knows (tests only). */
+  github: StoredGitHub | null;
+  githubWorld: Record<string, MockGitHubUser>;
 }
 
 export function createAcademicStore(): AcademicStore {
@@ -140,6 +144,8 @@ export function createAcademicStore(): AcademicStore {
     hackathons: [],
     internships: [],
     internshipEvents: [],
+    github: null,
+    githubWorld: {},
   };
 }
 

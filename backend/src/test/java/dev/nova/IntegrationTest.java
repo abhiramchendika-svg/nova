@@ -25,7 +25,7 @@ import org.springframework.test.web.servlet.MvcResult;
  */
 @SpringBootTest
 @AutoConfigureMockMvc
-@Import(TestcontainersConfiguration.class)
+@Import({TestcontainersConfiguration.class, FakeGitHubConfiguration.class})
 public abstract class IntegrationTest {
 
     protected static final String SESSION_COOKIE = "NOVA_SESSION";

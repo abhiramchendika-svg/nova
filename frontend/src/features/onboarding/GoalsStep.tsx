@@ -16,15 +16,7 @@ const FIELDS: (keyof GoalValues)[] = ['title', 'targetOn', 'topics'];
  * Step 5 (skippable): one thing you're learning outside class, broken into topics. Saved with the
  * normal learning-goal API, so it shows up on Learning and in Home's Developer card straight away.
  */
-export function GoalsStep({
-  onBack,
-  onFinish,
-  finishing,
-}: {
-  onBack: () => void;
-  onFinish: () => void;
-  finishing: boolean;
-}) {
+export function GoalsStep({ onBack, onDone }: { onBack: () => void; onDone: () => void }) {
   const goals = useGoals();
   const create = useCreateGoal();
   const existing = goals.data ?? [];
@@ -53,7 +45,7 @@ export function GoalsStep({
         topics: topicLines(v.topics),
       },
       {
-        onSuccess: onFinish,
+        onSuccess: onDone,
         onError: (error) => {
           for (const fe of error.fieldErrors) {
             const name = fe.field.startsWith('topics') ? 'topics' : FIELDS.find((f) => f === fe.field);
@@ -67,7 +59,7 @@ export function GoalsStep({
   const submit = (event: FormEvent<HTMLFormElement>) => {
     if (!blank) return void onSubmit(event);
     event.preventDefault();
-    onFinish();
+    onDone();
   };
 
   const formError = create.error && create.error.fieldErrors.length === 0 ? errorMessage(create.error) : null;
@@ -111,8 +103,8 @@ export function GoalsStep({
         {...register('topics')}
       />
       <Actions onBack={onBack}>
-        <Button type="submit" variant="primary" loading={create.isPending || finishing}>
-          {blank ? 'Skip and finish' : 'Save and finish'}
+        <Button type="submit" variant="primary" loading={create.isPending}>
+          {blank ? 'Skip' : 'Save and continue'}
         </Button>
       </Actions>
     </form>

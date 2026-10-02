@@ -27,7 +27,9 @@ import dev.nova.developer.hackathon.HackathonDtos.ExamClash;
 import dev.nova.developer.hackathon.HackathonDtos.HackathonResponse;
 import dev.nova.developer.hackathon.HackathonRules.DeadlineKind;
 import dev.nova.developer.hackathon.HackathonService;
+import dev.nova.dashboard.DashboardDtos.GitHubSummary;
 import dev.nova.dashboard.DashboardDtos.NextInternshipStep;
+import dev.nova.developer.github.GitHubService;
 import dev.nova.developer.internship.Internship;
 import dev.nova.developer.internship.InternshipRules;
 import dev.nova.developer.internship.InternshipService;
@@ -103,6 +105,7 @@ public class DashboardService {
     private final LearningService learning;
     private final HackathonService hackathons;
     private final InternshipService internships;
+    private final GitHubService github;
     private final UserClock userClock;
 
     public DashboardService(
@@ -119,6 +122,7 @@ public class DashboardService {
             LearningService learning,
             HackathonService hackathons,
             InternshipService internships,
+            GitHubService github,
             UserClock userClock) {
         this.assignments = assignments;
         this.tasks = tasks;
@@ -133,6 +137,7 @@ public class DashboardService {
         this.learning = learning;
         this.hackathons = hackathons;
         this.internships = internships;
+        this.github = github;
         this.userClock = userClock;
     }
 
@@ -242,7 +247,16 @@ public class DashboardService {
                 upcoming.size(),
                 nextHackathon,
                 activeApplications,
-                nextStep);
+                nextStep,
+                githubSummary(userId));
+    }
+
+    private GitHubSummary githubSummary(UUID userId) {
+        GitHubService.Summary s = github.summary(userId);
+        return s == null
+                ? null
+                : new GitHubSummary(
+                        s.username(), s.contributionsThisMonth(), s.lastPushRepo(), s.lastPushAt(), s.fetchedAt());
     }
 
     private static NextMilestone nextMilestone(Milestone m, Project project, LocalDate today) {

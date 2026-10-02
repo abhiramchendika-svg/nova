@@ -291,7 +291,9 @@ See [api.md](./api.md). Summary: REST under `/api/v1`, JSON, session cookie and 
 
 **Token handling:** OAuth `code` → exchanged server-side → token encrypted (AES-256-GCM, `NOVA_ENCRYPTION_KEY`) → stored in `github_accounts`. Disconnecting deletes the token and revokes it via GitHub's API. The token never reaches the browser.
 
-**Testing:** a `GitHubClient` interface with a WireMock-backed test (recorded JSON fixtures) covering pagination, 304, 403 rate-limit and 5xx. Tests never call the real GitHub.
+**Testing:** a `GitHubClient` interface. The HTTP implementation is tested with Spring's `MockRestServiceServer` (JSON fixtures) covering pagination, 304, 403 rate-limit, 404 and 5xx; full-stack tests swap in an in-memory client. Tests never call the real GitHub. (Changed from WireMock in 4e: no extra dependency.)
+
+**Storage (4e):** normalised tables (`github_accounts`, `github_repos`, `github_contribution_days`) rather than JSON snapshots; see database.md V13.
 
 ## 14. Testing strategy
 
@@ -301,7 +303,7 @@ See [api.md](./api.md). Summary: REST under `/api/v1`, JSON, session cookie and 
 | Services | JUnit + Mockito | Business rules, ownership checks, transactions | Every rule |
 | Controllers | `@WebMvcTest` + MockMvc | Status codes, validation errors, JSON shape, auth required, CSRF | Every endpoint's happy path plus main errors |
 | Repositories / integration | `@DataJpaTest` / `@SpringBootTest` + **Testcontainers PostgreSQL** | Custom queries, constraints, Flyway migrations on real Postgres (not H2, which behaves differently) | Custom queries plus migration smoke |
-| GitHub client | WireMock | Pagination, ETag, rate limits, errors | All failure modes |
+| GitHub client | MockRestServiceServer | Pagination, ETag, rate limits, errors | All failure modes |
 | Frontend units | Vitest + RTL | Formatters, date bucketing, components (ProgressRing, LoadBar, EmptyState) | Critical logic |
 | Frontend interactions | RTL + user-event + MSW | Quick-add, attendance projection updates, task complete (optimistic update plus rollback), form validation, ⌘K | Critical flows |
 | Accessibility | jest-axe / vitest-axe on key components; Playwright + axe later | No serious violations | Key screens |

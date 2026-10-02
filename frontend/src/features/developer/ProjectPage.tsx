@@ -31,6 +31,7 @@ import {
 } from './api';
 import { ExternalLinkText } from './ProjectCard';
 import { ProjectDialog } from './ProjectDialog';
+import { RepoStats } from './RepoStats';
 import { STATUS_LABEL, STATUS_TONE } from './projectText';
 import { milestoneTitle } from './schemas';
 import type { Milestone, Project } from './types';
@@ -153,6 +154,7 @@ function ProjectView({ project: p }: { project: Project }) {
                 {p.demoUrl && <ExternalLinkText href={p.demoUrl} label="Demo" />}
               </p>
             )}
+            <RepoStats repoUrl={p.repoUrl} />
           </div>
         </Panel>
       )}

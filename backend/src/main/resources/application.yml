@@ -50,6 +50,12 @@ nova:
     cookie-secure: ${NOVA_COOKIE_SECURE:false}   # true in production (HTTPS only)
     login-attempts: 5
     login-window: PT1M
+  github:
+    api-url: ${NOVA_GITHUB_API_URL:https://api.github.com}
+    # Optional. Without it, profiles and repositories still work (GitHub's 60 requests/hour per IP);
+    # the contribution calendar needs it (GitHub's GraphQL API always requires a token).
+    # A fine-grained token with no extra permissions is enough for public data.
+    server-token: ${GITHUB_SERVER_TOKEN:}
 
 management:
   endpoints:

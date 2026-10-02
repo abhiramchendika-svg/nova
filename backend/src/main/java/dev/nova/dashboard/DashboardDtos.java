@@ -58,11 +58,18 @@ public final class DashboardDtos {
             UUID internshipId, String company, String role, String step, Instant at) {}
 
     /**
+     * The saved GitHub data (Home never waits on GitHub): contributions this month (null without
+     * the calendar) and the most recent push.
+     */
+    public record GitHubSummary(
+            String username, Integer contributionsThisMonth, String lastPushRepo, Instant lastPushAt, Instant fetchedAt) {}
+
+    /**
      * Projects in development, projects that aren't completed or archived, and the soonest open
      * milestone with a due date among those; active learning goals and the one to focus on (the
      * nearest target date, then the newest); hackathons that aren't past and the next dated one;
-     * applications that are sent and still in play, and the next step among them. GitHub activity
-     * joins in slice 4e.
+     * applications that are sent and still in play, and the next step among them; GitHub (null when
+     * no username is set).
      */
     public record DeveloperSummary(
             int inDevelopment,
@@ -73,7 +80,8 @@ public final class DashboardDtos {
             int upcomingHackathons,
             NextHackathon nextHackathon,
             int activeApplications,
-            NextInternshipStep nextInternshipStep) {}
+            NextInternshipStep nextInternshipStep,
+            GitHubSummary github) {}
 
     public record DashboardResponse(
             LocalDate date,

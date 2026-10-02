@@ -229,7 +229,8 @@ function DeveloperCard({ summary, timezone }: { summary: DeveloperSummary | null
     (summary.activeProjects === 0 &&
       summary.activeGoals === 0 &&
       summary.upcomingHackathons === 0 &&
-      summary.activeApplications === 0)
+      summary.activeApplications === 0 &&
+      summary.github === null)
   ) {
     return (
       <DomainSummary
@@ -252,7 +253,9 @@ function DeveloperCard({ summary, timezone }: { summary: DeveloperSummary | null
       ? ['/app/developer/learning', 'Open learning']
       : summary.upcomingHackathons > 0
         ? ['/app/developer/hackathons', 'Open hackathons']
-        : ['/app/developer/internships', 'Open internships'];
+        : summary.activeApplications > 0
+          ? ['/app/developer/internships', 'Open internships']
+          : ['/app/developer/github', 'Open GitHub'];
   return (
     <DomainSummary
       domain="developer"
@@ -304,6 +307,22 @@ function DeveloperCard({ summary, timezone }: { summary: DeveloperSummary | null
               )}
             </p>
           )}
+          {summary.github &&
+            (summary.github.contributionsThisMonth !== null || summary.github.lastPushAt) && (
+              <p>
+                <Link to="/app/developer/github" className="font-medium text-ink hover:underline">
+                  GitHub
+                </Link>
+                :{' '}
+                {summary.github.contributionsThisMonth !== null &&
+                  `${summary.github.contributionsThisMonth} public ${
+                    summary.github.contributionsThisMonth === 1 ? 'contribution' : 'contributions'
+                  } this month`}
+                {summary.github.contributionsThisMonth !== null && summary.github.lastPushAt && ' · '}
+                {summary.github.lastPushAt &&
+                  `last push to ${summary.github.lastPushRepo} ${formatDay(summary.github.lastPushAt.slice(0, 10))}`}
+              </p>
+            )}
           {hackathon && (
             <p>
               Next hackathon:{' '}

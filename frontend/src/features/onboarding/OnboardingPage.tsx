@@ -11,6 +11,7 @@ import { useCompleteOnboarding, useSettings } from '@/features/settings/api';
 import { cn } from '@/lib/cn';
 import { errorMessage } from '@/services/http';
 import { CoursesStep } from './CoursesStep';
+import { GitHubStep } from './GitHubStep';
 import { GoalsStep } from './GoalsStep';
 import { SemesterStep } from './SemesterStep';
 import { resumeStep, STEPS, type StepIndex } from './steps';
@@ -18,7 +19,7 @@ import { TimetableStep } from './TimetableStep';
 import { YouStep } from './YouStep';
 
 /**
- * First-run setup (architecture.md J1): You → Semester → Courses → Timetable → Goals → Home. Every step
+ * First-run setup (architecture.md J1): You → Semester → Courses → Timetable → Goals → GitHub → Home. Every step
  * saves through the normal APIs as you continue, so leaving halfway loses nothing, and coming
  * back resumes from what's saved. "Skip setup" (or finishing) marks onboarding done.
  */
@@ -74,7 +75,7 @@ function Flow({ firstName, start }: { firstName: string; start: StepIndex }) {
 
       <main className="mx-auto grid max-w-2xl gap-6 px-4 py-6">
         <nav aria-label="Setup steps">
-          <ol className="grid grid-cols-5 gap-2">
+          <ol className="grid grid-cols-3 gap-2 sm:grid-cols-6">
             {STEPS.map((name, i) => (
               <li
                 key={name}
@@ -108,7 +109,8 @@ function Flow({ firstName, start }: { firstName: string; start: StepIndex }) {
           {step === 1 && <SemesterStep onBack={back} onDone={next} />}
           {step === 2 && <CoursesStep onBack={back} onDone={next} />}
           {step === 3 && <TimetableStep onBack={back} onDone={next} />}
-          {step === 4 && <GoalsStep onBack={back} onFinish={finish} finishing={complete.isPending} />}
+          {step === 4 && <GoalsStep onBack={back} onDone={next} />}
+          {step === 5 && <GitHubStep onBack={back} onFinish={finish} finishing={complete.isPending} />}
         </section>
       </main>
     </div>

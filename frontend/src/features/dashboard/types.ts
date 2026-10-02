@@ -89,6 +89,14 @@ export interface DeveloperSummary {
     step: string | null;
     at: string;
   } | null;
+  /** Saved GitHub data (null when no username is set); contributionsThisMonth is null without the calendar. */
+  github: {
+    username: string;
+    contributionsThisMonth: number | null;
+    lastPushRepo: string | null;
+    lastPushAt: string | null;
+    fetchedAt: string | null;
+  } | null;
 }
 
 export interface Dashboard {

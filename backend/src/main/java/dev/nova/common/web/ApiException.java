@@ -63,6 +63,11 @@ public class ApiException extends RuntimeException {
                 HttpStatus.TOO_MANY_REQUESTS, "RATE_LIMITED", "Too many attempts", List.of(), retryAfterSeconds);
     }
 
+    /** A service NOVA depends on (GitHub) didn't answer and there's nothing saved to fall back on. */
+    public static ApiException upstreamUnavailable(String title) {
+        return new ApiException(HttpStatus.BAD_GATEWAY, "UPSTREAM_UNAVAILABLE", title, List.of(), null);
+    }
+
     public HttpStatus getStatus() {
         return status;
     }
