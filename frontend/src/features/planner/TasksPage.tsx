@@ -13,6 +13,7 @@ import { cn } from '@/lib/cn';
 import { addDays, formatDay, todayIn } from '@/lib/dates';
 import { useCompletedTasks, useTodayTasks, useUpcomingTasks } from './api';
 import { DeleteTaskDialog } from './DeleteTaskDialog';
+import { EditTask } from './EditTask';
 import { QuickAdd } from './QuickAdd';
 import { TaskDialog } from './TaskDialog';
 import { TaskItem } from './TaskItem';
@@ -47,6 +48,8 @@ export function TasksPage() {
   const view: View = viewParam === 'upcoming' || viewParam === 'done' ? viewParam : 'today';
   const category = (params.get('category') as TaskCategory | null) ?? undefined;
   const courseId = params.get('course') ?? undefined;
+  // ?task=<id> opens that task (links from notifications and search)
+  const linkedTask = params.get('task');
   const filtered = Boolean(category || courseId);
   const matches = (t: Task) =>
     (!category || t.category === category) && (!courseId || t.courseId === courseId);
@@ -185,6 +188,12 @@ export function TasksPage() {
         timezone={timezone}
         task={dialog.editing}
         initial={view === 'today' ? { plannedFor: today } : undefined}
+        onSaved={(title) => setAnnouncement(`Saved “${title}”.`)}
+      />
+      <EditTask
+        id={linkedTask}
+        timezone={timezone}
+        onClose={() => update({ task: null })}
         onSaved={(title) => setAnnouncement(`Saved “${title}”.`)}
       />
       <DeleteTaskDialog task={deleting} onClose={() => setDeleting(null)} onDeleted={setAnnouncement} />

@@ -465,15 +465,31 @@ Home also uses `/timetable/day` (today's classes), `/tasks/today` (today's tasks
 | Method | Path | Purpose |
 |---|---|---|
 | GET | `/api/v1/insights?window=WEEK` | A list of insights (see below). Only rules whose data exists produce output. |
-| GET | `/api/v1/notifications` **P** | `?unread=true` |
-| GET | `/api/v1/notifications/unread-count` | Bell badge (cheap query, polled every 60 s while the tab is visible) |
-| PATCH | `/api/v1/notifications/{id}` | `{ "read": true }` |
-| POST | `/api/v1/notifications/read-all` | |
+| GET | `/api/v1/notifications` **P** | Phase 5b. Newest first; `?unread=true` for unread only. Items: `{ "id", "type", "title", "body", "link", "read", "createdAt", "readAt" }` |
+| GET | `/api/v1/notifications/unread-count` | `{ "count" }`. The bell badge (a partial-index count, polled every 60 s while the tab is visible) |
+| PATCH | `/api/v1/notifications/{id}` | `{ "read": true }` or `false` → the notification. Someone else's id → `404` |
+| POST | `/api/v1/notifications/read-all` | `{ "updated": n }` |
+| GET | `/api/v1/settings/notifications` | `{ "types": [{ "type", "enabled" }] }`, every type in a fixed order; all on to start |
+| PATCH | `/api/v1/settings/notifications` | `{ "enabled": { "TASK_OVERDUE": false } }`, only the types to change → the full list. Unknown type → `400` |
 | GET | `/api/v1/search?q=dbms&limit=5` | Phase 5a. `{ "q", "courses", "assignments", "exams", "tasks", "projects", "learningGoals", "hackathons", "internships" }`, each a list of `{ "id", "title", "subtitle", "link" }` (see below). |
 
 **Search (5a).** A case-insensitive *contains* match on names and titles (courses also by code; internship applications by company or role), only over the user's own records. Up to `limit` (1–10, default 5; `400` on `limit`) per kind, those whose title starts with the query first, then A–Z. `q` is trimmed and must be 2–100 characters (`400` on `q`). It's a plain `LIKE` with `%`, `_` and the escape character escaped, so they match literally; full-text ranking isn't in scope. `subtitle` is a short line of context (course code, due or planned day, status); `link` is where the record lives in the app (a task's opens its dialog in the ⌘K palette).
 
 The **⌘K palette** (Ctrl+K on Windows/Linux, or the Search button in the top bar) combines this with every page in the navigation, quick actions (new task, assignment, exam, project, learning goal, hackathon, internship application; today's attendance on Home) and the last 6 things opened from it (kept in this browser's localStorage only).
+
+**Notifications (5b).** In-app only. A background job runs a minute after start-up and then an hour after each run, for every user, and creates what's new from their data, in their timezone:
+
+| Type | When | Once per |
+|---|---|---|
+| `ASSIGNMENT_DUE`, `TASK_DUE` | An open one is due within the next 24 hours | item and due day (moving it to another day notifies again) |
+| `TASK_OVERDUE` | A task is still open from 08:00 on the day after its deadline (deadlines in the last 7 days only) | task and due day |
+| `EXAM_SOON` | An exam is 3 days away or closer; the body says how many topics are ready | exam and day |
+| `ATTENDANCE_AT_RISK` | A current-semester course gets worse: into "at risk" or "below target", or from at risk to below. Improving or recovering only updates the stored state | change |
+| `HACKATHON_DEADLINE` | The deadline that matters for the status (registration while interested, submissions while building) closes within 24 hours | hackathon, kind and day |
+| `INTERNSHIP_DEADLINE` | A saved application's apply-by date is within 24 hours | application and day |
+| `INTERNSHIP_STEP` | An open application's next step (usually an interview) is tomorrow | application and step time |
+
+"Once" is enforced by a unique `(user_id, dedupe_key)` and `INSERT … ON CONFLICT DO NOTHING`, so runs can repeat (or overlap on two instances) without duplicates; attendance changes are claimed with a compare-and-set on the last state seen. Types switched off in Settings → Notifications aren't evaluated; existing notifications stay. A daily job deletes notifications read more than 90 days ago (`nova.notifications.retention`); unread ones are kept. `link` is an in-app path; a task's is `/app/planner/tasks?task={id}`, which opens it.
 
 **Insight object (traceable by construction)**
 

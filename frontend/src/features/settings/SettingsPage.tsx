@@ -7,6 +7,7 @@ import { FormAlert } from '@/components/patterns/FormAlert';
 import { Skeleton } from '@/components/patterns/Skeleton';
 import { Button } from '@/components/ui/Button';
 import { Field } from '@/components/ui/Field';
+import { NotificationSettings } from '@/features/notifications/NotificationSettings';
 import { useTheme } from '@/features/theme/ThemeContext';
 import { cn } from '@/lib/cn';
 import { errorMessage } from '@/services/http';
@@ -37,7 +38,9 @@ export function SettingsPage() {
     <div className="animate-enter mx-auto grid max-w-2xl gap-5 px-4 py-6 lg:px-6">
       <header>
         <h1 className="font-display text-[24px] font-semibold tracking-[-0.01em]">Settings</h1>
-        <p className="mt-1 text-ink-2">How NOVA reads your time, your targets and your screen.</p>
+        <p className="mt-1 text-ink-2">
+          How NOVA reads your time, your targets and your screen, and what it reminds you about.
+        </p>
       </header>
       {settings.isPending ? (
         <div role="status" aria-busy="true" className="grid gap-3">
@@ -53,7 +56,10 @@ export function SettingsPage() {
           requestId={settings.error.problem.requestId}
         />
       ) : (
-        <SettingsForm saved={settings.data} />
+        <>
+          <SettingsForm saved={settings.data} />
+          <NotificationSettings />
+        </>
       )}
     </div>
   );

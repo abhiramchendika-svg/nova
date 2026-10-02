@@ -1,6 +1,7 @@
 import { Search } from 'lucide-react';
 import { Link, useLocation } from 'react-router';
 import { TriMark } from '@/components/patterns/TriMark';
+import { NotificationBell } from '@/features/notifications/NotificationBell';
 import { useSaveTheme } from '@/features/settings/accountTheme';
 import { ThemeMenu } from '@/features/theme/ThemeMenu';
 import { AccountMenu } from './AccountMenu';
@@ -41,6 +42,7 @@ export function TopBar({ onSearch }: { onSearch: () => void }) {
             {isMac ? '⌘K' : 'Ctrl K'}
           </kbd>
         </button>
+        <NotificationBell />
         <ThemeMenu onChange={saveTheme} />
         <AccountMenu />
       </div>

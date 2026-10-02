@@ -56,6 +56,13 @@ nova:
     # the contribution calendar needs it (GitHub's GraphQL API always requires a token).
     # A fine-grained token with no extra permissions is enough for public data.
     server-token: ${GITHUB_SERVER_TOKEN:}
+  notifications:
+    # The generator runs a minute after start-up, then an hour after each run (every user, idempotent)
+    initial-delay: PT1M
+    interval: PT1H
+    # Daily clean-up (UTC) of notifications read more than `retention` ago; unread ones are kept
+    cleanup-cron: '0 17 3 * * *'
+    retention: P90D
 
 management:
   endpoints:

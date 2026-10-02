@@ -314,7 +314,7 @@ public class DashboardService {
     }
 
     /** "Was due today at 18:00", "Was due yesterday", "Overdue by 3 days"; "Due tomorrow at 09:00". */
-    static String deadlineReason(Instant dueAt, boolean overdue, LocalDate today, ZoneId zone) {
+    public static String deadlineReason(Instant dueAt, boolean overdue, LocalDate today, ZoneId zone) {
         LocalDateTime local = LocalDateTime.ofInstant(dueAt, zone);
         LocalDate day = local.toLocalDate();
         String time = local.format(HH_MM);
@@ -443,7 +443,7 @@ public class DashboardService {
     }
 
     /** "Apply by today at 23:59", "Apply-by date passed yesterday · apply or update it". */
-    static String applyByReason(Instant at, boolean missed, LocalDate today, ZoneId zone) {
+    public static String applyByReason(Instant at, boolean missed, LocalDate today, ZoneId zone) {
         if (missed) {
             long ago = ChronoUnit.DAYS.between(LocalDate.ofInstant(at, zone), today);
             String when = ago <= 0 ? "today" : ago == 1 ? "yesterday" : ago + " days ago";
@@ -454,7 +454,7 @@ public class DashboardService {
     }
 
     /** "Registration closes today at 18:00", "Submissions closed yesterday · update its status". */
-    static String hackathonDeadlineReason(
+    public static String hackathonDeadlineReason(
             DeadlineKind kind, Instant at, boolean missed, LocalDate today, ZoneId zone) {
         String what = kind == DeadlineKind.REGISTRATION ? "Registration" : "Submissions";
         if (missed) {
@@ -484,7 +484,7 @@ public class DashboardService {
     }
 
     /** 72.5 → "72.5%", 75.00 → "75%". */
-    static String percent(BigDecimal value) {
+    public static String percent(BigDecimal value) {
         BigDecimal rounded = value.setScale(1, RoundingMode.HALF_UP).stripTrailingZeros();
         return rounded.toPlainString() + "%";
     }

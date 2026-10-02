@@ -10,7 +10,7 @@ import { fitRange, formatMinutes, hourTicks, toMinutes } from '@/features/dashbo
 import { useSettings } from '@/features/settings/api';
 import { cn } from '@/lib/cn';
 import { todayIn } from '@/lib/dates';
-import { useCalendar, useTask } from './api';
+import { useCalendar } from './api';
 import {
   dayOfMonth,
   longDay,
@@ -23,6 +23,7 @@ import {
   type CalendarView,
 } from './calendarDates';
 import { FULL_DAY, itemDescription, itemHref, itemTime, loadScore, loadText } from './calendarText';
+import { EditTask } from './EditTask';
 import { TaskDialog } from './TaskDialog';
 import type { CalendarItem, CalendarItemType, DayLoad } from './types';
 
@@ -197,40 +198,6 @@ export function CalendarPage() {
         onSaved={(t) => setAnnouncement(`Saved “${t}”.`)}
       />
     </div>
-  );
-}
-
-/** Loads a task by id, then edits it in the usual dialog. */
-function EditTask({
-  id,
-  timezone,
-  onClose,
-  onSaved,
-}: {
-  id: string | null;
-  timezone: string;
-  onClose: () => void;
-  onSaved: (title: string) => void;
-}) {
-  const task = useTask(id);
-  return (
-    <>
-      {id && task.isError && (
-        <p role="alert" className="text-[13px] text-critical">
-          We couldn’t open that task.{' '}
-          <button type="button" className="underline" onClick={onClose}>
-            Dismiss
-          </button>
-        </p>
-      )}
-      <TaskDialog
-        open={id !== null && task.data !== undefined}
-        onOpenChange={(o) => !o && onClose()}
-        timezone={timezone}
-        task={task.data}
-        onSaved={onSaved}
-      />
-    </>
   );
 }
 

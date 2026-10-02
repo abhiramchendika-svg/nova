@@ -23,7 +23,9 @@ import org.springframework.test.web.servlet.MvcResult;
  * against PostgreSQL in Docker, driven through MockMvc. Spring caches this context, so every
  * subclass shares one container and one startup.
  */
-@SpringBootTest
+// Background jobs never run during tests (they would race with a test's own calls): the generator's
+// first run is ten years away and "-" disables the clean-up cron. Tests call the jobs directly.
+@SpringBootTest(properties = {"nova.notifications.initial-delay=P3650D", "nova.notifications.cleanup-cron=-"})
 @AutoConfigureMockMvc
 @Import({TestcontainersConfiguration.class, FakeGitHubConfiguration.class})
 public abstract class IntegrationTest {

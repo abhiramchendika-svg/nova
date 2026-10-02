@@ -14,6 +14,8 @@ import type { StoredMilestone, StoredProject } from './developer';
 import type { MockGitHubUser, StoredGitHub } from './github';
 import type { StoredHackathon } from './hackathons';
 import type { StoredInternship, StoredInternshipEvent } from './internships';
+import type { StoredNotification } from './notifications';
+import type { NotificationType } from '@/features/notifications/types';
 import type {
   StoredGoal,
   StoredResource as StoredLearningResource,
@@ -122,6 +124,10 @@ export interface AcademicStore {
   /** The GitHub username's saved data, and the GitHub users this mock knows (tests only). */
   github: StoredGitHub | null;
   githubWorld: Record<string, MockGitHubUser>;
+  /** In-app notifications, the types switched off, and what change-based rules last saw. */
+  notifications: StoredNotification[];
+  notificationMutes: NotificationType[];
+  notificationStates: Record<string, string>;
 }
 
 export function createAcademicStore(): AcademicStore {
@@ -146,6 +152,9 @@ export function createAcademicStore(): AcademicStore {
     internshipEvents: [],
     github: null,
     githubWorld: {},
+    notifications: [],
+    notificationMutes: [],
+    notificationStates: {},
   };
 }
 

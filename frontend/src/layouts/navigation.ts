@@ -76,6 +76,8 @@ export const TAB_ITEMS: TabItem[] = [
 /** Page title for the current path, used by the top bars. */
 export function titleForPath(pathname: string): string {
   if (pathname === '/app' || pathname === '/app/') return 'Home';
+  // Reached from the bell in the top bar, not the sidebar
+  if (pathname === '/app/notifications') return 'Notifications';
   for (const section of NAV_SECTIONS) {
     for (const item of section.items) {
       if (pathname === item.to) return item.label;

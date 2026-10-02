@@ -216,11 +216,16 @@ See §13. OAuth tokens are **encrypted at rest** (AES-GCM, with the key taken fr
 ### 9.6 Notifications (extensible, not over-engineered)
 
 ```
-NotificationScheduler (@Scheduled hourly)
-  → NotificationRules (pure: due-tomorrow, exam-in-3-days, attendance-at-risk, overdue-task, internship/hackathon deadline)
-  → NotificationService.create(dedupeKey)   // unique (user_id, dedupe_key) → never duplicates
-  → NotificationChannel[]  (MVP: InAppChannel only; EmailChannel/PushChannel later implement the same interface)
+NotificationScheduler (@Scheduled: a minute after start-up, then an hour after each run; every user, one transaction each)
+  → NotificationGenerator (reads the user's data; skips types switched off)
+  → NotificationRules (pure: due within 24 h, overdue the morning after, exam in ≤ 3 days, attendance got worse,
+                       hackathon/apply-by deadline within 24 h, interview tomorrow)
+  → NotificationStore.insertIfNew(dedupeKey)   // unique (user_id, dedupe_key) + ON CONFLICT DO NOTHING → never duplicates
+  → in-app only (the bell and /app/notifications). An email or push channel would be another consumer of the same
+    drafts; not built.
 ```
+
+Implemented in Phase 5b. Details and the full rule table: [api.md §2.14](./api.md).
 
 ## 10. Frontend architecture
 

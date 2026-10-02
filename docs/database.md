@@ -455,6 +455,20 @@ create table notifications (
 );
 create index ix_notifications_unread on notifications(user_id, created_at desc) where read_at is null;
 create index ix_notifications_user   on notifications(user_id, created_at desc);
+
+-- Added in V14 with the notifications themselves:
+create table notification_mutes (            -- types switched off in Settings; no row = on
+  user_id uuid not null references users(id) on delete cascade,
+  type    varchar(30) not null,
+  primary key (user_id, type)
+);
+create table notification_states (           -- the last state a change-based rule saw ('ATTENDANCE:{courseId}' → 'AT_RISK')
+  user_id    uuid not null references users(id) on delete cascade,
+  subject    varchar(80) not null,
+  state      varchar(20) not null,
+  updated_at timestamptz not null default now(),
+  primary key (user_id, subject)
+);
 ```
 
 > **Ordering note:** `tasks` references `projects` and `exams`, so in the real migrations `projects` is created before the task foreign key is added (the planner and developer phases add the FKs with `ALTER TABLE`).
