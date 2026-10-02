@@ -16,6 +16,10 @@ import dev.nova.developer.hackathon.Hackathon;
 import dev.nova.developer.hackathon.HackathonRepository;
 import dev.nova.developer.hackathon.HackathonRules;
 import dev.nova.developer.hackathon.HackathonStatus;
+import dev.nova.developer.internship.Internship;
+import dev.nova.developer.internship.InternshipRepository;
+import dev.nova.developer.internship.InternshipRules;
+import dev.nova.developer.internship.InternshipStatus;
 import dev.nova.developer.project.Milestone;
 import dev.nova.developer.project.MilestoneRepository;
 import dev.nova.developer.project.Project;
@@ -47,7 +51,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * One read-only feed over the timetable, exams, assignments, tasks, project milestones and hackathons (architecture.md: the
+ * One read-only feed over the timetable, exams, assignments, tasks, project milestones, hackathons and internship applications (architecture.md: the
  * calendar is a view, not a table). Everything is placed on the user's calendar days (UserClock).
  */
 @Service
@@ -65,6 +69,7 @@ public class CalendarService {
     private final MilestoneRepository milestones;
     private final ProjectRepository projects;
     private final HackathonRepository hackathons;
+    private final InternshipRepository internships;
     private final UserClock userClock;
 
     public CalendarService(
@@ -77,6 +82,7 @@ public class CalendarService {
             MilestoneRepository milestones,
             ProjectRepository projects,
             HackathonRepository hackathons,
+            InternshipRepository internships,
             UserClock userClock) {
         this.semesters = semesters;
         this.courses = courses;
@@ -87,6 +93,7 @@ public class CalendarService {
         this.milestones = milestones;
         this.projects = projects;
         this.hackathons = hackathons;
+        this.internships = internships;
         this.userClock = userClock;
     }
 
@@ -130,9 +137,9 @@ public class CalendarService {
                 : courses.findAllById(courseIds).stream().collect(Collectors.toMap(Course::getId, Function.identity()));
         Items items = new Items(courseById);
 
-        Map<LocalDate, int[]> load = new LinkedHashMap<>(); // deadlines, exams, class minutes, task minutes, hackathons
+        Map<LocalDate, int[]> load = new LinkedHashMap<>(); // deadlines, exams, class minutes, task minutes, hackathons, steps
         for (LocalDate d = from; !d.isAfter(to); d = d.plusDays(1)) {
-            load.put(d, new int[5]);
+            load.put(d, new int[6]);
         }
 
         for (TimetableEntry e : entries) {
@@ -244,10 +251,41 @@ public class CalendarService {
                     });
         }
 
+        List<InternshipStatus> open = List.of(InternshipStatus.values()).stream()
+                .filter(InternshipRules::stepMatters)
+                .toList();
+        for (Internship a : internships.findByUserIdAndStatusIn(userId, open)) {
+            String label = a.getRole() + " at " + a.getCompany();
+            if (InternshipRules.deadlineMatters(a.getStatus())
+                    && a.getDeadlineAt() != null
+                    && !a.getDeadlineAt().isBefore(start)
+                    && a.getDeadlineAt().isBefore(end)) {
+                LocalDateTime at = LocalDateTime.ofInstant(a.getDeadlineAt(), zone);
+                items.list.add(new CalendarItem("internship-deadline:" + a.getId(), ItemType.INTERNSHIP_DEADLINE,
+                        a.getId(), "Apply: " + label, at.toLocalDate(), CalendarRules.hhmm(at.toLocalTime()), null,
+                        false, null, null, null, null, a.getLocation(), null, null, null, null));
+                load.get(at.toLocalDate())[0]++;
+            }
+            if (a.getNextStepAt() != null && !a.getNextStepAt().isBefore(start) && a.getNextStepAt().isBefore(end)) {
+                LocalDateTime at = LocalDateTime.ofInstant(a.getNextStepAt(), zone);
+                String step = a.getNextStep() != null ? a.getNextStep() : "Next step";
+                items.list.add(new CalendarItem("internship-step:" + a.getId(), ItemType.INTERNSHIP_STEP, a.getId(),
+                        a.getCompany() + ": " + step, at.toLocalDate(), CalendarRules.hhmm(at.toLocalTime()), null,
+                        false, null, null, null, null, a.getLocation(), a.getStatus().name(), null, null, null));
+                load.get(at.toLocalDate())[5]++;
+            }
+        }
+
         List<CalendarItem> sorted = items.list.stream().sorted(CalendarRules.ORDER).toList();
         List<DayLoad> loads = load.entrySet().stream()
                 .map(e -> new DayLoad(
-                        e.getKey(), e.getValue()[0], e.getValue()[1], e.getValue()[4], e.getValue()[2], e.getValue()[3]))
+                        e.getKey(),
+                        e.getValue()[0],
+                        e.getValue()[1],
+                        e.getValue()[4],
+                        e.getValue()[5],
+                        e.getValue()[2],
+                        e.getValue()[3]))
                 .toList();
         return new CalendarResponse(from, to, zone.getId(), sorted, loads);
     }

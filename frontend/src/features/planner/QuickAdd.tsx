@@ -44,6 +44,7 @@ export function QuickAdd({
         projectId: null,
         learningGoalId: null,
         hackathonId: null,
+        internshipId: null,
       },
       {
         onSuccess: () => {

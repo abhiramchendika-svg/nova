@@ -10,6 +10,8 @@ export const ITEM_LABEL: Record<CalendarItemType, string> = {
   MILESTONE: 'Milestone',
   HACKATHON: 'Hackathon',
   HACKATHON_DEADLINE: 'Hackathon deadline',
+  INTERNSHIP_DEADLINE: 'Apply by',
+  INTERNSHIP_STEP: 'Internship',
 };
 
 /** Where an item lives; tasks open in a dialog instead (null). */
@@ -24,6 +26,9 @@ export function itemHref(item: CalendarItem): string | null {
     case 'HACKATHON':
     case 'HACKATHON_DEADLINE':
       return `/app/developer/hackathons/${item.refId}`;
+    case 'INTERNSHIP_DEADLINE':
+    case 'INTERNSHIP_STEP':
+      return `/app/developer/internships/${item.refId}`;
     case 'ASSIGNMENT_DUE':
       return item.courseId
         ? `/app/academics/assignments?course=${item.courseId}`
@@ -36,6 +41,8 @@ export function itemHref(item: CalendarItem): string | null {
 /** "09:00–09:50", "Due 23:59", or null for an untimed task. */
 export function itemTime(item: CalendarItem): string | null {
   if (!item.startTime) return null;
+  // An interview or assessment starts then; it isn't due
+  if (item.type === 'INTERNSHIP_STEP') return item.startTime;
   if (!item.endTime) return `Due ${item.startTime}`;
   return `${item.startTime}–${item.endTime}`;
 }
@@ -53,13 +60,17 @@ export function itemDescription(item: CalendarItem): string {
   return parts.join(', ');
 }
 
-/** Busy-ness in minute-equivalents: an exam counts as two hours, a deadline as one, a hackathon as six. */
+/**
+ * Busy-ness in minute-equivalents: an exam counts as two hours, a deadline or internship step as one,
+ * a hackathon as six.
+ */
 export function loadScore(load: DayLoad): number {
   return (
     load.classMinutes +
     load.plannedTaskMinutes +
     load.exams * 120 +
     load.deadlines * 60 +
+    load.internshipSteps * 60 +
     load.hackathons * 360
   );
 }
@@ -72,6 +83,10 @@ export function loadText(load: DayLoad): string | null {
   const parts: string[] = [];
   if (load.hackathons) parts.push(load.hackathons === 1 ? '1 hackathon' : `${load.hackathons} hackathons`);
   if (load.exams) parts.push(load.exams === 1 ? '1 exam' : `${load.exams} exams`);
+  if (load.internshipSteps)
+    parts.push(
+      load.internshipSteps === 1 ? '1 interview or test' : `${load.internshipSteps} interviews or tests`,
+    );
   if (load.deadlines) parts.push(load.deadlines === 1 ? '1 deadline' : `${load.deadlines} deadlines`);
   if (load.classMinutes) parts.push(`${formatMinutes(load.classMinutes)} of classes`);
   if (load.plannedTaskMinutes) parts.push(`${formatMinutes(load.plannedTaskMinutes)} planned`);

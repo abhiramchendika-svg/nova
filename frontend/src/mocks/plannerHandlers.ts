@@ -62,6 +62,8 @@ function check(store: AcademicStore, body: Partial<TaskRequest>, prefix = ''): C
   if (body.learningGoalId && !goal) return fail('learningGoalId', 'Choose one of your learning goals.');
   const hackathon = body.hackathonId ? store.hackathons.find((h) => h.id === body.hackathonId) : null;
   if (body.hackathonId && !hackathon) return fail('hackathonId', 'Choose one of your hackathons.');
+  const internship = body.internshipId ? store.internships.find((i) => i.id === body.internshipId) : null;
+  if (body.internshipId && !internship) return fail('internshipId', 'Choose one of your applications.');
   const recurrence = body.recurrence ?? 'NONE';
   if (body.plannedStart && !body.plannedFor) return fail('plannedStart', 'Pick a day before a start time.');
   if (recurrence !== 'NONE' && !body.plannedFor)
@@ -72,7 +74,15 @@ function check(store: AcademicStore, body: Partial<TaskRequest>, prefix = ''): C
       description: body.description?.trim() || null,
       category:
         body.category ??
-        (courseId ? 'ACADEMIC' : project || hackathon ? 'PROJECT' : goal ? 'CODING' : 'PERSONAL'),
+        (courseId
+          ? 'ACADEMIC'
+          : project || hackathon
+            ? 'PROJECT'
+            : internship
+              ? 'INTERNSHIP'
+              : goal
+                ? 'CODING'
+                : 'PERSONAL'),
       priority: body.priority ?? 'MEDIUM',
       plannedFor: body.plannedFor ?? null,
       plannedStart: body.plannedStart ?? null,
@@ -84,6 +94,7 @@ function check(store: AcademicStore, body: Partial<TaskRequest>, prefix = ''): C
       projectId: project?.id ?? null,
       learningGoalId: goal?.id ?? null,
       hackathonId: hackathon?.id ?? null,
+      internshipId: internship?.id ?? null,
     },
   };
 }
@@ -232,6 +243,7 @@ export function createPlannerHandlers(storeFor: StoreFor, settingsFor: () => Set
         const projectId = url.searchParams.get('projectId');
         const learningGoalId = url.searchParams.get('learningGoalId');
         const hackathonId = url.searchParams.get('hackathonId');
+        const internshipId = url.searchParams.get('internshipId');
         const sort = url.searchParams.get('sort');
         let compare = (a: StoredTask, b: StoredTask) => b.createdAt - a.createdAt || a.id.localeCompare(b.id);
         if (sort) {
@@ -267,6 +279,7 @@ export function createPlannerHandlers(storeFor: StoreFor, settingsFor: () => Set
           .filter((t) => !projectId || t.projectId === projectId)
           .filter((t) => !learningGoalId || t.learningGoalId === learningGoalId)
           .filter((t) => !hackathonId || t.hackathonId === hackathonId)
+          .filter((t) => !internshipId || t.internshipId === internshipId)
           .sort(compare);
         return page(store, all, p.page, p.size);
       }),

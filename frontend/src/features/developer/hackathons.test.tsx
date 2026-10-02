@@ -221,6 +221,7 @@ describe('Hackathons', () => {
       projectId: null,
       learningGoalId: null,
       hackathonId: 'h-later',
+      internshipId: null,
       createdAt: 1,
     });
     const { user, router } = renderRoute('/app/developer/hackathons/h-later');

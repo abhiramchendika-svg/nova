@@ -40,6 +40,8 @@ export const taskSchema = z
     learningGoalId: z.string(),
     /** Likewise for a hackathon's prep tasks. */
     hackathonId: z.string(),
+    /** Likewise for an internship application's prep tasks. */
+    internshipId: z.string(),
   })
   .superRefine((v, ctx) => {
     if (v.plannedStart && !v.plannedFor) {
@@ -75,5 +77,6 @@ export function toTaskRequest(v: TaskValues, timezone: string): TaskRequest {
     projectId: v.projectId || null,
     learningGoalId: v.learningGoalId || null,
     hackathonId: v.hackathonId || null,
+    internshipId: v.internshipId || null,
   };
 }

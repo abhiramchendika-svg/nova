@@ -50,6 +50,14 @@ class DashboardWordingTest {
     }
 
     @Test
+    void saysWhenToApplyBy() {
+        assertThat(DashboardService.applyByReason(Instant.parse("2026-10-01T18:29:00Z"), false, TODAY, IST))
+                .isEqualTo("Apply by today at 23:59");
+        assertThat(DashboardService.applyByReason(Instant.parse("2026-09-30T03:30:00Z"), true, TODAY, IST))
+                .isEqualTo("Apply-by date passed yesterday · apply or update it");
+    }
+
+    @Test
     void placesAClashingExamAroundTheEvent() {
         LocalDate start = LocalDate.of(2026, 10, 10);
         LocalDate end = LocalDate.of(2026, 10, 11);

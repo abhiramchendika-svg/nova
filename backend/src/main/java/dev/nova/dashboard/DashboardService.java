@@ -27,6 +27,11 @@ import dev.nova.developer.hackathon.HackathonDtos.ExamClash;
 import dev.nova.developer.hackathon.HackathonDtos.HackathonResponse;
 import dev.nova.developer.hackathon.HackathonRules.DeadlineKind;
 import dev.nova.developer.hackathon.HackathonService;
+import dev.nova.dashboard.DashboardDtos.NextInternshipStep;
+import dev.nova.developer.internship.Internship;
+import dev.nova.developer.internship.InternshipRules;
+import dev.nova.developer.internship.InternshipService;
+import dev.nova.developer.internship.InternshipStatus;
 import dev.nova.developer.learning.GoalStatus;
 import dev.nova.developer.learning.LearningDtos.GoalResponse;
 import dev.nova.developer.learning.LearningService;
@@ -97,6 +102,7 @@ public class DashboardService {
     private final MilestoneRepository milestones;
     private final LearningService learning;
     private final HackathonService hackathons;
+    private final InternshipService internships;
     private final UserClock userClock;
 
     public DashboardService(
@@ -112,6 +118,7 @@ public class DashboardService {
             MilestoneRepository milestones,
             LearningService learning,
             HackathonService hackathons,
+            InternshipService internships,
             UserClock userClock) {
         this.assignments = assignments;
         this.tasks = tasks;
@@ -125,6 +132,7 @@ public class DashboardService {
         this.milestones = milestones;
         this.learning = learning;
         this.hackathons = hackathons;
+        this.internships = internships;
         this.userClock = userClock;
     }
 
@@ -151,6 +159,8 @@ public class DashboardService {
         addAttendance(attention, attendanceRows);
         addExams(userId, attention);
         addHackathons(upcomingHackathons, attention, now, today, zone);
+        List<Internship> openApplications = internships.open(userId);
+        addApplyBy(openApplications, attention, now, today, zone);
         List<AttentionItem> ranked = attention.stream()
                 .sorted(Comparator.comparingInt(AttentionItem::score).reversed().thenComparing(AttentionItem::title))
                 .limit(MAX_ATTENTION)
@@ -172,12 +182,17 @@ public class DashboardService {
                                 .orElse(null));
 
         return new DashboardResponse(
-                today, ranked, academics, planner(userId, today, zone), developer(userId, today, upcomingHackathons));
+                today, ranked, academics, planner(userId, today, zone), developer(userId, today, upcomingHackathons, openApplications, now));
     }
 
     // ───────────── developer card ─────────────
 
-    private DeveloperSummary developer(UUID userId, LocalDate today, List<HackathonResponse> upcoming) {
+    private DeveloperSummary developer(
+            UUID userId,
+            LocalDate today,
+            List<HackathonResponse> upcoming,
+            List<Internship> applications,
+            Instant now) {
         Map<UUID, Project> active = projects
                 .findByUserIdAndStatusInOrderByCreatedAtDesc(
                         userId, Set.of(ProjectStatus.IDEA, ProjectStatus.PLANNING, ProjectStatus.DEVELOPMENT))
@@ -209,8 +224,25 @@ public class DashboardService {
                 .map(h -> new NextHackathon(
                         h.id(), h.name(), h.startsOn(), h.endsOn(), h.daysUntil(), h.status().name()))
                 .orElse(null);
+        int activeApplications = (int) applications.stream()
+                .filter(a -> a.getStatus() != InternshipStatus.SAVED)
+                .count();
+        NextInternshipStep nextStep = applications.stream()
+                .filter(a -> a.getNextStepAt() != null && !a.getNextStepAt().isBefore(now))
+                .min(Comparator.comparing(Internship::getNextStepAt))
+                .map(a -> new NextInternshipStep(
+                        a.getId(), a.getCompany(), a.getRole(), a.getNextStep(), a.getNextStepAt()))
+                .orElse(null);
         return new DeveloperSummary(
-                inDevelopment, active.size(), next, goals.size(), focus, upcoming.size(), nextHackathon);
+                inDevelopment,
+                active.size(),
+                next,
+                goals.size(),
+                focus,
+                upcoming.size(),
+                nextHackathon,
+                activeApplications,
+                nextStep);
     }
 
     private static NextMilestone nextMilestone(Milestone m, Project project, LocalDate today) {
@@ -370,6 +402,41 @@ public class DashboardService {
                         link));
             }
         }
+    }
+
+    private void addApplyBy(
+            List<Internship> applications, List<AttentionItem> out, Instant now, LocalDate today, ZoneId zone) {
+        Instant horizon = now.plus(PriorityScorer.DUE_SOON_WINDOW);
+        Instant oldest = now.minus(PriorityScorer.APPLY_BY_MISSED_WINDOW);
+        for (Internship a : applications) {
+            Instant at = a.getDeadlineAt();
+            if (!InternshipRules.deadlineMatters(a.getStatus()) || at == null || !at.isBefore(horizon)
+                    || at.isBefore(oldest)) {
+                continue;
+            }
+            boolean missed = at.isBefore(now);
+            out.add(new AttentionItem(
+                    AttentionKind.INTERNSHIP_DEADLINE,
+                    a.getId(),
+                    a.getRole() + " at " + a.getCompany(),
+                    null,
+                    applyByReason(at, missed, today, zone),
+                    missed
+                            ? PriorityScorer.applyByMissed()
+                            : PriorityScorer.applyBySoon(Duration.between(now, at)),
+                    "/app/developer/internships/" + a.getId()));
+        }
+    }
+
+    /** "Apply by today at 23:59", "Apply-by date passed yesterday · apply or update it". */
+    static String applyByReason(Instant at, boolean missed, LocalDate today, ZoneId zone) {
+        if (missed) {
+            long ago = ChronoUnit.DAYS.between(LocalDate.ofInstant(at, zone), today);
+            String when = ago <= 0 ? "today" : ago == 1 ? "yesterday" : ago + " days ago";
+            return "Apply-by date passed " + when + " · apply or update it";
+        }
+        // "Due today at 18:00" → "Apply by today at 18:00"
+        return "Apply by" + deadlineReason(at, false, today, zone).substring("Due".length());
     }
 
     /** "Registration closes today at 18:00", "Submissions closed yesterday · update its status". */

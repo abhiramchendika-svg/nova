@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { localParts, zonedToInstant } from '@/lib/dates';
-import type { Hackathon, HackathonRequest, ProjectRequest } from './types';
+import type { Hackathon, HackathonRequest, Internship, InternshipRequest, ProjectRequest } from './types';
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -237,5 +237,83 @@ export function hackathonRequestOf(h: Hackathon, changes: Partial<HackathonReque
     certificateUrl: h.certificateUrl,
     notes: h.notes,
     ...changes,
+  };
+}
+
+// ───────────── Internships ─────────────
+
+/**
+ * The application form (docs/api.md §2.12). Empty strings mean "not set". The apply-by date and the
+ * next step are a date plus a time, read in the user's timezone (23:59 / 09:00 when the time is empty).
+ */
+export const internshipSchema = z
+  .object({
+    company: z.string().trim().min(1, 'Name the company.').max(120, 'Keep it under 120 characters.'),
+    role: z.string().trim().min(1, 'Name the role.').max(120, 'Keep it under 120 characters.'),
+    status: z.enum(['SAVED', 'APPLIED', 'ASSESSMENT', 'INTERVIEW', 'OFFER', 'REJECTED', 'WITHDRAWN']),
+    location: text(120),
+    jobUrl: link,
+    source: text(60),
+    appliedOn: date,
+    deadlineDate: date,
+    deadlineTime: time,
+    nextStep: text(120),
+    nextStepDate: date,
+    nextStepTime: time,
+    resumeVersion: text(60),
+    notes: z.string().max(4000, 'Keep notes under 4000 characters.'),
+  })
+  .superRefine((v, ctx) => {
+    if (v.deadlineTime && !v.deadlineDate) {
+      ctx.addIssue({ code: 'custom', path: ['deadlineDate'], message: 'Choose the date too.' });
+    }
+    if (v.nextStepTime && !v.nextStepDate) {
+      ctx.addIssue({ code: 'custom', path: ['nextStepDate'], message: 'Choose the date too.' });
+    }
+  });
+
+export type InternshipValues = z.infer<typeof internshipSchema>;
+
+export function internshipValues(
+  i: Internship | undefined,
+  timezone: string,
+  initial: Partial<InternshipValues> = {},
+): InternshipValues {
+  const deadline = i?.deadlineAt ? localParts(i.deadlineAt, timezone) : null;
+  const step = i?.nextStepAt ? localParts(i.nextStepAt, timezone) : null;
+  return {
+    company: i?.company ?? '',
+    role: i?.role ?? '',
+    status: i?.status ?? 'APPLIED',
+    location: i?.location ?? '',
+    jobUrl: i?.jobUrl ?? '',
+    source: i?.source ?? '',
+    appliedOn: i?.appliedOn ?? '',
+    deadlineDate: deadline?.date ?? '',
+    deadlineTime: deadline?.time ?? '',
+    nextStep: i?.nextStep ?? '',
+    nextStepDate: step?.date ?? '',
+    nextStepTime: step?.time ?? '',
+    resumeVersion: i?.resumeVersion ?? '',
+    notes: i?.notes ?? '',
+    ...(i ? {} : initial),
+  };
+}
+
+export function toInternshipRequest(v: InternshipValues, timezone: string): InternshipRequest {
+  const blank = (s: string) => s.trim() || null;
+  return {
+    company: v.company.trim(),
+    role: v.role.trim(),
+    status: v.status,
+    location: blank(v.location),
+    jobUrl: blank(v.jobUrl),
+    source: blank(v.source),
+    appliedOn: v.appliedOn || null,
+    deadlineAt: v.deadlineDate ? zonedToInstant(v.deadlineDate, v.deadlineTime || '23:59', timezone) : null,
+    nextStep: blank(v.nextStep),
+    nextStepAt: v.nextStepDate ? zonedToInstant(v.nextStepDate, v.nextStepTime || '09:00', timezone) : null,
+    resumeVersion: blank(v.resumeVersion),
+    notes: blank(v.notes),
   };
 }

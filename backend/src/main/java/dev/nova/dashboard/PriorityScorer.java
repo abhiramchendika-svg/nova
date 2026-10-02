@@ -18,6 +18,8 @@ import java.time.Duration;
  *   <li>A hackathon deadline that matters for its status: within 48 hours, scored like medium-priority
  *       work due soon; already missed (while the event isn't over): 45.
  *   <li>A hackathon starting within 21 days that clashes with an exam: 30 + 2 per day closer than 21.
+ *   <li>A saved internship's apply-by date within 48 hours: like medium-priority work due soon;
+ *       passed within the last 7 days: 40.
  * </ul>
  *
  * Priority adds 15 (high), 8 (medium) or 0 (low).
@@ -42,6 +44,8 @@ public final class PriorityScorer {
     static final int CLASH_BASE = 30;
     static final int CLASH_WINDOW_DAYS = 21;
     static final int CLASH_PER_DAY = 2;
+    static final int APPLY_BY_MISSED = 40;
+    static final Duration APPLY_BY_MISSED_WINDOW = Duration.ofDays(7);
 
     private PriorityScorer() {}
 
@@ -102,6 +106,14 @@ public final class PriorityScorer {
 
     public static int hackathonDeadlineMissed() {
         return HACKATHON_MISSED;
+    }
+
+    public static int applyBySoon(Duration left) {
+        return dueSoon("MEDIUM", left);
+    }
+
+    public static int applyByMissed() {
+        return APPLY_BY_MISSED;
     }
 
     /** True when a clash belongs on the list: the hackathon starts within the window (or is on). */

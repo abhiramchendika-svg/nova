@@ -28,6 +28,7 @@
 | `V9__create_projects.sql` | `projects`, `project_milestones`; adds `tasks.project_id` | 4a |
 | `V10__create_learning.sql` | `learning_goals`, `learning_topics`, `learning_resources`; adds `tasks.learning_goal_id` | 4b |
 | `V11__create_hackathons.sql` | `hackathons`; adds `tasks.hackathon_id` | 4c |
+| `V12__create_internships.sql` | `internship_applications`, `internship_status_events`; adds `tasks.internship_id` | 4d |
 >
 > Differences from the draft in V3: `ordinal`, `position` and `color_hue` are `integer` rather than `smallint` (simpler Java mapping, same checks); `notes` is `varchar(2000)`; `grade_definitions` has a unique `(scheme_id, position)` too, and both of its unique constraints are **deferred to commit** so a scheme edit can swap labels or order between grades in one transaction; `courses.grade_definition_id` has its own index. V3 was applied to PostgreSQL 16 and its constraints were exercised directly (cross-tenant course, second current semester, duplicate ordinal, half-set grade, deleting an in-use scheme, label swap at commit, cascades): all behaved as designed.
 >
@@ -40,6 +41,8 @@
 > V7 changes no schema. Checked on PostgreSQL 16 with three accounts: one with semesters (marked onboarded), one without (left for onboarding) and one already onboarded (its original timestamp kept).
 >
 > V9: `projects.description` is `varchar(4000)` and `tech_stack` a `text[]` (at most 15 entries, checked); there is **no `progress_pct`**: progress is derived from milestones only. Links must match `^https?://`; `target_on` can't precede `started_on`. Milestones carry `user_id` with a composite FK to `projects (id, user_id)` (`uq_projects_id_user`), a `position` and `done_at`; `ix_milestones_open_due` is partial (open, dated milestones) for the calendar and Home. `tasks.project_id` references `projects (id, user_id)` with `on delete set null (project_id)`. Applied to PostgreSQL 16 and exercised (javascript: URL, bad status, 16 technologies, target before start, blank name, cross-tenant milestone, cross-tenant task link, and cascade to milestones plus set-null on tasks when a project is deleted).
+>
+> V12: `internship_applications.status` adds `WITHDRAWN` to the draft list; `next_step` (`varchar(120)`) and `next_step_at` are new, and `notes` is `varchar(4000)`. Checks: company and role not blank, status in its list, `job_url` `^https?://`, and an applied date for anything but `SAVED`. `internship_status_events` carries `user_id` with a composite FK to `(id, user_id)` (`uq_internships_id_user`, `on delete cascade`) and checks `to_status`; analytics are derived from it, never stored. `tasks.internship_id` references the application with `on delete set null (internship_id)` and a partial index. Applied to PostgreSQL 16 and exercised (applied without a date, saved without one, bad status, blank role, `javascript:` link, cross-tenant event and task link, and cascade to events plus set-null on tasks when an application is deleted).
 >
 > V11: `hackathons.status` is progress only (`INTERESTED`, `REGISTERED`, `PARTICIPATING`, `SUBMITTED`, `FINISHED`, `SKIPPED`); the outcome is the free-text `result` (`varchar(160)`), never inferred, which replaces the draft's `SHORTLISTED`/`WON`/`COMPLETED` statuses. `team_members` is `varchar(500)` and `notes` `varchar(4000)`. Checks: name not blank, mode and status in their lists, every link `^https?://`, `ends_on` needs `starts_on` and isn't before it, registration closes no later than submissions. `project_id` references `projects (id, user_id)` with `on delete set null (project_id)`; `uq_hackathons_id_user` is the target for `tasks.hackathon_id` (`on delete set null (hackathon_id)`, partial index). Applied to PostgreSQL 16 and exercised (bad status and mode, end without start, end before start, registration after submission, `javascript:` certificate link, cross-tenant project and task links, and set-null on hackathons when a project is deleted and on tasks when a hackathon is).
 >
@@ -393,7 +396,7 @@ create table internship_applications (
   job_url         varchar(2048) check (job_url ~* '^https?://'),
   source          varchar(60),                       -- 'LinkedIn', 'Referral', 'Campus'
   status          varchar(10) not null default 'APPLIED'
-                    check (status in ('SAVED','APPLIED','ASSESSMENT','INTERVIEW','OFFER','REJECTED')),
+                    check (status in ('SAVED','APPLIED','ASSESSMENT','INTERVIEW','OFFER','REJECTED','WITHDRAWN')),  -- V12
   applied_on      date,
   deadline_at     timestamptz,
   resume_version  varchar(60),                       -- label, e.g. 'v3-backend'

@@ -44,11 +44,13 @@ const TONE: Record<CalendarItemType, string> = {
   MILESTONE: 'bg-surface border-dashed border-developer/60 text-developer-text',
   HACKATHON: 'tint-developer border-developer/35 text-developer-text',
   HACKATHON_DEADLINE: 'bg-surface border-dashed border-developer/60 text-ink',
+  INTERNSHIP_DEADLINE: 'bg-surface border-dashed border-developer/60 text-ink',
+  INTERNSHIP_STEP: 'tint-developer border-developer text-developer-text font-semibold',
 };
 
 /**
  * Everything with a date, in one place (docs/api.md §2.10): classes, exams, assignment deadlines,
- * tasks, project milestones and hackathons, by week or month. Read-only: items link to where
+ * tasks, project milestones, hackathons and internships, by week or month. Read-only: items link to where
  * they're edited, and tasks open their dialog. Each day also says how full it is.
  */
 export function CalendarPage() {
@@ -240,6 +242,7 @@ function Legend() {
     { label: 'Task', tone: TONE.TASK },
     { label: 'Milestone', tone: TONE.MILESTONE },
     { label: 'Hackathon', tone: TONE.HACKATHON },
+    { label: 'Interview', tone: TONE.INTERNSHIP_STEP },
   ];
   return (
     <ul aria-label="Legend" className="ml-auto flex flex-wrap gap-3 text-[12px] text-ink-2">

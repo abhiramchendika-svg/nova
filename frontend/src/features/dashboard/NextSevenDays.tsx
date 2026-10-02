@@ -11,7 +11,16 @@ import { cn } from '@/lib/cn';
 import { addDays, formatDay } from '@/lib/dates';
 
 /** Deadlines, exams, milestones and hackathons; classes and planned tasks only count towards how full a day is. */
-const SHOWN = new Set(['ASSIGNMENT_DUE', 'EXAM', 'TASK_DUE', 'MILESTONE', 'HACKATHON', 'HACKATHON_DEADLINE']);
+const SHOWN = new Set([
+  'ASSIGNMENT_DUE',
+  'EXAM',
+  'TASK_DUE',
+  'MILESTONE',
+  'HACKATHON',
+  'HACKATHON_DEADLINE',
+  'INTERNSHIP_DEADLINE',
+  'INTERNSHIP_STEP',
+]);
 
 /** The coming week's deadlines and exams by day, with the busiest day marked (from the calendar feed). */
 export function NextSevenDays({ today }: { today: string }) {

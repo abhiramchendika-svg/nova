@@ -8,7 +8,8 @@ export type AttentionKind =
   | 'ATTENDANCE_AT_RISK'
   | 'EXAM_PREP'
   | 'HACKATHON_DEADLINE'
-  | 'HACKATHON_EXAM_CLASH';
+  | 'HACKATHON_EXAM_CLASH'
+  | 'INTERNSHIP_DEADLINE';
 
 export interface AttentionItem {
   kind: AttentionKind;
@@ -77,6 +78,16 @@ export interface DeveloperSummary {
     endsOn: string | null;
     daysUntil: number;
     status: string;
+  } | null;
+  /** Applications sent and still in play. */
+  activeApplications: number;
+  /** The soonest upcoming interview, assessment or other next step. */
+  nextInternshipStep: {
+    internshipId: string;
+    company: string;
+    role: string;
+    step: string | null;
+    at: string;
   } | null;
 }
 

@@ -616,6 +616,7 @@ function StudyTasks({ goal: g }: { goal: LearningGoal }) {
           projectId: null,
           learningGoalId: g.id,
           hackathonId: null,
+          internshipId: null,
         })}
         timezone={timezone}
         onSaved={(count) =>

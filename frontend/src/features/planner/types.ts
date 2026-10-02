@@ -35,6 +35,8 @@ export interface Task {
   learningGoalTitle: string | null;
   hackathonId: string | null;
   hackathonName: string | null;
+  internshipId: string | null;
+  internshipName: string | null;
   overdue: boolean;
   urgency: Urgency | null;
 }
@@ -55,6 +57,7 @@ export interface TaskRequest {
   projectId: string | null;
   learningGoalId: string | null;
   hackathonId: string | null;
+  internshipId: string | null;
 }
 
 export interface StatusResult {
@@ -84,6 +87,7 @@ export interface TaskFilter {
   projectId?: string;
   learningGoalId?: string;
   hackathonId?: string;
+  internshipId?: string;
   sort?: string;
   page?: number;
   size?: number;
@@ -101,7 +105,9 @@ export type CalendarItemType =
   | 'TASK_DUE'
   | 'MILESTONE'
   | 'HACKATHON'
-  | 'HACKATHON_DEADLINE';
+  | 'HACKATHON_DEADLINE'
+  | 'INTERNSHIP_DEADLINE'
+  | 'INTERNSHIP_STEP';
 
 /**
  * One thing on one day. Times are "HH:mm" on the user's wall clock: a block has both (endTime
@@ -134,6 +140,8 @@ export interface DayLoad {
   exams: number;
   /** Hackathons on that day. */
   hackathons: number;
+  /** Internship interviews, assessments and other next steps that day. */
+  internshipSteps: number;
   classMinutes: number;
   plannedTaskMinutes: number;
 }

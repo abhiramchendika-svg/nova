@@ -8,7 +8,7 @@ import { useTimetableDay } from '@/features/academics/api';
 import { useCurrentUser } from '@/features/auth/api';
 import { useSettings } from '@/features/settings/api';
 import { cn } from '@/lib/cn';
-import { formatDay, localParts, todayIn } from '@/lib/dates';
+import { formatDateTime, formatDay, localParts, todayIn } from '@/lib/dates';
 import { useDashboard } from './api';
 import { formatBriefDate, greetingFor } from './format';
 import { NeedsAttention } from './NeedsAttention';
@@ -72,7 +72,7 @@ export function HomePage() {
       >
         <AcademicsCard summary={dashboard.data?.academics ?? null} />
         <PlannerCard summary={dashboard.data?.planner ?? null} />
-        <DeveloperCard summary={dashboard.data?.developer ?? null} />
+        <DeveloperCard summary={dashboard.data?.developer ?? null} timezone={timezone} />
       </section>
 
       <Panel title="Next 7 days" className="lg:col-span-8">
@@ -223,10 +223,13 @@ function PlannerCard({ summary }: { summary: PlannerSummary | null }) {
   );
 }
 
-function DeveloperCard({ summary }: { summary: DeveloperSummary | null }) {
+function DeveloperCard({ summary, timezone }: { summary: DeveloperSummary | null; timezone: string }) {
   if (
     !summary ||
-    (summary.activeProjects === 0 && summary.activeGoals === 0 && summary.upcomingHackathons === 0)
+    (summary.activeProjects === 0 &&
+      summary.activeGoals === 0 &&
+      summary.upcomingHackathons === 0 &&
+      summary.activeApplications === 0)
   ) {
     return (
       <DomainSummary
@@ -241,12 +244,15 @@ function DeveloperCard({ summary }: { summary: DeveloperSummary | null }) {
   const next = summary.nextMilestone;
   const goal = summary.focusGoal;
   const hackathon = summary.nextHackathon;
+  const step = summary.nextInternshipStep;
   const projects = summary.activeProjects > 0;
   const [to, cta] = projects
     ? ['/app/developer/projects', 'Open projects']
     : summary.activeGoals > 0
       ? ['/app/developer/learning', 'Open learning']
-      : ['/app/developer/hackathons', 'Open hackathons'];
+      : summary.upcomingHackathons > 0
+        ? ['/app/developer/hackathons', 'Open hackathons']
+        : ['/app/developer/internships', 'Open internships'];
   return (
     <DomainSummary
       domain="developer"
@@ -278,6 +284,24 @@ function DeveloperCard({ summary }: { summary: DeveloperSummary | null }) {
               </Link>
               {goal.percentage !== null && <span className="font-mono tabular"> {goal.percentage}%</span>}
               {goal.nextTopic && <>, next: {goal.nextTopic}</>}
+            </p>
+          )}
+          {summary.activeApplications > 0 && (
+            <p>
+              {summary.activeApplications} internship{' '}
+              {summary.activeApplications === 1 ? 'application' : 'applications'} in play
+              {step && (
+                <>
+                  ; next:{' '}
+                  <Link
+                    to={`/app/developer/internships/${step.internshipId}`}
+                    className="font-medium text-ink hover:underline"
+                  >
+                    {step.step ?? 'next step'} at {step.company}
+                  </Link>
+                  , {formatDateTime(step.at, timezone)}
+                </>
+              )}
             </p>
           )}
           {hackathon && (

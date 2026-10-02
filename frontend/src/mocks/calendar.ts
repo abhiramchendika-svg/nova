@@ -4,6 +4,7 @@ import { addDays, daysBetween, localParts, zonedToInstant } from '@/lib/dates';
 import type { AcademicStore } from './academics';
 import { isOpen } from './coursework';
 import { lastDay, relevantDeadline } from './hackathons';
+import { deadlineMatters, stepMatters } from './internships';
 
 /** The calendar feed for the mock API: a port of CalendarService.java and CalendarRules.java. */
 
@@ -17,6 +18,8 @@ const TYPE_ORDER: CalendarItemType[] = [
   'MILESTONE',
   'HACKATHON',
   'HACKATHON_DEADLINE',
+  'INTERNSHIP_DEADLINE',
+  'INTERNSHIP_STEP',
 ];
 
 /** Java's String order (by code unit), not the locale's. */
@@ -61,7 +64,15 @@ export function buildCalendar(
   const items: CalendarItem[] = [];
   const load = new Map<string, DayLoad>();
   for (let d = from; d <= to; d = addDays(d, 1)) {
-    load.set(d, { date: d, deadlines: 0, exams: 0, hackathons: 0, classMinutes: 0, plannedTaskMinutes: 0 });
+    load.set(d, {
+      date: d,
+      deadlines: 0,
+      exams: 0,
+      hackathons: 0,
+      internshipSteps: 0,
+      classMinutes: 0,
+      plannedTaskMinutes: 0,
+    });
   }
   const add = (
     item: Omit<CalendarItem, 'courseCode' | 'courseName' | 'colorHue' | 'title'> & { title: string | null },
@@ -240,6 +251,44 @@ export function buildCalendar(
         kind: deadline.kind,
       });
       load.get(at.date)!.deadlines += 1;
+    }
+  }
+
+  for (const a of store.internships.filter((x) => stepMatters(x.status))) {
+    const application = {
+      ...base,
+      refId: a.id,
+      endTime: null,
+      courseId: null,
+      courseCode: null,
+      courseName: null,
+      colorHue: null,
+      location: a.location,
+    };
+    if (deadlineMatters(a.status) && a.deadlineAt && within(a.deadlineAt)) {
+      const at = local(a.deadlineAt);
+      items.push({
+        ...application,
+        key: `internship-deadline:${a.id}`,
+        type: 'INTERNSHIP_DEADLINE',
+        title: `Apply: ${a.role} at ${a.company}`,
+        date: at.date,
+        startTime: at.time,
+      });
+      load.get(at.date)!.deadlines += 1;
+    }
+    if (a.nextStepAt && within(a.nextStepAt)) {
+      const at = local(a.nextStepAt);
+      items.push({
+        ...application,
+        key: `internship-step:${a.id}`,
+        type: 'INTERNSHIP_STEP',
+        title: `${a.company}: ${a.nextStep ?? 'Next step'}`,
+        date: at.date,
+        startTime: at.time,
+        kind: a.status,
+      });
+      load.get(at.date)!.internshipSteps += 1;
     }
   }
 

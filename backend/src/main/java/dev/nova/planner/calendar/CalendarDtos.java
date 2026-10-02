@@ -17,7 +17,9 @@ public final class CalendarDtos {
         TASK_DUE,
         MILESTONE,
         HACKATHON,
-        HACKATHON_DEADLINE
+        HACKATHON_DEADLINE,
+        INTERNSHIP_DEADLINE,
+        INTERNSHIP_STEP
     }
 
     /**
@@ -27,7 +29,8 @@ public final class CalendarDtos {
      * (a weekly class appears once per date); {@code refId} is the class entry, exam, assignment or
      * task it comes from, for a milestone its project (the milestone itself is in {@code key}), and
      * for a hackathon day or deadline the hackathon. A hackathon deadline's {@code kind} is
-     * REGISTRATION or SUBMISSION.
+     * REGISTRATION or SUBMISSION. An internship's apply-by deadline or next step points at the
+     * application; a step's {@code kind} is the application's status.
      */
     public record CalendarItem(
             String key,
@@ -49,11 +52,18 @@ public final class CalendarDtos {
             String projectName) {}
 
     /**
-     * How full a day is: deadlines (assignments, tasks, project milestones and hackathon deadlines),
-     * exams, hackathons on that day, class time and planned task time.
+     * How full a day is: deadlines (assignments, tasks, project milestones, hackathon deadlines and
+     * internship apply-by dates), exams, hackathons on that day, internship steps (interviews,
+     * assessments), class time and planned task time.
      */
     public record DayLoad(
-            LocalDate date, int deadlines, int exams, int hackathons, int classMinutes, int plannedTaskMinutes) {}
+            LocalDate date,
+            int deadlines,
+            int exams,
+            int hackathons,
+            int internshipSteps,
+            int classMinutes,
+            int plannedTaskMinutes) {}
 
     public record CalendarResponse(
             LocalDate from, LocalDate to, String timezone, List<CalendarItem> items, List<DayLoad> load) {}

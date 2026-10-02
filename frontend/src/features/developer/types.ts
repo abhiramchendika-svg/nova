@@ -179,3 +179,75 @@ export interface HackathonRequest {
   certificateUrl: string | null;
   notes: string | null;
 }
+
+// ───────────── Internships (docs/api.md §2.12) ─────────────
+
+/** Rejected and withdrawn are closed; the rest are still in play. */
+export type InternshipStatus =
+  'SAVED' | 'APPLIED' | 'ASSESSMENT' | 'INTERVIEW' | 'OFFER' | 'REJECTED' | 'WITHDRAWN';
+
+export interface StatusChange {
+  fromStatus: InternshipStatus | null;
+  toStatus: InternshipStatus;
+  changedAt: string;
+}
+
+export interface Internship {
+  id: string;
+  company: string;
+  role: string;
+  location: string | null;
+  jobUrl: string | null;
+  source: string | null;
+  status: InternshipStatus;
+  appliedOn: string | null;
+  /** Apply by; only matters while saved. */
+  deadlineAt: string | null;
+  /** Still saved and the apply-by date has passed. */
+  deadlineMissed: boolean;
+  nextStep: string | null;
+  nextStepAt: string | null;
+  resumeVersion: string | null;
+  notes: string | null;
+  openTasks: number;
+  /** Every status change, oldest first. */
+  history: StatusChange[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface InternshipRequest {
+  company: string;
+  role: string;
+  location: string | null;
+  jobUrl: string | null;
+  source: string | null;
+  status: InternshipStatus;
+  /** Null keeps the current one (today once it's sent). */
+  appliedOn: string | null;
+  deadlineAt: string | null;
+  nextStep: string | null;
+  nextStepAt: string | null;
+  resumeVersion: string | null;
+  notes: string | null;
+}
+
+/** One month's applications (by applied date) and how far they've got, plus the all-time funnel. */
+export interface InternshipAnalytics {
+  month: string;
+  applied: number;
+  assessments: number;
+  interviews: number;
+  offers: number;
+  rejected: number;
+  responseRate: { value: number | null; formula: string; responded: number; applied: number };
+  allTime: {
+    saved: number;
+    applied: number;
+    assessment: number;
+    interview: number;
+    offer: number;
+    rejected: number;
+    withdrawn: number;
+  };
+}

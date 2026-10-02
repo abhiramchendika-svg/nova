@@ -54,4 +54,10 @@ class PriorityScorerTest {
         assertThat(PriorityScorer.clash(3)).isEqualTo(66); // 30 + 2 × 18
         assertThat(PriorityScorer.clash(-1)).isEqualTo(72); // already on: as close as it gets
     }
+
+    @Test
+    void applyByDatesRankLikeMediumWork() {
+        assertThat(PriorityScorer.applyBySoon(Duration.ofHours(20))).isEqualTo(63); // 40 + 8 + 15
+        assertThat(PriorityScorer.applyByMissed()).isEqualTo(40);
+    }
 }

@@ -12,6 +12,7 @@ import type { StoredRecord } from './attendance';
 import type { StoredAssignment, StoredEntry, StoredExam, StoredResource, StoredTopic } from './coursework';
 import type { StoredMilestone, StoredProject } from './developer';
 import type { StoredHackathon } from './hackathons';
+import type { StoredInternship, StoredInternshipEvent } from './internships';
 import type {
   StoredGoal,
   StoredResource as StoredLearningResource,
@@ -114,6 +115,9 @@ export interface AcademicStore {
   learningResources: StoredLearningResource[];
   /** Hackathons (they link to projects and are linked from tasks). */
   hackathons: StoredHackathon[];
+  /** Internship applications and their status history. */
+  internships: StoredInternship[];
+  internshipEvents: StoredInternshipEvent[];
 }
 
 export function createAcademicStore(): AcademicStore {
@@ -134,6 +138,8 @@ export function createAcademicStore(): AcademicStore {
     learningTopics: [],
     learningResources: [],
     hackathons: [],
+    internships: [],
+    internshipEvents: [],
   };
 }
 

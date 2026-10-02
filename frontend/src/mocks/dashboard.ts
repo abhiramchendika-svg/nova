@@ -6,6 +6,7 @@ import { summarize, type AcademicStore } from './academics';
 import { courseAttendance } from './attendance';
 import { isOpen, toExamSummary } from './coursework';
 import { toHackathon } from './hackathons';
+import { deadlineMatters, stepMatters } from './internships';
 import { toGoal } from './learning';
 
 /** Home's aggregate for the mock API: a port of DashboardService.java, PriorityScorer.java and Streaks.java. */
@@ -27,6 +28,7 @@ export const scorer = {
     daysUntil >= 0 && daysUntil <= 7 && pct !== null && pct < 50,
   exam: (daysUntil: number, pct: number) => clamp(30 + 4 * (7 - daysUntil) + Math.floor((50 - pct) / 5)),
   hackathonMissed: 45,
+  applyByMissed: 40,
   clashNeedsAttention: (daysUntil: number) => daysUntil <= 21,
   clash: (daysUntil: number) => clamp(30 + 2 * (21 - Math.max(0, daysUntil))),
 };
@@ -71,6 +73,16 @@ export function hackathonDeadlineReason(
   }
   const verb = kind === 'REGISTRATION' ? 'closes' : 'close';
   return `${what} ${verb}${deadlineReason(at, false, today, timezone).slice('Due'.length)}`;
+}
+
+/** DashboardService.applyByReason. */
+export function applyByReason(at: string, missed: boolean, today: string, timezone: string): string {
+  if (missed) {
+    const ago = daysBetween(localParts(at, timezone).date, today);
+    const when = ago <= 0 ? 'today' : ago === 1 ? 'yesterday' : `${ago} days ago`;
+    return `Apply-by date passed ${when} · apply or update it`;
+  }
+  return `Apply by${deadlineReason(at, false, today, timezone).slice('Due'.length)}`;
 }
 
 /** DashboardService.clashReason. */
@@ -213,6 +225,23 @@ export function buildDashboard(
     }
   }
 
+  const open = store.internships.filter((a) => stepMatters(a.status));
+  for (const a of open) {
+    if (!deadlineMatters(a.status) || !a.deadlineAt) continue;
+    const at = Date.parse(a.deadlineAt);
+    if (at >= horizon || at < nowMs - 7 * DAY) continue;
+    const missed = at < nowMs;
+    items.push({
+      kind: 'INTERNSHIP_DEADLINE',
+      refId: a.id,
+      title: `${a.role} at ${a.company}`,
+      courseCode: null,
+      reason: applyByReason(a.deadlineAt, missed, today, tz),
+      score: missed ? scorer.applyByMissed : scorer.dueSoon('MEDIUM', at - nowMs),
+      link: `/app/developer/internships/${a.id}`,
+    });
+  }
+
   items.sort((a, b) => b.score - a.score || (a.title < b.title ? -1 : a.title > b.title ? 1 : 0));
 
   const grades = summarize(store);
@@ -270,7 +299,7 @@ export function buildDashboard(
       weekPlanned: week.length,
       streakDays: streak(doneDays, today),
     },
-    developer: developerSummary(store, today, upcoming),
+    developer: developerSummary(store, today, upcoming, open, nowMs),
   };
 }
 
@@ -279,7 +308,12 @@ function developerSummary(
   store: AcademicStore,
   today: string,
   upcoming: ReturnType<typeof toHackathon>[],
+  applications: AcademicStore['internships'],
+  nowMs: number,
 ): Dashboard['developer'] {
+  const step = applications
+    .filter((a) => a.nextStepAt !== null && Date.parse(a.nextStepAt) >= nowMs)
+    .sort((a, b) => Date.parse(a.nextStepAt!) - Date.parse(b.nextStepAt!))[0];
   const active = store.projects.filter((p) => ['IDEA', 'PLANNING', 'DEVELOPMENT'].includes(p.status));
   const ids = new Set(active.map((p) => p.id));
   const next = store.milestones
@@ -304,6 +338,16 @@ function developerSummary(
     .filter((h) => h.startsOn !== null)
     .sort((a, b) => (a.startsOn! < b.startsOn! ? -1 : a.startsOn! > b.startsOn! ? 1 : 0))[0];
   return {
+    activeApplications: applications.filter((a) => a.status !== 'SAVED').length,
+    nextInternshipStep: step
+      ? {
+          internshipId: step.id,
+          company: step.company,
+          role: step.role,
+          step: step.nextStep,
+          at: step.nextStepAt!,
+        }
+      : null,
     upcomingHackathons: upcoming.length,
     nextHackathon: nextHackathon
       ? {

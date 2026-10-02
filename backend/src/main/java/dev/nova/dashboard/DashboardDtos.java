@@ -1,6 +1,7 @@
 package dev.nova.dashboard;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -18,7 +19,8 @@ public final class DashboardDtos {
         ATTENDANCE_AT_RISK,
         EXAM_PREP,
         HACKATHON_DEADLINE,
-        HACKATHON_EXAM_CLASH
+        HACKATHON_EXAM_CLASH,
+        INTERNSHIP_DEADLINE
     }
 
     /** One thing that needs the user, with a plain reason and where to deal with it. */
@@ -51,11 +53,16 @@ public final class DashboardDtos {
     public record NextHackathon(
             UUID hackathonId, String name, LocalDate startsOn, LocalDate endsOn, long daysUntil, String status) {}
 
+    /** The soonest upcoming interview, assessment or other next step of an application still in play. */
+    public record NextInternshipStep(
+            UUID internshipId, String company, String role, String step, Instant at) {}
+
     /**
      * Projects in development, projects that aren't completed or archived, and the soonest open
      * milestone with a due date among those; active learning goals and the one to focus on (the
-     * nearest target date, then the newest); hackathons that aren't past and the next dated one.
-     * GitHub activity joins in slice 4e.
+     * nearest target date, then the newest); hackathons that aren't past and the next dated one;
+     * applications that are sent and still in play, and the next step among them. GitHub activity
+     * joins in slice 4e.
      */
     public record DeveloperSummary(
             int inDevelopment,
@@ -64,7 +71,9 @@ public final class DashboardDtos {
             int activeGoals,
             FocusGoal focusGoal,
             int upcomingHackathons,
-            NextHackathon nextHackathon) {}
+            NextHackathon nextHackathon,
+            int activeApplications,
+            NextInternshipStep nextInternshipStep) {}
 
     public record DashboardResponse(
             LocalDate date,

@@ -27,6 +27,8 @@ const LearningPage = lazy(pageLoaders.LearningPage);
 const GoalPage = lazy(pageLoaders.GoalPage);
 const HackathonsPage = lazy(pageLoaders.HackathonsPage);
 const HackathonPage = lazy(pageLoaders.HackathonPage);
+const InternshipsPage = lazy(pageLoaders.InternshipsPage);
+const InternshipPage = lazy(pageLoaders.InternshipPage);
 const SettingsPage = lazy(pageLoaders.SettingsPage);
 const OnboardingPage = lazy(pageLoaders.OnboardingPage);
 const SectionPlaceholder = lazy(pageLoaders.SectionPlaceholder);
@@ -76,6 +78,8 @@ export const routes: RouteObject[] = [
       { path: 'developer/learning/:goalId', element: <GoalPage /> },
       { path: 'developer/hackathons', element: <HackathonsPage /> },
       { path: 'developer/hackathons/:hackathonId', element: <HackathonPage /> },
+      { path: 'developer/internships', element: <InternshipsPage /> },
+      { path: 'developer/internships/:internshipId', element: <InternshipPage /> },
       { path: 'settings', element: <SettingsPage /> },
       { path: 'academics/attendance', element: <AttendancePage /> },
       { path: 'academics/grades', element: <GradesPage /> },

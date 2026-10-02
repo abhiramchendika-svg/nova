@@ -9,6 +9,8 @@ import dev.nova.common.web.ApiException;
 import dev.nova.common.web.PageResponse;
 import dev.nova.developer.hackathon.Hackathon;
 import dev.nova.developer.hackathon.HackathonRepository;
+import dev.nova.developer.internship.Internship;
+import dev.nova.developer.internship.InternshipRepository;
 import dev.nova.developer.learning.LearningGoal;
 import dev.nova.developer.learning.LearningGoalRepository;
 import dev.nova.developer.project.Project;
@@ -65,6 +67,7 @@ public class TaskService {
     private final ProjectRepository projects;
     private final LearningGoalRepository goals;
     private final HackathonRepository hackathons;
+    private final InternshipRepository internships;
 
     public TaskService(
             TaskRepository tasks,
@@ -73,9 +76,11 @@ public class TaskService {
             UserClock userClock,
             ProjectRepository projects,
             LearningGoalRepository goals,
-            HackathonRepository hackathons) {
+            HackathonRepository hackathons,
+            InternshipRepository internships) {
         this.tasks = tasks;
         this.hackathons = hackathons;
+        this.internships = internships;
         this.projects = projects;
         this.goals = goals;
         this.courses = courses;
@@ -91,7 +96,8 @@ public class TaskService {
             UUID examId,
             UUID projectId,
             UUID learningGoalId,
-            UUID hackathonId) {}
+            UUID hackathonId,
+            UUID internshipId) {}
 
     // ───────────── views ─────────────
 
@@ -176,6 +182,9 @@ public class TaskService {
             }
             if (filter.hackathonId() != null) {
                 where.add(cb.equal(root.get("hackathonId"), filter.hackathonId()));
+            }
+            if (filter.internshipId() != null) {
+                where.add(cb.equal(root.get("internshipId"), filter.internshipId()));
             }
             return cb.and(where.toArray(Predicate[]::new));
         };
@@ -309,6 +318,11 @@ public class TaskService {
                 : hackathons.findByIdAndUserId(request.hackathonId(), userId)
                         .orElseThrow(() -> ApiException.invalidField(
                                 "hackathonId", "Choose one of your hackathons."));
+        Internship internship = request.internshipId() == null
+                ? null
+                : internships.findByIdAndUserId(request.internshipId(), userId)
+                        .orElseThrow(() -> ApiException.invalidField(
+                                "internshipId", "Choose one of your applications."));
 
         Recurrence recurrence = request.recurrence() == null ? Recurrence.NONE : request.recurrence();
         if (request.plannedStart() != null && request.plannedFor() == null) {
@@ -324,6 +338,8 @@ public class TaskService {
             category = TaskCategory.ACADEMIC;
         } else if (project != null || hackathon != null) {
             category = TaskCategory.PROJECT;
+        } else if (internship != null) {
+            category = TaskCategory.INTERNSHIP;
         } else if (goal != null) {
             category = TaskCategory.CODING;
         } else {
@@ -344,7 +360,8 @@ public class TaskService {
                 exam == null ? null : exam.getId(),
                 project == null ? null : project.getId(),
                 goal == null ? null : goal.getId(),
-                hackathon == null ? null : hackathon.getId());
+                hackathon == null ? null : hackathon.getId(),
+                internship == null ? null : internship.getId());
     }
 
     /** "plannedFor,asc" style, allow-listed; default newest first. Ties break on id for stable paging. */
@@ -372,7 +389,7 @@ public class TaskService {
         return all;
     }
 
-    /** One course, exam, project, goal and hackathon lookup, and one timezone lookup, for a batch. */
+    /** One course, exam, project, goal, hackathon and application lookup, and one timezone lookup, for a batch. */
     private Responses responsesFor(UUID userId, List<Task> batch) {
         Set<UUID> courseIds = batch.stream().map(Task::getCourseId).filter(Objects::nonNull).collect(Collectors.toSet());
         Set<UUID> examIds = batch.stream().map(Task::getExamId).filter(Objects::nonNull).collect(Collectors.toSet());
@@ -400,12 +417,19 @@ public class TaskService {
                 ? Map.of()
                 : hackathons.findAllById(hackathonIds).stream()
                         .collect(Collectors.toMap(Hackathon::getId, Function.identity()));
+        Set<UUID> internshipIds =
+                batch.stream().map(Task::getInternshipId).filter(Objects::nonNull).collect(Collectors.toSet());
+        Map<UUID, Internship> internshipById = internshipIds.isEmpty()
+                ? Map.of()
+                : internships.findAllById(internshipIds).stream()
+                        .collect(Collectors.toMap(Internship::getId, Function.identity()));
         return new Responses(
                 courseById,
                 examById,
                 projectById,
                 goalById,
                 hackathonById,
+                internshipById,
                 userClock.now(),
                 userClock.zoneOf(userId));
     }
@@ -416,6 +440,7 @@ public class TaskService {
             Map<UUID, Project> projects,
             Map<UUID, LearningGoal> goals,
             Map<UUID, Hackathon> hackathons,
+            Map<UUID, Internship> internships,
             Instant now,
             ZoneId zone) {
 
@@ -425,6 +450,7 @@ public class TaskService {
             Project project = t.getProjectId() == null ? null : projects.get(t.getProjectId());
             LearningGoal goal = t.getLearningGoalId() == null ? null : goals.get(t.getLearningGoalId());
             Hackathon hackathon = t.getHackathonId() == null ? null : hackathons.get(t.getHackathonId());
+            Internship internship = t.getInternshipId() == null ? null : internships.get(t.getInternshipId());
             boolean open = t.getStatus().isOpen();
             return new TaskResponse(
                     t.getId(),
@@ -451,6 +477,8 @@ public class TaskService {
                     goal == null ? null : goal.getTitle(),
                     t.getHackathonId(),
                     hackathon == null ? null : hackathon.getName(),
+                    t.getInternshipId(),
+                    internship == null ? null : internship.getRole() + " at " + internship.getCompany(),
                     open && t.getDueAt() != null && t.getDueAt().isBefore(now),
                     open && t.getDueAt() != null ? Urgency.of(t.getDueAt(), now, zone) : null);
         }

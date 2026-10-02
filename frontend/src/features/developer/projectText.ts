@@ -1,6 +1,13 @@
 import type { BadgeTone } from '@/components/ui/Badge';
 import { formatDay } from '@/lib/dates';
-import type { DeadlineKind, GoalStatus, HackathonMode, HackathonStatus, ProjectStatus } from './types';
+import type {
+  DeadlineKind,
+  GoalStatus,
+  HackathonMode,
+  HackathonStatus,
+  InternshipStatus,
+  ProjectStatus,
+} from './types';
 
 export const STATUS_LABEL: Record<ProjectStatus, string> = {
   IDEA: 'Idea',
@@ -97,3 +104,41 @@ export function countdown(daysUntil: number | null): string | null {
   if (daysUntil === 1) return 'Tomorrow';
   return `In ${daysUntil} days`;
 }
+
+// ───────────── Internships ─────────────
+
+export const INTERNSHIP_STATUS_LABEL: Record<InternshipStatus, string> = {
+  SAVED: 'Saved',
+  APPLIED: 'Applied',
+  ASSESSMENT: 'Assessment',
+  INTERVIEW: 'Interview',
+  OFFER: 'Offer',
+  REJECTED: 'Rejected',
+  WITHDRAWN: 'Withdrawn',
+};
+
+/** Every status, in the order an application goes. */
+export const INTERNSHIP_STATUSES: InternshipStatus[] = [
+  'SAVED',
+  'APPLIED',
+  'ASSESSMENT',
+  'INTERVIEW',
+  'OFFER',
+  'REJECTED',
+  'WITHDRAWN',
+];
+
+/** The board's columns: everything still in play. Closed ones are in the list. */
+export const BOARD_STAGES: InternshipStatus[] = ['SAVED', 'APPLIED', 'ASSESSMENT', 'INTERVIEW', 'OFFER'];
+
+export const CLOSED_STATUSES: InternshipStatus[] = ['REJECTED', 'WITHDRAWN'];
+
+export const INTERNSHIP_STATUS_TONE: Record<InternshipStatus, BadgeTone> = {
+  SAVED: 'neutral',
+  APPLIED: 'developer',
+  ASSESSMENT: 'developer',
+  INTERVIEW: 'developer',
+  OFFER: 'good',
+  REJECTED: 'neutral',
+  WITHDRAWN: 'neutral',
+};
