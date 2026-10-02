@@ -43,6 +43,7 @@ export function QuickAdd({
         examId: null,
         projectId: null,
         learningGoalId: null,
+        hackathonId: null,
       },
       {
         onSuccess: () => {

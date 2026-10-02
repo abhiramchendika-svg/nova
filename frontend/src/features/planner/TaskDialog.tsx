@@ -54,6 +54,7 @@ const EMPTY: TaskValues = {
   examId: '',
   projectId: '',
   learningGoalId: '',
+  hackathonId: '',
 };
 
 function valuesOf(task: Task, timezone: string): TaskValues {
@@ -73,6 +74,7 @@ function valuesOf(task: Task, timezone: string): TaskValues {
     examId: task.examId ?? '',
     projectId: task.projectId ?? '',
     learningGoalId: task.learningGoalId ?? '',
+    hackathonId: task.hackathonId ?? '',
   };
 }
 

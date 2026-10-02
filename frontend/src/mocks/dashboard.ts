@@ -5,6 +5,7 @@ import { addDays, daysBetween, formatDay, localParts, todayIn, zonedToInstant } 
 import { summarize, type AcademicStore } from './academics';
 import { courseAttendance } from './attendance';
 import { isOpen, toExamSummary } from './coursework';
+import { toHackathon } from './hackathons';
 import { toGoal } from './learning';
 
 /** Home's aggregate for the mock API: a port of DashboardService.java, PriorityScorer.java and Streaks.java. */
@@ -25,6 +26,9 @@ export const scorer = {
   examNeedsPrep: (daysUntil: number, pct: number | null) =>
     daysUntil >= 0 && daysUntil <= 7 && pct !== null && pct < 50,
   exam: (daysUntil: number, pct: number) => clamp(30 + 4 * (7 - daysUntil) + Math.floor((50 - pct) / 5)),
+  hackathonMissed: 45,
+  clashNeedsAttention: (daysUntil: number) => daysUntil <= 21,
+  clash: (daysUntil: number) => clamp(30 + 2 * (21 - Math.max(0, daysUntil))),
 };
 
 /** Streaks.streak: days in a row with a finished task, ending today or yesterday; null below 3. */
@@ -49,6 +53,41 @@ export function deadlineReason(dueAt: string, overdue: boolean, today: string, t
   if (date === today) return `Due today at ${time}`;
   if (date === addDays(today, 1)) return `Due tomorrow at ${time}`;
   return `Due ${formatDay(date)} at ${time}`;
+}
+
+/** DashboardService.hackathonDeadlineReason. */
+export function hackathonDeadlineReason(
+  kind: 'REGISTRATION' | 'SUBMISSION',
+  at: string,
+  missed: boolean,
+  today: string,
+  timezone: string,
+): string {
+  const what = kind === 'REGISTRATION' ? 'Registration' : 'Submissions';
+  if (missed) {
+    const ago = daysBetween(localParts(at, timezone).date, today);
+    const when = ago <= 0 ? 'today' : ago === 1 ? 'yesterday' : `${ago} days ago`;
+    return `${what} closed ${when} · update its status`;
+  }
+  const verb = kind === 'REGISTRATION' ? 'closes' : 'close';
+  return `${what} ${verb}${deadlineReason(at, false, today, timezone).slice('Due'.length)}`;
+}
+
+/** DashboardService.clashReason. */
+export function clashReason(
+  exam: { title: string; on: string },
+  startsOn: string,
+  endsOn: string | null,
+): string {
+  const last = endsOn ?? startsOn;
+  const days = (n: number) => `${n} ${n === 1 ? 'day' : 'days'}`;
+  const where =
+    exam.on < startsOn
+      ? `${days(daysBetween(exam.on, startsOn))} before it`
+      : exam.on > last
+        ? `${days(daysBetween(last, exam.on))} after it`
+        : 'during it';
+  return `${exam.title} on ${formatDay(exam.on)} · ${where}`;
 }
 
 const percent = (n: number) => `${Number(n.toFixed(1))}%`;
@@ -144,6 +183,36 @@ export function buildDashboard(
       link: `/app/academics/exams/${s.id}`,
     });
   }
+  const upcoming = store.hackathons.map((h) => toHackathon(store, h, now, tz)).filter((h) => !h.past);
+  for (const h of upcoming) {
+    const link = `/app/developer/hackathons/${h.id}`;
+    if (h.deadline && Date.parse(h.deadline.at) < horizon) {
+      const at = Date.parse(h.deadline.at);
+      items.push({
+        kind: 'HACKATHON_DEADLINE',
+        refId: h.id,
+        title: h.name,
+        courseCode: null,
+        reason: hackathonDeadlineReason(h.deadline.kind, h.deadline.at, h.deadline.missed, today, tz),
+        score: h.deadline.missed ? scorer.hackathonMissed : scorer.dueSoon('MEDIUM', at - nowMs),
+        link,
+      });
+    }
+    if (h.examClashes.length > 0 && h.daysUntil !== null && scorer.clashNeedsAttention(h.daysUntil)) {
+      const first = h.examClashes[0]!;
+      const more = h.examClashes.length - 1;
+      items.push({
+        kind: 'HACKATHON_EXAM_CLASH',
+        refId: h.id,
+        title: h.name,
+        courseCode: first.courseCode,
+        reason: clashReason(first, h.startsOn!, h.endsOn) + (more > 0 ? ` (+${more} more)` : ''),
+        score: scorer.clash(h.daysUntil),
+        link,
+      });
+    }
+  }
+
   items.sort((a, b) => b.score - a.score || (a.title < b.title ? -1 : a.title > b.title ? 1 : 0));
 
   const grades = summarize(store);
@@ -201,12 +270,16 @@ export function buildDashboard(
       weekPlanned: week.length,
       streakDays: streak(doneDays, today),
     },
-    developer: developerSummary(store, today),
+    developer: developerSummary(store, today, upcoming),
   };
 }
 
 /** DashboardService.developer: active projects and the soonest open, dated milestone among them. */
-function developerSummary(store: AcademicStore, today: string): Dashboard['developer'] {
+function developerSummary(
+  store: AcademicStore,
+  today: string,
+  upcoming: ReturnType<typeof toHackathon>[],
+): Dashboard['developer'] {
   const active = store.projects.filter((p) => ['IDEA', 'PLANNING', 'DEVELOPMENT'].includes(p.status));
   const ids = new Set(active.map((p) => p.id));
   const next = store.milestones
@@ -227,7 +300,21 @@ function developerSummary(store: AcademicStore, today: string): Dashboard['devel
               : 1) || b.createdAt.localeCompare(a.createdAt),
   )[0];
   const focusGoal = focus && toGoal(store, focus);
+  const nextHackathon = upcoming
+    .filter((h) => h.startsOn !== null)
+    .sort((a, b) => (a.startsOn! < b.startsOn! ? -1 : a.startsOn! > b.startsOn! ? 1 : 0))[0];
   return {
+    upcomingHackathons: upcoming.length,
+    nextHackathon: nextHackathon
+      ? {
+          hackathonId: nextHackathon.id,
+          name: nextHackathon.name,
+          startsOn: nextHackathon.startsOn!,
+          endsOn: nextHackathon.endsOn,
+          daysUntil: nextHackathon.daysUntil!,
+          status: nextHackathon.status,
+        }
+      : null,
     activeGoals: goals.length,
     focusGoal: focusGoal
       ? {

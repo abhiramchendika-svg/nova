@@ -3,13 +3,14 @@ import { createAcademicStore, seedDemoAcademics } from './academics';
 import { seedDemoCoursework } from './coursework';
 import { createHandlers, createMockDb, DEFAULT_SETTINGS } from './handlers';
 import { seedDemoProjects } from './developer';
+import { seedDemoHackathons } from './hackathons';
 import { seedDemoLearning } from './learning';
 import { seedDemoTasks } from './planner';
 
 /**
  * Starts in-browser API mocks for `npm run dev:mock`.
  * A demo account is pre-registered: demo@nova.dev / nova-demo-2026
- * It comes with three semesters of clearly fictional courses, grades, attendance, assignments, exams, links, tasks, projects and a learning goal.
+ * It comes with three semesters of clearly fictional courses, grades, attendance, assignments, exams, links, tasks, projects, a learning goal and hackathons.
  */
 export async function startMockApi(): Promise<void> {
   const db = createMockDb();
@@ -25,6 +26,7 @@ export async function startMockApi(): Promise<void> {
   seedDemoCoursework(demoAcademics);
   seedDemoProjects(demoAcademics);
   seedDemoLearning(demoAcademics);
+  seedDemoHackathons(demoAcademics);
   seedDemoTasks(demoAcademics);
   db.academics.set('00000000-0000-4000-8000-00000000de00', demoAcademics);
   db.settings.set('00000000-0000-4000-8000-00000000de00', {

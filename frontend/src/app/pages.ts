@@ -25,6 +25,10 @@ export const pageLoaders = {
   ProjectPage: () => import('@/features/developer/ProjectPage').then((m) => ({ default: m.ProjectPage })),
   LearningPage: () => import('@/features/developer/LearningPage').then((m) => ({ default: m.LearningPage })),
   GoalPage: () => import('@/features/developer/GoalPage').then((m) => ({ default: m.GoalPage })),
+  HackathonsPage: () =>
+    import('@/features/developer/HackathonsPage').then((m) => ({ default: m.HackathonsPage })),
+  HackathonPage: () =>
+    import('@/features/developer/HackathonPage').then((m) => ({ default: m.HackathonPage })),
   CalendarPage: () => import('@/features/planner/CalendarPage').then((m) => ({ default: m.CalendarPage })),
   TasksPage: () => import('@/features/planner/TasksPage').then((m) => ({ default: m.TasksPage })),
   SettingsPage: () => import('@/features/settings/SettingsPage').then((m) => ({ default: m.SettingsPage })),

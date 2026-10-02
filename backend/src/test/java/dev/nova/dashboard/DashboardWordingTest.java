@@ -2,6 +2,8 @@ package dev.nova.dashboard;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.nova.developer.hackathon.HackathonDtos.ExamClash;
+import dev.nova.developer.hackathon.HackathonRules.DeadlineKind;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -29,6 +31,37 @@ class DashboardWordingTest {
                 .isEqualTo("Was due yesterday");
         assertThat(DashboardService.deadlineReason(Instant.parse("2026-09-27T03:30:00Z"), true, TODAY, IST))
                 .isEqualTo("Overdue by 4 days");
+    }
+
+    @Test
+    void saysWhichHackathonDeadlineAndWhen() {
+        assertThat(DashboardService.hackathonDeadlineReason(
+                        DeadlineKind.REGISTRATION, Instant.parse("2026-10-01T18:00:00Z"), false, TODAY, IST))
+                .isEqualTo("Registration closes today at 23:30");
+        assertThat(DashboardService.hackathonDeadlineReason(
+                        DeadlineKind.SUBMISSION, Instant.parse("2026-10-02T03:30:00Z"), false, TODAY, IST))
+                .isEqualTo("Submissions close tomorrow at 09:00");
+        assertThat(DashboardService.hackathonDeadlineReason(
+                        DeadlineKind.REGISTRATION, Instant.parse("2026-09-30T03:30:00Z"), true, TODAY, IST))
+                .isEqualTo("Registration closed yesterday · update its status");
+        assertThat(DashboardService.hackathonDeadlineReason(
+                        DeadlineKind.SUBMISSION, Instant.parse("2026-09-27T03:30:00Z"), true, TODAY, IST))
+                .isEqualTo("Submissions closed 4 days ago · update its status");
+    }
+
+    @Test
+    void placesAClashingExamAroundTheEvent() {
+        LocalDate start = LocalDate.of(2026, 10, 10);
+        LocalDate end = LocalDate.of(2026, 10, 11);
+        assertThat(DashboardService.clashReason(clash(start.minusDays(2)), start, end))
+                .isEqualTo("Midsem on Thu 8 Oct · 2 days before it");
+        assertThat(DashboardService.clashReason(clash(end), start, end)).isEqualTo("Midsem on Sun 11 Oct · during it");
+        assertThat(DashboardService.clashReason(clash(start.plusDays(1)), start, null))
+                .isEqualTo("Midsem on Sun 11 Oct · 1 day after it");
+    }
+
+    private static ExamClash clash(LocalDate on) {
+        return new ExamClash(null, "Midsem", "CSE 201", on);
     }
 
     @Test

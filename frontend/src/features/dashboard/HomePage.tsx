@@ -224,7 +224,10 @@ function PlannerCard({ summary }: { summary: PlannerSummary | null }) {
 }
 
 function DeveloperCard({ summary }: { summary: DeveloperSummary | null }) {
-  if (!summary || (summary.activeProjects === 0 && summary.activeGoals === 0)) {
+  if (
+    !summary ||
+    (summary.activeProjects === 0 && summary.activeGoals === 0 && summary.upcomingHackathons === 0)
+  ) {
     return (
       <DomainSummary
         domain="developer"
@@ -237,7 +240,13 @@ function DeveloperCard({ summary }: { summary: DeveloperSummary | null }) {
   }
   const next = summary.nextMilestone;
   const goal = summary.focusGoal;
+  const hackathon = summary.nextHackathon;
   const projects = summary.activeProjects > 0;
+  const [to, cta] = projects
+    ? ['/app/developer/projects', 'Open projects']
+    : summary.activeGoals > 0
+      ? ['/app/developer/learning', 'Open learning']
+      : ['/app/developer/hackathons', 'Open hackathons'];
   return (
     <DomainSummary
       domain="developer"
@@ -271,10 +280,29 @@ function DeveloperCard({ summary }: { summary: DeveloperSummary | null }) {
               {goal.nextTopic && <>, next: {goal.nextTopic}</>}
             </p>
           )}
+          {hackathon && (
+            <p>
+              Next hackathon:{' '}
+              <Link
+                to={`/app/developer/hackathons/${hackathon.hackathonId}`}
+                className="font-medium text-ink hover:underline"
+              >
+                {hackathon.name}
+              </Link>
+              ,{' '}
+              {hackathon.daysUntil < 0
+                ? 'on now'
+                : hackathon.daysUntil === 0
+                  ? 'today'
+                  : hackathon.daysUntil === 1
+                    ? 'tomorrow'
+                    : `in ${hackathon.daysUntil} days`}
+            </p>
+          )}
         </>
       }
-      to={projects ? '/app/developer/projects' : '/app/developer/learning'}
-      cta={projects ? 'Open projects' : 'Open learning'}
+      to={to}
+      cta={cta}
     />
   );
 }

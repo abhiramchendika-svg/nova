@@ -24,7 +24,7 @@ public final class TaskDtos {
      * Create, or full replacement on update (status is changed separately). {@code plannedStart} is
      * "HH:mm" on the user's wall clock and needs {@code plannedFor}; a repeating task needs
      * {@code plannedFor} too. Category defaults to ACADEMIC when a course or exam is linked,
-     * else PROJECT when a project is, else CODING when a learning goal is,
+     * else PROJECT when a project or hackathon is, else CODING when a learning goal is,
      * else PERSONAL.
      */
     public record TaskRequest(
@@ -42,7 +42,8 @@ public final class TaskDtos {
             UUID courseId,
             UUID examId,
             UUID projectId,
-            UUID learningGoalId) {}
+            UUID learningGoalId,
+            UUID hackathonId) {}
 
     /** Several tasks created together, all or none (an exam's revision plan). */
     public record BatchRequest(
@@ -81,6 +82,8 @@ public final class TaskDtos {
             String projectName,
             UUID learningGoalId,
             String learningGoalTitle,
+            UUID hackathonId,
+            String hackathonName,
             boolean overdue,
             Urgency urgency) {}
 

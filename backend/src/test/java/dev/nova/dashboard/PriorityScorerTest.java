@@ -43,4 +43,15 @@ class PriorityScorerTest {
         assertThat(PriorityScorer.exam(3, 25)).isEqualTo(51);
         assertThat(PriorityScorer.exam(0, 0)).isEqualTo(68);
     }
+
+    @Test
+    void hackathonsRankDeadlinesAndClashes() {
+        assertThat(PriorityScorer.hackathonDeadlineSoon(Duration.ofHours(5))).isEqualTo(73); // like medium work
+        assertThat(PriorityScorer.hackathonDeadlineMissed()).isEqualTo(45);
+        assertThat(PriorityScorer.clashNeedsAttention(21)).isTrue();
+        assertThat(PriorityScorer.clashNeedsAttention(22)).isFalse();
+        assertThat(PriorityScorer.clash(21)).isEqualTo(30);
+        assertThat(PriorityScorer.clash(3)).isEqualTo(66); // 30 + 2 × 18
+        assertThat(PriorityScorer.clash(-1)).isEqualTo(72); // already on: as close as it gets
+    }
 }

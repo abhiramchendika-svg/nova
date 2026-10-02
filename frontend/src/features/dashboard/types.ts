@@ -6,7 +6,9 @@ export type AttentionKind =
   | 'ASSIGNMENT_DUE_SOON'
   | 'TASK_DUE_SOON'
   | 'ATTENDANCE_AT_RISK'
-  | 'EXAM_PREP';
+  | 'EXAM_PREP'
+  | 'HACKATHON_DEADLINE'
+  | 'HACKATHON_EXAM_CLASH';
 
 export interface AttentionItem {
   kind: AttentionKind;
@@ -44,7 +46,7 @@ export interface PlannerSummary {
   streakDays: number | null;
 }
 
-/** Projects at a glance; GitHub activity joins in slice 4e. */
+/** Projects, learning and hackathons at a glance; GitHub activity joins in slice 4e. */
 export interface DeveloperSummary {
   inDevelopment: number;
   /** Not completed or archived. */
@@ -64,6 +66,17 @@ export interface DeveloperSummary {
     percentage: number | null;
     nextTopic: string | null;
     targetOn: string | null;
+  } | null;
+  /** Hackathons that aren't past. */
+  upcomingHackathons: number;
+  /** The upcoming (or ongoing) hackathon that starts soonest; daysUntil is 0 or less once it's on. */
+  nextHackathon: {
+    hackathonId: string;
+    name: string;
+    startsOn: string;
+    endsOn: string | null;
+    daysUntil: number;
+    status: string;
   } | null;
 }
 

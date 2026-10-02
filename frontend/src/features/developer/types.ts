@@ -103,3 +103,79 @@ export interface ResourceRequest {
   title: string;
   url: string;
 }
+
+// ───────────── Hackathons (docs/api.md §2.12) ─────────────
+
+/** Progress only; the outcome is the free-text result. */
+export type HackathonStatus =
+  'INTERESTED' | 'REGISTERED' | 'PARTICIPATING' | 'SUBMITTED' | 'FINISHED' | 'SKIPPED';
+export type HackathonMode = 'ONLINE' | 'OFFLINE' | 'HYBRID';
+export type DeadlineKind = 'REGISTRATION' | 'SUBMISSION';
+
+/** The deadline that matters for the status; missed once it has passed. */
+export interface HackathonDeadline {
+  kind: DeadlineKind;
+  at: string;
+  missed: boolean;
+}
+
+/** An exam within the event's days or two days either side. */
+export interface ExamClash {
+  examId: string;
+  title: string;
+  courseCode: string | null;
+  on: string;
+}
+
+export interface Hackathon {
+  id: string;
+  name: string;
+  organizer: string | null;
+  mode: HackathonMode | null;
+  location: string | null;
+  websiteUrl: string | null;
+  startsOn: string | null;
+  endsOn: string | null;
+  registrationDeadline: string | null;
+  submissionDeadline: string | null;
+  status: HackathonStatus;
+  teamName: string | null;
+  teamMembers: string | null;
+  projectId: string | null;
+  projectName: string | null;
+  result: string | null;
+  repoUrl: string | null;
+  demoUrl: string | null;
+  certificateUrl: string | null;
+  notes: string | null;
+  /** Finished, skipped or over. */
+  past: boolean;
+  /** Days from today to the start (null when undated; 0 or less once it's on). */
+  daysUntil: number | null;
+  /** Only while it isn't past. */
+  deadline: HackathonDeadline | null;
+  examClashes: ExamClash[];
+  openTasks: number;
+  createdAt: string;
+}
+
+export interface HackathonRequest {
+  name: string;
+  organizer: string | null;
+  mode: HackathonMode | null;
+  location: string | null;
+  websiteUrl: string | null;
+  startsOn: string | null;
+  endsOn: string | null;
+  registrationDeadline: string | null;
+  submissionDeadline: string | null;
+  status: HackathonStatus;
+  teamName: string | null;
+  teamMembers: string | null;
+  projectId: string | null;
+  result: string | null;
+  repoUrl: string | null;
+  demoUrl: string | null;
+  certificateUrl: string | null;
+  notes: string | null;
+}

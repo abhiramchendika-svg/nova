@@ -33,6 +33,8 @@ export interface Task {
   projectName: string | null;
   learningGoalId: string | null;
   learningGoalTitle: string | null;
+  hackathonId: string | null;
+  hackathonName: string | null;
   overdue: boolean;
   urgency: Urgency | null;
 }
@@ -52,6 +54,7 @@ export interface TaskRequest {
   examId: string | null;
   projectId: string | null;
   learningGoalId: string | null;
+  hackathonId: string | null;
 }
 
 export interface StatusResult {
@@ -80,6 +83,7 @@ export interface TaskFilter {
   examId?: string;
   projectId?: string;
   learningGoalId?: string;
+  hackathonId?: string;
   sort?: string;
   page?: number;
   size?: number;
@@ -89,7 +93,15 @@ export type TaskPage = Page<Task>;
 
 // ───────────── Calendar (docs/api.md §2.10) ─────────────
 
-export type CalendarItemType = 'CLASS' | 'EXAM' | 'ASSIGNMENT_DUE' | 'TASK' | 'TASK_DUE' | 'MILESTONE';
+export type CalendarItemType =
+  | 'CLASS'
+  | 'EXAM'
+  | 'ASSIGNMENT_DUE'
+  | 'TASK'
+  | 'TASK_DUE'
+  | 'MILESTONE'
+  | 'HACKATHON'
+  | 'HACKATHON_DEADLINE';
 
 /**
  * One thing on one day. Times are "HH:mm" on the user's wall clock: a block has both (endTime
@@ -120,6 +132,8 @@ export interface DayLoad {
   date: string;
   deadlines: number;
   exams: number;
+  /** Hackathons on that day. */
+  hackathons: number;
   classMinutes: number;
   plannedTaskMinutes: number;
 }

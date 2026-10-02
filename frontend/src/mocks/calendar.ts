@@ -3,11 +3,21 @@ import type { CalendarItem, CalendarItemType, CalendarRange, DayLoad } from '@/f
 import { addDays, daysBetween, localParts, zonedToInstant } from '@/lib/dates';
 import type { AcademicStore } from './academics';
 import { isOpen } from './coursework';
+import { lastDay, relevantDeadline } from './hackathons';
 
 /** The calendar feed for the mock API: a port of CalendarService.java and CalendarRules.java. */
 
 const DEFAULT_TASK_MINUTES = 30;
-const TYPE_ORDER: CalendarItemType[] = ['CLASS', 'EXAM', 'ASSIGNMENT_DUE', 'TASK', 'TASK_DUE', 'MILESTONE'];
+const TYPE_ORDER: CalendarItemType[] = [
+  'CLASS',
+  'EXAM',
+  'ASSIGNMENT_DUE',
+  'TASK',
+  'TASK_DUE',
+  'MILESTONE',
+  'HACKATHON',
+  'HACKATHON_DEADLINE',
+];
 
 /** Java's String order (by code unit), not the locale's. */
 const text = (x: string, y: string) => (x < y ? -1 : x > y ? 1 : 0);
@@ -51,7 +61,7 @@ export function buildCalendar(
   const items: CalendarItem[] = [];
   const load = new Map<string, DayLoad>();
   for (let d = from; d <= to; d = addDays(d, 1)) {
-    load.set(d, { date: d, deadlines: 0, exams: 0, classMinutes: 0, plannedTaskMinutes: 0 });
+    load.set(d, { date: d, deadlines: 0, exams: 0, hackathons: 0, classMinutes: 0, plannedTaskMinutes: 0 });
   }
   const add = (
     item: Omit<CalendarItem, 'courseCode' | 'courseName' | 'colorHue' | 'title'> & { title: string | null },
@@ -188,6 +198,49 @@ export function buildCalendar(
       projectName: project?.name ?? null,
     });
     load.get(m.dueOn!)!.deadlines += 1;
+  }
+
+  for (const h of store.hackathons.filter((x) => x.status !== 'SKIPPED')) {
+    const hackathon = {
+      ...base,
+      refId: h.id,
+      endTime: null,
+      courseId: null,
+      courseCode: null,
+      courseName: null,
+      colorHue: null,
+    };
+    if (h.startsOn) {
+      const first = h.startsOn < from ? from : h.startsOn;
+      const last = lastDay(h)! > to ? to : lastDay(h)!;
+      for (let d = first; d <= last; d = addDays(d, 1)) {
+        items.push({
+          ...hackathon,
+          key: `hackathon:${h.id}:${d}`,
+          type: 'HACKATHON',
+          title: h.name,
+          date: d,
+          startTime: null,
+          kind: h.mode,
+          location: h.location,
+        });
+        load.get(d)!.hackathons += 1;
+      }
+    }
+    const deadline = relevantDeadline(h);
+    if (deadline && within(deadline.at)) {
+      const at = local(deadline.at);
+      items.push({
+        ...hackathon,
+        key: `hackathon-deadline:${h.id}`,
+        type: 'HACKATHON_DEADLINE',
+        title: `${deadline.kind === 'REGISTRATION' ? 'Register' : 'Submit'}: ${h.name}`,
+        date: at.date,
+        startTime: at.time,
+        kind: deadline.kind,
+      });
+      load.get(at.date)!.deadlines += 1;
+    }
   }
 
   // CalendarRules.ORDER: day, untimed first, start time, type, title, key

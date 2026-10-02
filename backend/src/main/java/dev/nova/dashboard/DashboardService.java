@@ -22,6 +22,11 @@ import dev.nova.dashboard.DashboardDtos.FocusGoal;
 import dev.nova.dashboard.DashboardDtos.NextMilestone;
 import dev.nova.dashboard.DashboardDtos.LowestAttendance;
 import dev.nova.dashboard.DashboardDtos.PlannerSummary;
+import dev.nova.dashboard.DashboardDtos.NextHackathon;
+import dev.nova.developer.hackathon.HackathonDtos.ExamClash;
+import dev.nova.developer.hackathon.HackathonDtos.HackathonResponse;
+import dev.nova.developer.hackathon.HackathonRules.DeadlineKind;
+import dev.nova.developer.hackathon.HackathonService;
 import dev.nova.developer.learning.GoalStatus;
 import dev.nova.developer.learning.LearningDtos.GoalResponse;
 import dev.nova.developer.learning.LearningService;
@@ -91,6 +96,7 @@ public class DashboardService {
     private final ProjectRepository projects;
     private final MilestoneRepository milestones;
     private final LearningService learning;
+    private final HackathonService hackathons;
     private final UserClock userClock;
 
     public DashboardService(
@@ -105,6 +111,7 @@ public class DashboardService {
             ProjectRepository projects,
             MilestoneRepository milestones,
             LearningService learning,
+            HackathonService hackathons,
             UserClock userClock) {
         this.assignments = assignments;
         this.tasks = tasks;
@@ -117,6 +124,7 @@ public class DashboardService {
         this.projects = projects;
         this.milestones = milestones;
         this.learning = learning;
+        this.hackathons = hackathons;
         this.userClock = userClock;
     }
 
@@ -134,10 +142,15 @@ public class DashboardService {
         List<CourseAttendance> attendanceRows =
                 current == null ? List.of() : attendance.forSemester(userId, current.id());
 
+        List<HackathonResponse> upcomingHackathons = hackathons.list(userId, null).stream()
+                .filter(h -> !h.past())
+                .toList();
+
         List<AttentionItem> attention = new ArrayList<>();
         addDeadlines(userId, attention, now, today, zone);
         addAttendance(attention, attendanceRows);
         addExams(userId, attention);
+        addHackathons(upcomingHackathons, attention, now, today, zone);
         List<AttentionItem> ranked = attention.stream()
                 .sorted(Comparator.comparingInt(AttentionItem::score).reversed().thenComparing(AttentionItem::title))
                 .limit(MAX_ATTENTION)
@@ -159,12 +172,12 @@ public class DashboardService {
                                 .orElse(null));
 
         return new DashboardResponse(
-                today, ranked, academics, planner(userId, today, zone), developer(userId, today));
+                today, ranked, academics, planner(userId, today, zone), developer(userId, today, upcomingHackathons));
     }
 
     // ───────────── developer card ─────────────
 
-    private DeveloperSummary developer(UUID userId, LocalDate today) {
+    private DeveloperSummary developer(UUID userId, LocalDate today, List<HackathonResponse> upcoming) {
         Map<UUID, Project> active = projects
                 .findByUserIdAndStatusInOrderByCreatedAtDesc(
                         userId, Set.of(ProjectStatus.IDEA, ProjectStatus.PLANNING, ProjectStatus.DEVELOPMENT))
@@ -190,7 +203,14 @@ public class DashboardService {
                         g.nextTopic() == null ? null : g.nextTopic().title(),
                         g.targetOn()))
                 .orElse(null);
-        return new DeveloperSummary(inDevelopment, active.size(), next, goals.size(), focus);
+        NextHackathon nextHackathon = upcoming.stream()
+                .filter(h -> h.startsOn() != null)
+                .min(Comparator.comparing(HackathonResponse::startsOn))
+                .map(h -> new NextHackathon(
+                        h.id(), h.name(), h.startsOn(), h.endsOn(), h.daysUntil(), h.status().name()))
+                .orElse(null);
+        return new DeveloperSummary(
+                inDevelopment, active.size(), next, goals.size(), focus, upcoming.size(), nextHackathon);
     }
 
     private static NextMilestone nextMilestone(Milestone m, Project project, LocalDate today) {
@@ -315,6 +335,71 @@ public class DashboardService {
                     PriorityScorer.exam(e.daysUntil(), pct),
                     "/app/academics/exams/" + e.id()));
         }
+    }
+
+    private void addHackathons(
+            List<HackathonResponse> upcoming, List<AttentionItem> out, Instant now, LocalDate today, ZoneId zone) {
+        Instant horizon = now.plus(PriorityScorer.DUE_SOON_WINDOW);
+        for (HackathonResponse h : upcoming) {
+            String link = "/app/developer/hackathons/" + h.id();
+            if (h.deadline() != null && h.deadline().at().isBefore(horizon)) {
+                boolean missed = h.deadline().missed();
+                out.add(new AttentionItem(
+                        AttentionKind.HACKATHON_DEADLINE,
+                        h.id(),
+                        h.name(),
+                        null,
+                        hackathonDeadlineReason(h.deadline().kind(), h.deadline().at(), missed, today, zone),
+                        missed
+                                ? PriorityScorer.hackathonDeadlineMissed()
+                                : PriorityScorer.hackathonDeadlineSoon(Duration.between(now, h.deadline().at())),
+                        link));
+            }
+            if (!h.examClashes().isEmpty()
+                    && h.daysUntil() != null
+                    && PriorityScorer.clashNeedsAttention(h.daysUntil())) {
+                ExamClash first = h.examClashes().getFirst();
+                int more = h.examClashes().size() - 1;
+                out.add(new AttentionItem(
+                        AttentionKind.HACKATHON_EXAM_CLASH,
+                        h.id(),
+                        h.name(),
+                        first.courseCode(),
+                        clashReason(first, h.startsOn(), h.endsOn()) + (more > 0 ? " (+" + more + " more)" : ""),
+                        PriorityScorer.clash(h.daysUntil()),
+                        link));
+            }
+        }
+    }
+
+    /** "Registration closes today at 18:00", "Submissions closed yesterday · update its status". */
+    static String hackathonDeadlineReason(
+            DeadlineKind kind, Instant at, boolean missed, LocalDate today, ZoneId zone) {
+        String what = kind == DeadlineKind.REGISTRATION ? "Registration" : "Submissions";
+        if (missed) {
+            long ago = ChronoUnit.DAYS.between(LocalDate.ofInstant(at, zone), today);
+            String when = ago <= 0 ? "today" : ago == 1 ? "yesterday" : ago + " days ago";
+            return what + " closed " + when + " · update its status";
+        }
+        // "Due today at 18:00" → "Registration closes today at 18:00"
+        return what + " close" + (kind == DeadlineKind.REGISTRATION ? "s" : "")
+                + deadlineReason(at, false, today, zone).substring("Due".length());
+    }
+
+    /** "DBMS midsem on Mon 3 Nov · during it", "… · 2 days before it". */
+    static String clashReason(ExamClash exam, LocalDate startsOn, LocalDate endsOn) {
+        LocalDate last = endsOn != null ? endsOn : startsOn;
+        String where;
+        if (exam.on().isBefore(startsOn)) {
+            long d = ChronoUnit.DAYS.between(exam.on(), startsOn);
+            where = d + (d == 1 ? " day" : " days") + " before it";
+        } else if (exam.on().isAfter(last)) {
+            long d = ChronoUnit.DAYS.between(last, exam.on());
+            where = d + (d == 1 ? " day" : " days") + " after it";
+        } else {
+            where = "during it";
+        }
+        return exam.title() + " on " + exam.on().format(DAY) + " · " + where;
     }
 
     /** 72.5 → "72.5%", 75.00 → "75%". */

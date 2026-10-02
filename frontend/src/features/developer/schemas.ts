@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import type { ProjectRequest } from './types';
+import { localParts, zonedToInstant } from '@/lib/dates';
+import type { Hackathon, HackathonRequest, ProjectRequest } from './types';
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -95,3 +96,146 @@ export const resourceSchema = z.object({
     .max(2048, 'That address is too long.')
     .refine(isWebLink, 'Use a full web address starting with http:// or https://.'),
 });
+
+// ───────────── Hackathons ─────────────
+
+const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
+const date = z.string().refine((v) => v === '' || DATE.test(v), 'Choose a date.');
+const time = z.string().refine((v) => v === '' || HHMM.test(v), 'Use a time like 23:59.');
+const text = (max: number) => z.string().max(max, `Keep it under ${max} characters.`);
+
+/**
+ * The hackathon form (docs/api.md §2.12). Empty strings mean "not set". Deadlines are a date plus
+ * an optional time (23:59 when left empty), read in the user's timezone, as for task deadlines.
+ */
+export const hackathonSchema = z
+  .object({
+    name: z.string().trim().min(1, 'Name the hackathon.').max(120, 'Keep it under 120 characters.'),
+    status: z.enum(['INTERESTED', 'REGISTERED', 'PARTICIPATING', 'SUBMITTED', 'FINISHED', 'SKIPPED']),
+    organizer: text(120),
+    mode: z.enum(['', 'ONLINE', 'OFFLINE', 'HYBRID']),
+    location: text(120),
+    websiteUrl: link,
+    startsOn: date,
+    endsOn: date,
+    registrationDate: date,
+    registrationTime: time,
+    submissionDate: date,
+    submissionTime: time,
+    teamName: text(80),
+    teamMembers: text(500),
+    projectId: z.string(),
+    result: text(160),
+    repoUrl: link,
+    demoUrl: link,
+    certificateUrl: link,
+    notes: z.string().max(4000, 'Keep notes under 4000 characters.'),
+  })
+  .superRefine((v, ctx) => {
+    if (v.endsOn && !v.startsOn) {
+      ctx.addIssue({ code: 'custom', path: ['startsOn'], message: 'Add the start date too.' });
+    } else if (v.endsOn && v.endsOn < v.startsOn) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['endsOn'],
+        message: 'The end date can’t be before the start date.',
+      });
+    }
+    if (v.registrationTime && !v.registrationDate) {
+      ctx.addIssue({ code: 'custom', path: ['registrationDate'], message: 'Choose the date too.' });
+    }
+    if (v.submissionTime && !v.submissionDate) {
+      ctx.addIssue({ code: 'custom', path: ['submissionDate'], message: 'Choose the date too.' });
+    }
+    const reg = v.registrationDate && `${v.registrationDate}T${v.registrationTime || '23:59'}`;
+    const sub = v.submissionDate && `${v.submissionDate}T${v.submissionTime || '23:59'}`;
+    if (reg && sub && reg > sub) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['registrationDate'],
+        message: 'Registration should close before submissions do.',
+      });
+    }
+  });
+
+export type HackathonValues = z.infer<typeof hackathonSchema>;
+
+export function hackathonValues(h: Hackathon | undefined, timezone: string): HackathonValues {
+  const reg = h?.registrationDeadline ? localParts(h.registrationDeadline, timezone) : null;
+  const sub = h?.submissionDeadline ? localParts(h.submissionDeadline, timezone) : null;
+  return {
+    name: h?.name ?? '',
+    status: h?.status ?? 'INTERESTED',
+    organizer: h?.organizer ?? '',
+    mode: h?.mode ?? '',
+    location: h?.location ?? '',
+    websiteUrl: h?.websiteUrl ?? '',
+    startsOn: h?.startsOn ?? '',
+    endsOn: h?.endsOn ?? '',
+    registrationDate: reg?.date ?? '',
+    registrationTime: reg?.time ?? '',
+    submissionDate: sub?.date ?? '',
+    submissionTime: sub?.time ?? '',
+    teamName: h?.teamName ?? '',
+    teamMembers: h?.teamMembers ?? '',
+    projectId: h?.projectId ?? '',
+    result: h?.result ?? '',
+    repoUrl: h?.repoUrl ?? '',
+    demoUrl: h?.demoUrl ?? '',
+    certificateUrl: h?.certificateUrl ?? '',
+    notes: h?.notes ?? '',
+  };
+}
+
+export function toHackathonRequest(v: HackathonValues, timezone: string): HackathonRequest {
+  const blank = (s: string) => s.trim() || null;
+  return {
+    name: v.name.trim(),
+    status: v.status,
+    organizer: blank(v.organizer),
+    mode: v.mode || null,
+    location: blank(v.location),
+    websiteUrl: blank(v.websiteUrl),
+    startsOn: v.startsOn || null,
+    endsOn: v.endsOn || null,
+    registrationDeadline: v.registrationDate
+      ? zonedToInstant(v.registrationDate, v.registrationTime || '23:59', timezone)
+      : null,
+    submissionDeadline: v.submissionDate
+      ? zonedToInstant(v.submissionDate, v.submissionTime || '23:59', timezone)
+      : null,
+    teamName: blank(v.teamName),
+    teamMembers: blank(v.teamMembers),
+    projectId: v.projectId || null,
+    result: blank(v.result),
+    repoUrl: blank(v.repoUrl),
+    demoUrl: blank(v.demoUrl),
+    certificateUrl: blank(v.certificateUrl),
+    notes: blank(v.notes),
+  };
+}
+
+/** The same hackathon as a request, with some fields changed (status, project link). */
+export function hackathonRequestOf(h: Hackathon, changes: Partial<HackathonRequest> = {}): HackathonRequest {
+  return {
+    name: h.name,
+    status: h.status,
+    organizer: h.organizer,
+    mode: h.mode,
+    location: h.location,
+    websiteUrl: h.websiteUrl,
+    startsOn: h.startsOn,
+    endsOn: h.endsOn,
+    registrationDeadline: h.registrationDeadline,
+    submissionDeadline: h.submissionDeadline,
+    teamName: h.teamName,
+    teamMembers: h.teamMembers,
+    projectId: h.projectId,
+    result: h.result,
+    repoUrl: h.repoUrl,
+    demoUrl: h.demoUrl,
+    certificateUrl: h.certificateUrl,
+    notes: h.notes,
+    ...changes,
+  };
+}

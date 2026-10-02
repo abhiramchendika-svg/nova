@@ -71,6 +71,7 @@ export function taskQuery(filter: TaskFilter): string {
   if (filter.examId) params.set('examId', filter.examId);
   if (filter.projectId) params.set('projectId', filter.projectId);
   if (filter.learningGoalId) params.set('learningGoalId', filter.learningGoalId);
+  if (filter.hackathonId) params.set('hackathonId', filter.hackathonId);
   if (filter.sort) params.set('sort', filter.sort);
   params.set('page', String(filter.page ?? 0));
   params.set('size', String(filter.size ?? 20));

@@ -11,6 +11,7 @@ import type {
 import type { StoredRecord } from './attendance';
 import type { StoredAssignment, StoredEntry, StoredExam, StoredResource, StoredTopic } from './coursework';
 import type { StoredMilestone, StoredProject } from './developer';
+import type { StoredHackathon } from './hackathons';
 import type {
   StoredGoal,
   StoredResource as StoredLearningResource,
@@ -111,6 +112,8 @@ export interface AcademicStore {
   learningGoals: StoredGoal[];
   learningTopics: StoredLearningTopic[];
   learningResources: StoredLearningResource[];
+  /** Hackathons (they link to projects and are linked from tasks). */
+  hackathons: StoredHackathon[];
 }
 
 export function createAcademicStore(): AcademicStore {
@@ -130,6 +133,7 @@ export function createAcademicStore(): AcademicStore {
     learningGoals: [],
     learningTopics: [],
     learningResources: [],
+    hackathons: [],
   };
 }
 

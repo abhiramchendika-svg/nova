@@ -122,6 +122,7 @@ export function createDeveloperHandlers(
         store.projects.splice(index, 1);
         store.milestones = store.milestones.filter((m) => m.projectId !== params.id);
         for (const t of store.tasks) if (t.projectId === params.id) t.projectId = null;
+        for (const h of store.hackathons) if (h.projectId === params.id) h.projectId = null;
         return new HttpResponse(null, { status: 204 });
       }),
     ),

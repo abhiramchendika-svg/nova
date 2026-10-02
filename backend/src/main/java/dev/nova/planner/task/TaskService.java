@@ -7,6 +7,8 @@ import dev.nova.academics.exam.Exam;
 import dev.nova.academics.exam.ExamRepository;
 import dev.nova.common.web.ApiException;
 import dev.nova.common.web.PageResponse;
+import dev.nova.developer.hackathon.Hackathon;
+import dev.nova.developer.hackathon.HackathonRepository;
 import dev.nova.developer.learning.LearningGoal;
 import dev.nova.developer.learning.LearningGoalRepository;
 import dev.nova.developer.project.Project;
@@ -62,6 +64,7 @@ public class TaskService {
     private final UserClock userClock;
     private final ProjectRepository projects;
     private final LearningGoalRepository goals;
+    private final HackathonRepository hackathons;
 
     public TaskService(
             TaskRepository tasks,
@@ -69,8 +72,10 @@ public class TaskService {
             ExamRepository exams,
             UserClock userClock,
             ProjectRepository projects,
-            LearningGoalRepository goals) {
+            LearningGoalRepository goals,
+            HackathonRepository hackathons) {
         this.tasks = tasks;
+        this.hackathons = hackathons;
         this.projects = projects;
         this.goals = goals;
         this.courses = courses;
@@ -85,7 +90,8 @@ public class TaskService {
             UUID courseId,
             UUID examId,
             UUID projectId,
-            UUID learningGoalId) {}
+            UUID learningGoalId,
+            UUID hackathonId) {}
 
     // ───────────── views ─────────────
 
@@ -167,6 +173,9 @@ public class TaskService {
             }
             if (filter.learningGoalId() != null) {
                 where.add(cb.equal(root.get("learningGoalId"), filter.learningGoalId()));
+            }
+            if (filter.hackathonId() != null) {
+                where.add(cb.equal(root.get("hackathonId"), filter.hackathonId()));
             }
             return cb.and(where.toArray(Predicate[]::new));
         };
@@ -295,6 +304,11 @@ public class TaskService {
                 : goals.findByIdAndUserId(request.learningGoalId(), userId)
                         .orElseThrow(() -> ApiException.invalidField(
                                 "learningGoalId", "Choose one of your learning goals."));
+        Hackathon hackathon = request.hackathonId() == null
+                ? null
+                : hackathons.findByIdAndUserId(request.hackathonId(), userId)
+                        .orElseThrow(() -> ApiException.invalidField(
+                                "hackathonId", "Choose one of your hackathons."));
 
         Recurrence recurrence = request.recurrence() == null ? Recurrence.NONE : request.recurrence();
         if (request.plannedStart() != null && request.plannedFor() == null) {
@@ -308,7 +322,7 @@ public class TaskService {
             category = request.category();
         } else if (courseId != null) {
             category = TaskCategory.ACADEMIC;
-        } else if (project != null) {
+        } else if (project != null || hackathon != null) {
             category = TaskCategory.PROJECT;
         } else if (goal != null) {
             category = TaskCategory.CODING;
@@ -329,7 +343,8 @@ public class TaskService {
                 courseId,
                 exam == null ? null : exam.getId(),
                 project == null ? null : project.getId(),
-                goal == null ? null : goal.getId());
+                goal == null ? null : goal.getId(),
+                hackathon == null ? null : hackathon.getId());
     }
 
     /** "plannedFor,asc" style, allow-listed; default newest first. Ties break on id for stable paging. */
@@ -357,7 +372,7 @@ public class TaskService {
         return all;
     }
 
-    /** One course, exam, project and goal lookup, and one timezone lookup, for a batch. */
+    /** One course, exam, project, goal and hackathon lookup, and one timezone lookup, for a batch. */
     private Responses responsesFor(UUID userId, List<Task> batch) {
         Set<UUID> courseIds = batch.stream().map(Task::getCourseId).filter(Objects::nonNull).collect(Collectors.toSet());
         Set<UUID> examIds = batch.stream().map(Task::getExamId).filter(Objects::nonNull).collect(Collectors.toSet());
@@ -379,8 +394,20 @@ public class TaskService {
                 ? Map.of()
                 : goals.findAllById(goalIds).stream()
                         .collect(Collectors.toMap(LearningGoal::getId, Function.identity()));
+        Set<UUID> hackathonIds =
+                batch.stream().map(Task::getHackathonId).filter(Objects::nonNull).collect(Collectors.toSet());
+        Map<UUID, Hackathon> hackathonById = hackathonIds.isEmpty()
+                ? Map.of()
+                : hackathons.findAllById(hackathonIds).stream()
+                        .collect(Collectors.toMap(Hackathon::getId, Function.identity()));
         return new Responses(
-                courseById, examById, projectById, goalById, userClock.now(), userClock.zoneOf(userId));
+                courseById,
+                examById,
+                projectById,
+                goalById,
+                hackathonById,
+                userClock.now(),
+                userClock.zoneOf(userId));
     }
 
     private record Responses(
@@ -388,6 +415,7 @@ public class TaskService {
             Map<UUID, Exam> exams,
             Map<UUID, Project> projects,
             Map<UUID, LearningGoal> goals,
+            Map<UUID, Hackathon> hackathons,
             Instant now,
             ZoneId zone) {
 
@@ -396,6 +424,7 @@ public class TaskService {
             Exam exam = t.getExamId() == null ? null : exams.get(t.getExamId());
             Project project = t.getProjectId() == null ? null : projects.get(t.getProjectId());
             LearningGoal goal = t.getLearningGoalId() == null ? null : goals.get(t.getLearningGoalId());
+            Hackathon hackathon = t.getHackathonId() == null ? null : hackathons.get(t.getHackathonId());
             boolean open = t.getStatus().isOpen();
             return new TaskResponse(
                     t.getId(),
@@ -420,6 +449,8 @@ public class TaskService {
                     project == null ? null : project.getName(),
                     t.getLearningGoalId(),
                     goal == null ? null : goal.getTitle(),
+                    t.getHackathonId(),
+                    hackathon == null ? null : hackathon.getName(),
                     open && t.getDueAt() != null && t.getDueAt().isBefore(now),
                     open && t.getDueAt() != null ? Urgency.of(t.getDueAt(), now, zone) : null);
         }

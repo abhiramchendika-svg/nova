@@ -12,6 +12,10 @@ import dev.nova.academics.semester.SemesterRepository;
 import dev.nova.academics.timetable.TimetableEntry;
 import dev.nova.academics.timetable.TimetableRepository;
 import dev.nova.common.web.ApiException;
+import dev.nova.developer.hackathon.Hackathon;
+import dev.nova.developer.hackathon.HackathonRepository;
+import dev.nova.developer.hackathon.HackathonRules;
+import dev.nova.developer.hackathon.HackathonStatus;
 import dev.nova.developer.project.Milestone;
 import dev.nova.developer.project.MilestoneRepository;
 import dev.nova.developer.project.Project;
@@ -43,7 +47,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * One read-only feed over the timetable, exams, assignments, tasks and project milestones (architecture.md: the
+ * One read-only feed over the timetable, exams, assignments, tasks, project milestones and hackathons (architecture.md: the
  * calendar is a view, not a table). Everything is placed on the user's calendar days (UserClock).
  */
 @Service
@@ -60,6 +64,7 @@ public class CalendarService {
     private final TaskRepository tasks;
     private final MilestoneRepository milestones;
     private final ProjectRepository projects;
+    private final HackathonRepository hackathons;
     private final UserClock userClock;
 
     public CalendarService(
@@ -71,6 +76,7 @@ public class CalendarService {
             TaskRepository tasks,
             MilestoneRepository milestones,
             ProjectRepository projects,
+            HackathonRepository hackathons,
             UserClock userClock) {
         this.semesters = semesters;
         this.courses = courses;
@@ -80,6 +86,7 @@ public class CalendarService {
         this.tasks = tasks;
         this.milestones = milestones;
         this.projects = projects;
+        this.hackathons = hackathons;
         this.userClock = userClock;
     }
 
@@ -123,9 +130,9 @@ public class CalendarService {
                 : courses.findAllById(courseIds).stream().collect(Collectors.toMap(Course::getId, Function.identity()));
         Items items = new Items(courseById);
 
-        Map<LocalDate, int[]> load = new LinkedHashMap<>(); // deadlines, exams, class minutes, task minutes
+        Map<LocalDate, int[]> load = new LinkedHashMap<>(); // deadlines, exams, class minutes, task minutes, hackathons
         for (LocalDate d = from; !d.isAfter(to); d = d.plusDays(1)) {
-            load.put(d, new int[4]);
+            load.put(d, new int[5]);
         }
 
         for (TimetableEntry e : entries) {
@@ -211,11 +218,44 @@ public class CalendarService {
             load.get(m.getDueOn())[0]++;
         }
 
+        for (Hackathon h : hackathons.findByUserId(userId)) {
+            if (h.getStatus() == HackathonStatus.SKIPPED) {
+                continue;
+            }
+            if (h.getStartsOn() != null) {
+                LocalDate first = h.getStartsOn().isBefore(from) ? from : h.getStartsOn();
+                LocalDate last = h.lastDay().isAfter(to) ? to : h.lastDay();
+                for (LocalDate d = first; !d.isAfter(last); d = d.plusDays(1)) {
+                    items.list.add(hackathonItem("hackathon:" + h.getId() + ":" + d, ItemType.HACKATHON, h, h.getName(),
+                            d, null, h.getMode() == null ? null : h.getMode().name(), h.getLocation()));
+                    load.get(d)[4]++;
+                }
+            }
+            HackathonRules.relevantDeadline(h.getStatus(), h.getRegistrationDeadline(), h.getSubmissionDeadline())
+                    .filter(dl -> !dl.at().isBefore(start) && dl.at().isBefore(end))
+                    .ifPresent(dl -> {
+                        LocalDateTime at = LocalDateTime.ofInstant(dl.at(), zone);
+                        String label = dl.kind() == HackathonRules.DeadlineKind.REGISTRATION
+                                ? "Register: " : "Submit: ";
+                        items.list.add(hackathonItem("hackathon-deadline:" + h.getId(), ItemType.HACKATHON_DEADLINE,
+                                h, label + h.getName(), at.toLocalDate(), CalendarRules.hhmm(at.toLocalTime()),
+                                dl.kind().name(), null));
+                        load.get(at.toLocalDate())[0]++;
+                    });
+        }
+
         List<CalendarItem> sorted = items.list.stream().sorted(CalendarRules.ORDER).toList();
         List<DayLoad> loads = load.entrySet().stream()
-                .map(e -> new DayLoad(e.getKey(), e.getValue()[0], e.getValue()[1], e.getValue()[2], e.getValue()[3]))
+                .map(e -> new DayLoad(
+                        e.getKey(), e.getValue()[0], e.getValue()[1], e.getValue()[4], e.getValue()[2], e.getValue()[3]))
                 .toList();
         return new CalendarResponse(from, to, zone.getId(), sorted, loads);
+    }
+
+    private static CalendarItem hackathonItem(String key, ItemType type, Hackathon h, String title, LocalDate date,
+            String startTime, String kind, String location) {
+        return new CalendarItem(key, type, h.getId(), title, date, startTime, null, false, null, null, null, null,
+                location, kind, null, null, null);
     }
 
     /** Builds items with their course's code, name and colour; a class takes its title from the course. */

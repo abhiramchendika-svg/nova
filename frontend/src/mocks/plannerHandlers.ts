@@ -60,6 +60,8 @@ function check(store: AcademicStore, body: Partial<TaskRequest>, prefix = ''): C
   if (body.projectId && !project) return fail('projectId', 'Choose one of your projects.');
   const goal = body.learningGoalId ? store.learningGoals.find((g) => g.id === body.learningGoalId) : null;
   if (body.learningGoalId && !goal) return fail('learningGoalId', 'Choose one of your learning goals.');
+  const hackathon = body.hackathonId ? store.hackathons.find((h) => h.id === body.hackathonId) : null;
+  if (body.hackathonId && !hackathon) return fail('hackathonId', 'Choose one of your hackathons.');
   const recurrence = body.recurrence ?? 'NONE';
   if (body.plannedStart && !body.plannedFor) return fail('plannedStart', 'Pick a day before a start time.');
   if (recurrence !== 'NONE' && !body.plannedFor)
@@ -68,7 +70,9 @@ function check(store: AcademicStore, body: Partial<TaskRequest>, prefix = ''): C
     fields: {
       title,
       description: body.description?.trim() || null,
-      category: body.category ?? (courseId ? 'ACADEMIC' : project ? 'PROJECT' : goal ? 'CODING' : 'PERSONAL'),
+      category:
+        body.category ??
+        (courseId ? 'ACADEMIC' : project || hackathon ? 'PROJECT' : goal ? 'CODING' : 'PERSONAL'),
       priority: body.priority ?? 'MEDIUM',
       plannedFor: body.plannedFor ?? null,
       plannedStart: body.plannedStart ?? null,
@@ -79,6 +83,7 @@ function check(store: AcademicStore, body: Partial<TaskRequest>, prefix = ''): C
       examId: exam?.id ?? null,
       projectId: project?.id ?? null,
       learningGoalId: goal?.id ?? null,
+      hackathonId: hackathon?.id ?? null,
     },
   };
 }
@@ -226,6 +231,7 @@ export function createPlannerHandlers(storeFor: StoreFor, settingsFor: () => Set
         const examId = url.searchParams.get('examId');
         const projectId = url.searchParams.get('projectId');
         const learningGoalId = url.searchParams.get('learningGoalId');
+        const hackathonId = url.searchParams.get('hackathonId');
         const sort = url.searchParams.get('sort');
         let compare = (a: StoredTask, b: StoredTask) => b.createdAt - a.createdAt || a.id.localeCompare(b.id);
         if (sort) {
@@ -260,6 +266,7 @@ export function createPlannerHandlers(storeFor: StoreFor, settingsFor: () => Set
           .filter((t) => !examId || t.examId === examId)
           .filter((t) => !projectId || t.projectId === projectId)
           .filter((t) => !learningGoalId || t.learningGoalId === learningGoalId)
+          .filter((t) => !hackathonId || t.hackathonId === hackathonId)
           .sort(compare);
         return page(store, all, p.page, p.size);
       }),

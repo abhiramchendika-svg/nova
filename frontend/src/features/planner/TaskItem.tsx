@@ -23,6 +23,7 @@ export function TaskItem({
   showExam = true,
   showProject = true,
   showGoal = true,
+  showHackathon = true,
   onEdit,
   onDelete,
   onChanged,
@@ -39,6 +40,8 @@ export function TaskItem({
   showProject?: boolean;
   /** Likewise a learning goal's page. */
   showGoal?: boolean;
+  /** Likewise a hackathon's page. */
+  showHackathon?: boolean;
   onEdit: (t: Task) => void;
   onDelete: (t: Task) => void;
   /** Called with a sentence to announce after a status change. */
@@ -85,6 +88,7 @@ export function TaskItem({
   if (showExam && t.examTitle) parts.push({ key: 'exam', node: t.examTitle });
   if (showProject && t.projectName) parts.push({ key: 'project', node: t.projectName });
   if (showGoal && t.learningGoalTitle) parts.push({ key: 'goal', node: t.learningGoalTitle });
+  if (showHackathon && t.hackathonName) parts.push({ key: 'hackathon', node: t.hackathonName });
   if (t.estimatedMinutes !== null)
     parts.push({ key: 'estimate', node: `about ${formatMinutes(t.estimatedMinutes)}` });
   if (t.recurrence !== 'NONE') {

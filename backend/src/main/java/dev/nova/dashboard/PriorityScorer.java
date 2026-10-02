@@ -15,6 +15,9 @@ import java.time.Duration;
  *       to miss no more classes: 45; only one more: 35.
  *   <li>An exam within 7 days with under half its checklist done: 30 + 4 per day closer than 7 +
  *       1 per 5 points of prep missing below 50%.
+ *   <li>A hackathon deadline that matters for its status: within 48 hours, scored like medium-priority
+ *       work due soon; already missed (while the event isn't over): 45.
+ *   <li>A hackathon starting within 21 days that clashes with an exam: 30 + 2 per day closer than 21.
  * </ul>
  *
  * Priority adds 15 (high), 8 (medium) or 0 (low).
@@ -35,6 +38,10 @@ public final class PriorityScorer {
     static final int EXAM_WINDOW_DAYS = 7;
     static final int EXAM_PER_DAY = 4;
     static final int EXAM_PREP_THRESHOLD = 50;
+    static final int HACKATHON_MISSED = 45;
+    static final int CLASH_BASE = 30;
+    static final int CLASH_WINDOW_DAYS = 21;
+    static final int CLASH_PER_DAY = 2;
 
     private PriorityScorer() {}
 
@@ -87,6 +94,24 @@ public final class PriorityScorer {
         return clamp(EXAM_BASE
                 + EXAM_PER_DAY * (int) (EXAM_WINDOW_DAYS - daysUntil)
                 + (EXAM_PREP_THRESHOLD - prepPercentage) / 5);
+    }
+
+    public static int hackathonDeadlineSoon(Duration left) {
+        return dueSoon("MEDIUM", left);
+    }
+
+    public static int hackathonDeadlineMissed() {
+        return HACKATHON_MISSED;
+    }
+
+    /** True when a clash belongs on the list: the hackathon starts within the window (or is on). */
+    public static boolean clashNeedsAttention(long daysUntil) {
+        return daysUntil <= CLASH_WINDOW_DAYS;
+    }
+
+    public static int clash(long daysUntil) {
+        long days = Math.max(0, daysUntil);
+        return clamp(CLASH_BASE + CLASH_PER_DAY * (int) (CLASH_WINDOW_DAYS - days));
     }
 
     private static int clamp(int score) {

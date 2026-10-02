@@ -26,7 +26,8 @@ const FIELDS: (keyof ProjectValues)[] = [
   'targetOn',
 ];
 
-function defaults(project?: Project): ProjectValues {
+function defaults(project?: Project, initial?: Partial<ProjectValues>): ProjectValues {
+  if (!project && initial) return { ...defaults(), ...initial };
   return {
     name: project?.name ?? '',
     status: project?.status ?? 'IDEA',
@@ -43,12 +44,15 @@ export function ProjectDialog({
   open,
   onOpenChange,
   project,
+  initial,
   onSaved,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** Edit this project; omit to add one. */
   project?: Project;
+  /** Starting values when adding (e.g. a hackathon's name and links). */
+  initial?: Partial<ProjectValues>;
   onSaved?: (saved: Project) => void;
 }) {
   const create = useCreateProject();
@@ -72,11 +76,14 @@ export function ProjectDialog({
     reset,
     setError,
     formState: { errors },
-  } = useForm<ProjectValues>({ resolver: zodResolver(projectSchema), defaultValues: defaults(project) });
+  } = useForm<ProjectValues>({
+    resolver: zodResolver(projectSchema),
+    defaultValues: defaults(project, initial),
+  });
 
   useEffect(() => {
     if (open) {
-      reset(defaults(project));
+      reset(defaults(project, initial));
       create.reset();
       update.reset();
     }

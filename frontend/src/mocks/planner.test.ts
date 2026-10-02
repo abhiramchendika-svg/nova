@@ -21,6 +21,7 @@ const base: StoredTask = {
   examId: null,
   projectId: null,
   learningGoalId: null,
+  hackathonId: null,
   createdAt: 0,
 };
 const task = (title: string, changes: Partial<StoredTask> = {}): StoredTask => ({

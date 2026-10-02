@@ -17,7 +17,7 @@ import java.util.UUID;
 
 /**
  * A planner task: an optional do date (and start time, read in the user's timezone), an optional
- * deadline, and optional links to a course, an exam, a project and a learning goal. Status and completedAt move together.
+ * deadline, and optional links to a course, an exam, a project, a learning goal and a hackathon. Status and completedAt move together.
  */
 @Entity
 @Table(name = "tasks")
@@ -82,6 +82,9 @@ public class Task extends AuditedEntity {
     @Column(name = "learning_goal_id")
     private UUID learningGoalId;
 
+    @Column(name = "hackathon_id")
+    private UUID hackathonId;
+
     protected Task() {}
 
     public Task(UUID userId) {
@@ -102,7 +105,8 @@ public class Task extends AuditedEntity {
             UUID courseId,
             UUID examId,
             UUID projectId,
-            UUID learningGoalId) {
+            UUID learningGoalId,
+            UUID hackathonId) {
         if (plannedStart != null && plannedFor == null) {
             throw new IllegalArgumentException("A start time needs a planned day");
         }
@@ -125,6 +129,7 @@ public class Task extends AuditedEntity {
         this.examId = examId;
         this.projectId = projectId;
         this.learningGoalId = learningGoalId;
+        this.hackathonId = hackathonId;
     }
 
     /** DONE records when; anything else clears it. Completing again keeps the first time. */
@@ -160,7 +165,8 @@ public class Task extends AuditedEntity {
                 courseId,
                 examId,
                 projectId,
-                learningGoalId);
+                learningGoalId,
+                hackathonId);
         return next;
     }
 
@@ -234,5 +240,9 @@ public class Task extends AuditedEntity {
 
     public UUID getLearningGoalId() {
         return learningGoalId;
+    }
+
+    public UUID getHackathonId() {
+        return hackathonId;
     }
 }

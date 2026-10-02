@@ -13,6 +13,8 @@ const CHIP: Record<AttentionKind, { tone: BadgeTone; label: string }> = {
   TASK_DUE_SOON: { tone: 'warning', label: 'Due soon' },
   ATTENDANCE_AT_RISK: { tone: 'warning', label: 'Attendance' },
   EXAM_PREP: { tone: 'academics', label: 'Exam prep' },
+  HACKATHON_DEADLINE: { tone: 'developer', label: 'Hackathon' },
+  HACKATHON_EXAM_CLASH: { tone: 'warning', label: 'Exam clash' },
 };
 
 /**

@@ -18,7 +18,7 @@ class TaskTest {
     private static Task task(LocalDate plannedFor, LocalTime start, Recurrence recurrence) {
         Task task = new Task(USER);
         task.edit("Revise joins", null, TaskCategory.ACADEMIC, TaskPriority.HIGH, plannedFor, start, null, 30,
-                recurrence, null, null, null, null);
+                recurrence, null, null, null, null, null);
         return task;
     }
 
@@ -45,7 +45,7 @@ class TaskTest {
         assertThat(series).isNotNull();
 
         task.edit("Renamed", null, TaskCategory.ACADEMIC, TaskPriority.LOW, DAY.plusDays(1), null, null, null,
-                Recurrence.WEEKLY, null, null, null, null);
+                Recurrence.WEEKLY, null, null, null, null, null);
         assertThat(task.getSeriesId()).isEqualTo(series);
     }
 

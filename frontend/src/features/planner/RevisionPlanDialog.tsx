@@ -48,6 +48,7 @@ export function RevisionPlanDialog({
         examId: exam.id,
         projectId: null,
         learningGoalId: null,
+        hackathonId: null,
       })}
       timezone={timezone}
       onSaved={onSaved}

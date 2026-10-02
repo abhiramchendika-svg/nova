@@ -27,6 +27,7 @@
 | `V8__create_tasks.sql` | `tasks` (without `project_id`, which V9 adds) | 3a |
 | `V9__create_projects.sql` | `projects`, `project_milestones`; adds `tasks.project_id` | 4a |
 | `V10__create_learning.sql` | `learning_goals`, `learning_topics`, `learning_resources`; adds `tasks.learning_goal_id` | 4b |
+| `V11__create_hackathons.sql` | `hackathons`; adds `tasks.hackathon_id` | 4c |
 >
 > Differences from the draft in V3: `ordinal`, `position` and `color_hue` are `integer` rather than `smallint` (simpler Java mapping, same checks); `notes` is `varchar(2000)`; `grade_definitions` has a unique `(scheme_id, position)` too, and both of its unique constraints are **deferred to commit** so a scheme edit can swap labels or order between grades in one transaction; `courses.grade_definition_id` has its own index. V3 was applied to PostgreSQL 16 and its constraints were exercised directly (cross-tenant course, second current semester, duplicate ordinal, half-set grade, deleting an in-use scheme, label swap at commit, cascades): all behaved as designed.
 >
@@ -39,6 +40,8 @@
 > V7 changes no schema. Checked on PostgreSQL 16 with three accounts: one with semesters (marked onboarded), one without (left for onboarding) and one already onboarded (its original timestamp kept).
 >
 > V9: `projects.description` is `varchar(4000)` and `tech_stack` a `text[]` (at most 15 entries, checked); there is **no `progress_pct`**: progress is derived from milestones only. Links must match `^https?://`; `target_on` can't precede `started_on`. Milestones carry `user_id` with a composite FK to `projects (id, user_id)` (`uq_projects_id_user`), a `position` and `done_at`; `ix_milestones_open_due` is partial (open, dated milestones) for the calendar and Home. `tasks.project_id` references `projects (id, user_id)` with `on delete set null (project_id)`. Applied to PostgreSQL 16 and exercised (javascript: URL, bad status, 16 technologies, target before start, blank name, cross-tenant milestone, cross-tenant task link, and cascade to milestones plus set-null on tasks when a project is deleted).
+>
+> V11: `hackathons.status` is progress only (`INTERESTED`, `REGISTERED`, `PARTICIPATING`, `SUBMITTED`, `FINISHED`, `SKIPPED`); the outcome is the free-text `result` (`varchar(160)`), never inferred, which replaces the draft's `SHORTLISTED`/`WON`/`COMPLETED` statuses. `team_members` is `varchar(500)` and `notes` `varchar(4000)`. Checks: name not blank, mode and status in their lists, every link `^https?://`, `ends_on` needs `starts_on` and isn't before it, registration closes no later than submissions. `project_id` references `projects (id, user_id)` with `on delete set null (project_id)`; `uq_hackathons_id_user` is the target for `tasks.hackathon_id` (`on delete set null (hackathon_id)`, partial index). Applied to PostgreSQL 16 and exercised (bad status and mode, end without start, end before start, registration after submission, `javascript:` certificate link, cross-tenant project and task links, and set-null on hackathons when a project is deleted and on tasks when a hackathon is).
 >
 > V10: there is **no stored progress**; it is derived from topics. `learning_goals.status` is checked (`ACTIVE`, `PAUSED`, `DONE`) and `uq_learning_goals_id_user` is the target for composite FKs from `learning_topics` and `learning_resources` (both `on delete cascade`, each carrying `user_id`). Topics keep a `position` and `done_at`; resource URLs must match `^https?://`. `tasks.learning_goal_id` references `learning_goals (id, user_id)` with `on delete set null (learning_goal_id)` and a partial index. Applied to PostgreSQL 16 and exercised (bad status, blank title, `javascript:` URL, cross-tenant topic and task link, cascade to topics and links plus set-null on tasks when a goal is deleted).
 >
@@ -367,8 +370,8 @@ create table hackathons (
   website_url            varchar(2048) check (website_url ~* '^https?://'),
   registration_deadline  timestamptz,
   submission_deadline    timestamptz,
-  status                 varchar(12) not null default 'INTERESTED'
-                           check (status in ('INTERESTED','REGISTERED','PARTICIPATING','SUBMITTED','SHORTLISTED','WON','COMPLETED')),
+  status                 varchar(13) not null default 'INTERESTED'   -- progress only (V11); the outcome is `result`
+                           check (status in ('INTERESTED','REGISTERED','PARTICIPATING','SUBMITTED','FINISHED','SKIPPED')),
   team_name              varchar(80),
   team_members           text,                        -- free text; teammates aren't NOVA users
   project_id             uuid,

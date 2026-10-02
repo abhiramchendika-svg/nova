@@ -16,7 +16,9 @@ public final class DashboardDtos {
         ASSIGNMENT_DUE_SOON,
         TASK_DUE_SOON,
         ATTENDANCE_AT_RISK,
-        EXAM_PREP
+        EXAM_PREP,
+        HACKATHON_DEADLINE,
+        HACKATHON_EXAM_CLASH
     }
 
     /** One thing that needs the user, with a plain reason and where to deal with it. */
@@ -45,13 +47,24 @@ public final class DashboardDtos {
     /** The active learning goal to work on next: its progress and next topic. */
     public record FocusGoal(UUID goalId, String title, Integer percentage, String nextTopic, LocalDate targetOn) {}
 
+    /** The upcoming (or ongoing) hackathon that starts soonest; {@code daysUntil} is 0 or less once it's on. */
+    public record NextHackathon(
+            UUID hackathonId, String name, LocalDate startsOn, LocalDate endsOn, long daysUntil, String status) {}
+
     /**
      * Projects in development, projects that aren't completed or archived, and the soonest open
      * milestone with a due date among those; active learning goals and the one to focus on (the
-     * nearest target date, then the newest). GitHub activity joins in slice 4e.
+     * nearest target date, then the newest); hackathons that aren't past and the next dated one.
+     * GitHub activity joins in slice 4e.
      */
     public record DeveloperSummary(
-            int inDevelopment, int activeProjects, NextMilestone nextMilestone, int activeGoals, FocusGoal focusGoal) {}
+            int inDevelopment,
+            int activeProjects,
+            NextMilestone nextMilestone,
+            int activeGoals,
+            FocusGoal focusGoal,
+            int upcomingHackathons,
+            NextHackathon nextHackathon) {}
 
     public record DashboardResponse(
             LocalDate date,

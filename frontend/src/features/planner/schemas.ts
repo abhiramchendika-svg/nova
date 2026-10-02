@@ -38,6 +38,8 @@ export const taskSchema = z
     projectId: z.string(),
     /** Not shown in the form: set by a goal's page or study plan, and kept on edit. */
     learningGoalId: z.string(),
+    /** Likewise for a hackathon's prep tasks. */
+    hackathonId: z.string(),
   })
   .superRefine((v, ctx) => {
     if (v.plannedStart && !v.plannedFor) {
@@ -72,5 +74,6 @@ export function toTaskRequest(v: TaskValues, timezone: string): TaskRequest {
     examId: v.examId || null,
     projectId: v.projectId || null,
     learningGoalId: v.learningGoalId || null,
+    hackathonId: v.hackathonId || null,
   };
 }

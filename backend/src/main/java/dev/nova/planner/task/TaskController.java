@@ -72,10 +72,12 @@ public class TaskController {
             @RequestParam(required = false) UUID examId,
             @RequestParam(required = false) UUID projectId,
             @RequestParam(required = false) UUID learningGoalId,
+            @RequestParam(required = false) UUID hackathonId,
             @RequestParam(required = false) String sort,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "" + PageResponse.DEFAULT_SIZE) int size) {
-        return service.list(me.id(), new Filter(category, status, courseId, examId, projectId, learningGoalId), sort, page, size);
+        Filter filter = new Filter(category, status, courseId, examId, projectId, learningGoalId, hackathonId);
+        return service.list(me.id(), filter, sort, page, size);
     }
 
     @GetMapping("/{id}")

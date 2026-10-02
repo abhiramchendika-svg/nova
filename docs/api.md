@@ -298,16 +298,16 @@ Legend: 🔓 public · everything else requires a session. **P** marks paginated
 | GET | `/api/v1/tasks/today?date=` | `{ "date", "tasks", "completed" }`: open tasks planned for the date or earlier, or due before it ends (overdue included), in "what now?" order; plus tasks completed that date, newest first. Date defaults to today in the user's timezone. |
 | GET | `/api/v1/tasks/upcoming?days=14` | `{ "from", "to", "days": [{ "date", "tasks" }], "unscheduled" }`: open tasks after today, up to `days` (1–62, else `400` on `days`) |
 | GET | `/api/v1/tasks/completed` **P** | Done tasks, most recently completed first |
-| GET | `/api/v1/tasks` **P** | Filters: `category`, `status` (repeatable), `courseId`, `examId`, `projectId`, `learningGoalId`; `sort=plannedFor\|dueAt\|createdAt[,asc\|desc]` (default newest first; anything else `400` on `sort`) |
-| POST | `/api/v1/tasks` | Create → `201`: `{ "title", "description?", "category?", "priority?", "plannedFor?", "plannedStart?", "dueAt?", "estimatedMinutes?", "recurrence?", "courseId?", "examId?", "projectId?", "learningGoalId?" }` |
+| GET | `/api/v1/tasks` **P** | Filters: `category`, `status` (repeatable), `courseId`, `examId`, `projectId`, `learningGoalId`, `hackathonId`; `sort=plannedFor\|dueAt\|createdAt[,asc\|desc]` (default newest first; anything else `400` on `sort`) |
+| POST | `/api/v1/tasks` | Create → `201`: `{ "title", "description?", "category?", "priority?", "plannedFor?", "plannedStart?", "dueAt?", "estimatedMinutes?", "recurrence?", "courseId?", "examId?", "projectId?", "learningGoalId?", "hackathonId?" }` |
 | POST | `/api/v1/tasks/batch` | `{ "tasks": [ …1–30 task bodies… ] }` → `201 { "tasks": [...] }`. All or nothing; a problem with one is reported on `tasks[i].field` (e.g. `tasks[1].title`). Used by an exam's "Plan my revision" and a learning goal's "Plan my learning". |
 | GET / PUT / DELETE | `/api/v1/tasks/{id}` | Read / full replace (same body, status excluded) / delete → `204`. `DELETE ?series=true` also deletes the open repeats planned on or after this one. |
 | PATCH | `/api/v1/tasks/{id}/status` | `{ "status": "TODO" \| "IN_PROGRESS" \| "DONE" }` → `{ "task", "nextInstance" }` |
 
-- Task: `{ "id", "title", "description", "category", "priority", "status", "plannedFor", "plannedStart", "dueAt", "estimatedMinutes", "completedAt", "recurrence", "seriesId", "courseId", "courseCode", "courseName", "examId", "examTitle", "projectId", "projectName", "learningGoalId", "learningGoalTitle", "overdue", "urgency" }`.
+- Task: `{ "id", "title", "description", "category", "priority", "status", "plannedFor", "plannedStart", "dueAt", "estimatedMinutes", "completedAt", "recurrence", "seriesId", "courseId", "courseCode", "courseName", "examId", "examTitle", "projectId", "projectName", "learningGoalId", "learningGoalTitle", "hackathonId", "hackathonName", "overdue", "urgency" }`.
 - **Two kinds of date.** `plannedFor` is the day you mean to do it (optionally at `plannedStart`, `"HH:mm"` on your wall clock); `dueAt` is a hard deadline (an instant). Either, both or neither. With neither, a task is "unscheduled" and appears in `upcoming.unscheduled`.
-- `category`: `ACADEMIC`, `CODING`, `PERSONAL`, `INTERNSHIP`, `OPEN_SOURCE`, `PROJECT`; defaults to `ACADEMIC` when a course or exam is linked, else `PROJECT` when a project is, else `CODING` when a learning goal is, else `PERSONAL`. `priority`: `LOW`, `MEDIUM` (default), `HIGH`. `estimatedMinutes` 1–1440.
-- **Links:** the course and exam must be yours (`400` on `courseId` / `examId`); an exam from a different course than `courseId` is `400` on `examId`; linking only an exam links its course too. The project and learning goal must be yours (`400` on `projectId` / `learningGoalId`). Deleting the course, exam, project or goal keeps the task and clears the link.
+- `category`: `ACADEMIC`, `CODING`, `PERSONAL`, `INTERNSHIP`, `OPEN_SOURCE`, `PROJECT`; defaults to `ACADEMIC` when a course or exam is linked, else `PROJECT` when a project or hackathon is, else `CODING` when a learning goal is, else `PERSONAL`. `priority`: `LOW`, `MEDIUM` (default), `HIGH`. `estimatedMinutes` 1–1440.
+- **Links:** the course and exam must be yours (`400` on `courseId` / `examId`); an exam from a different course than `courseId` is `400` on `examId`; linking only an exam links its course too. The project, learning goal and hackathon must be yours (`400` on `projectId` / `learningGoalId` / `hackathonId`). Deleting the course, exam, project, goal or hackathon keeps the task and clears the link.
 - **Today's order:** overdue → due today → priority (high first) → start time (untimed last) → deadline → oldest. Upcoming groups by `plannedFor`, or by the deadline's local day when there's no plan; within a day by start time, then priority.
 - `overdue` is `true` for an open task past `dueAt`; `urgency` (as for assignments) is null without a deadline or once done. `completedAt` is set exactly while `status` is `DONE`; completing again keeps the first time.
 - **Repeats** (`recurrence`: `NONE`, `DAILY`, `WEEKDAYS`, `WEEKLY`) need `plannedFor` (`400` on `plannedFor`); `plannedStart` needs `plannedFor` too (`400` on `plannedStart`). A repeating task gets a `seriesId`. Completing it creates the next instance (same details; the deadline moves by the same number of days in your timezone) and returns it as `nextInstance`. If that day's instance already exists (e.g. completed, reopened, completed again) `nextInstance` is `null`, and reopening never deletes a generated instance. Two repeats in a series can't share a day (`409`).
@@ -329,15 +329,15 @@ Legend: 🔓 public · everything else requires a session. **P** marks paginated
     { "key": "assignment:…", "type": "ASSIGNMENT_DUE", "title": "ER diagram", "date": "2026-09-30", "startTime": "23:59", "endTime": null, "priority": "HIGH", "…": "…" },
     { "key": "task:…", "type": "TASK", "title": "Read notes", "date": "2026-10-01", "startTime": null, "endTime": null, "…": "…" }
   ],
-  "load": [ { "date": "2026-09-28", "deadlines": 1, "exams": 0, "classMinutes": 250, "plannedTaskMinutes": 90 } ]
+  "load": [ { "date": "2026-09-28", "deadlines": 1, "exams": 0, "hackathons": 0, "classMinutes": 250, "plannedTaskMinutes": 90 } ]
 }
 ```
 
-- `type`: `CLASS` (a weekly timetable entry on each matching date inside the current semester's `startsOn`–`endsOn`), `EXAM`, `ASSIGNMENT_DUE` (open assignments only), `TASK` (planned on that day, open or done; `done` says which) `TASK_DUE` (an open task's deadline, unless the task is planned for that same day) and `MILESTONE` (an open project milestone on its due day, untimed; its `refId` is the project, with `projectId` and `projectName` set). Hackathons and internship deadlines join later in Phase 4.
+- `type`: `CLASS` (a weekly timetable entry on each matching date inside the current semester's `startsOn`–`endsOn`), `EXAM`, `ASSIGNMENT_DUE` (open assignments only), `TASK` (planned on that day, open or done; `done` says which) `TASK_DUE` (an open task's deadline, unless the task is planned for that same day) and `MILESTONE` (an open project milestone on its due day, untimed; its `refId` is the project, with `projectId` and `projectName` set), `HACKATHON` (each day of a hackathon that isn't skipped, untimed; `kind` is its format, `location` its venue) and `HACKATHON_DEADLINE` (the deadline that matters for its status, §2.12, at its time; `kind` is `REGISTRATION` or `SUBMISSION`, and the title starts "Register:" or "Submit:"). A hackathon item's `refId` is the hackathon. Internship deadlines join in 4d.
 - Times are `"HH:mm"` on the user's wall clock. A block (class, exam with a duration, timed task) has both times, with `endTime` `"24:00"` when it runs past midnight; a deadline has only `startTime`; an untimed task has neither. A timed task is as long as its estimate, or 30 minutes without one.
 - `key` is unique in the response (a weekly class appears once per date); `refId` is the timetable entry, exam, assignment or task it comes from. The title of a class is its course's name.
 - Items are ordered by day, untimed first, then start time, then type, then title.
-- `load` has one entry per day in the range: deadlines (assignments, tasks (including a deadline on a task's own planned day) and milestones), exams, class minutes, and the estimates of open tasks planned that day.
+- `load` has one entry per day in the range: deadlines (assignments, tasks (including a deadline on a task's own planned day) milestones and hackathon deadlines), exams, hackathons on that day, class minutes, and the estimates of open tasks planned that day.
 
 ### 2.11 Dashboard (Phase 3; developer activity joins in Phase 4)
 
@@ -366,15 +366,17 @@ Home also uses `/timetable/day` (today's classes), `/tasks/today` (today's tasks
 }
 ```
 
-- **`needsAttention`** (at most 8, highest score first, then by title) holds: open assignments and open tasks that are overdue or due within 48 hours (`*_OVERDUE`, `*_DUE_SOON`); current-semester courses whose attendance is below target or at risk (`ATTENDANCE_AT_RISK`); and exams within 7 days with under half of a non-empty checklist done (`EXAM_PREP`). Each item has a plain `reason` and an in-app `link`.
+- **`needsAttention`** (at most 8, highest score first, then by title) holds: open assignments and open tasks that are overdue or due within 48 hours (`*_OVERDUE`, `*_DUE_SOON`); current-semester courses whose attendance is below target or at risk (`ATTENDANCE_AT_RISK`); exams within 7 days with under half of a non-empty checklist done (`EXAM_PREP`); a hackathon's deadline that matters (§2.12) within 48 hours or already missed while the event isn't over (`HACKATHON_DEADLINE`); and a hackathon starting within 21 days (or already on) that clashes with an exam (`HACKATHON_EXAM_CLASH`, one per hackathon, naming the first exam). Each item has a plain `reason` and an in-app `link`.
 - **The score is deterministic and documented** (0–100), from `PriorityScorer`, where every weight is a named constant:
   - Overdue work: 60, plus priority, plus 5 per full day overdue (up to 25).
   - Due within 48 hours: 40, plus priority, plus 25 (6 hours or less left), 15 (24 hours or less) or 5.
   - Attendance below target: 55, plus 5 per percentage point short, rounded up (up to 25). At target but able to miss no more classes: 45. Able to miss only one more: 35.
   - An exam within 7 days with prep under 50%: 30, plus 4 per day closer than 7, plus 1 per 5 points of prep missing below 50%.
+  - A hackathon deadline within 48 hours: as medium-priority work due soon. Already missed: 45.
+  - A hackathon clashing with an exam: 30, plus 2 per day closer than 21 (from 0 once it's on).
   - Priority adds 15 (high), 8 (medium) or 0 (low).
 - **`academics`** is `null` without a current semester. `gpa`/`cgpa` are `null` until there are grades. `lowestAttendance` is the current semester's course with the lowest percentage among those with classes held.
-- **`developer`**: `activeProjects` counts projects that are an idea, planning or in development; `nextMilestone` is the soonest open milestone with a due date among them (`null` if none). `activeGoals` counts `ACTIVE` learning goals; `focusGoal` is the active goal with the nearest target date (undated goals after dated ones, then the newest), with its progress `percentage` (`null` without topics) and `nextTopic` (`null` when none is open), or `null` with no active goal. GitHub activity joins in 4e.
+- **`developer`**: `activeProjects` counts projects that are an idea, planning or in development; `nextMilestone` is the soonest open milestone with a due date among them (`null` if none). `activeGoals` counts `ACTIVE` learning goals; `focusGoal` is the active goal with the nearest target date (undated goals after dated ones, then the newest), with its progress `percentage` (`null` without topics) and `nextTopic` (`null` when none is open), or `null` with no active goal. `upcomingHackathons` counts hackathons that aren't past; `nextHackathon` (`hackathonId`, `name`, `startsOn`, `endsOn`, `daysUntil`, `status`) is the one among them with the earliest start date, or `null`. GitHub activity joins in 4e.
 - **`planner`**: `openToday`/`doneToday` match `/tasks/today`. `weekPlanned` counts tasks planned in the current week (by the user's week start), and `weekDone` counts how many of those are done. `streakDays` = consecutive days (ending today, or yesterday if nothing is finished yet today) with at least one completed task, looking back up to 60 days; it is `null` until the streak reaches 3.
 
 ### 2.12 Projects, learning, hackathons, internships (Phase 4)
@@ -394,8 +396,8 @@ Home also uses `/timetable/day` (today's classes), `/tasks/today` (today's tasks
 | DELETE | `/api/v1/learning-goals/{id}/topics/{tid}` | → the goal, renumbered |
 | POST | `/api/v1/learning-goals/{id}/resources` | `{ "title", "url" }` → `201` with the whole goal |
 | PUT / DELETE | `/api/v1/learning-goals/{id}/resources/{rid}` | Replace / remove a link → the goal |
-| GET/POST | `/api/v1/hackathons` | `?status=` |
-| GET/PUT/DELETE | `/api/v1/hackathons/{id}` | `result` is free text entered by the user and never inferred |
+| GET / POST | `/api/v1/hackathons` | List: upcoming first (soonest start, undated last), then past (most recent first); `?status=` may repeat / create → `201` |
+| GET / PUT / DELETE | `/api/v1/hackathons/{id}` | Read / full replace / delete → `204` (prep tasks stay and lose the link; a linked project is untouched) |
 | GET/POST | `/api/v1/internships` **P** | `?status=` |
 | GET/PUT/DELETE | `/api/v1/internships/{id}` | |
 | PATCH | `/api/v1/internships/{id}/status` | `{ "status": "INTERVIEW" }` → appends to the status history |
@@ -418,6 +420,17 @@ Home also uses `/timetable/day` (today's classes), `/tasks/today` (today's tasks
 - Topics keep a dense 0…n−1 order; a `position` outside it is `400` on `position`. Resource links must be full `http(s)://` addresses (`400` on `url`), titles 1–120 characters.
 - Up to 50 goals per user, 100 topics and 20 links per goal (`422`). Another user's goal, topic or link is `404`.
 - **Study tasks** link with `learningGoalId` (§2.9). "Plan my learning" is the client-side revision planner (as for exams): one task per unfinished topic without a task yet, spread from today to the target date (or 14 days without one), saved through `POST /tasks/batch` with category `CODING`.
+
+**Hackathons (Phase 4c).** Body: `{ "name", "organizer?", "mode?", "location?", "websiteUrl?", "startsOn?", "endsOn?", "registrationDeadline?", "submissionDeadline?", "status?", "teamName?", "teamMembers?", "projectId?", "result?", "repoUrl?", "demoUrl?", "certificateUrl?", "notes?" }`.
+
+- Hackathon: the body's fields (deadlines as instants) plus `projectName`, `past`, `daysUntil`, `deadline`, `examClashes`, `openTasks` and `createdAt`.
+- `status` is progress only: `INTERESTED` (default), `REGISTERED`, `PARTICIPATING`, `SUBMITTED`, `FINISHED`, `SKIPPED`. **How it went is `result`**: free text the user writes (up to 160 characters), never inferred. `mode`: `ONLINE`, `OFFLINE`, `HYBRID`.
+- **`past`**: finished or skipped, or its last day (`endsOn`, else `startsOn`) is before today in the user's timezone. Undated and open is never past. `daysUntil` counts days from today to `startsOn` (negative once it has started; `null` when undated).
+- **`deadline`** is the one that matters for the status, `{ "kind", "at", "missed" }`: registration while `INTERESTED` (else submission), submission while `REGISTERED` or `PARTICIPATING`, none after that or once past. `missed` means it has passed.
+- **`examClashes`**: exams on a day from two days before the start to two days after the end, as `{ "examId", "title", "courseCode", "on" }` by time; empty once past or when undated.
+- `endsOn` needs `startsOn` (`400` on `startsOn`) and can't be before it (`400` on `endsOn`); registration can't close after submissions (`400` on `registrationDeadline`). Links must be full `http(s)://` addresses (`400` on the field). The project must be yours (`400` on `projectId`). Name 1–120 characters; organiser and venue up to 120, team name 80, teammates 500 (free text: teammates aren't NOVA users), notes 4000.
+- Up to 100 hackathons per user (`422`). Another user's hackathon is `404`.
+- **Prep tasks** link with `hackathonId` (§2.9). Hackathon days and the deadline that matters are on the calendar (§2.10); deadlines, exam clashes and the next hackathon are on Home (§2.11).
 
 ### 2.13 GitHub (Phase 4)
 

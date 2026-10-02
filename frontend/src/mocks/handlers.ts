@@ -3,6 +3,7 @@ import { API, CSRF_TOKEN, csrfOk, problem } from './http';
 import type { CurrentUser } from '@/features/auth/types';
 import { createAcademicsHandlers } from './academicsHandlers';
 import { createDeveloperHandlers } from './developerHandlers';
+import { createHackathonHandlers } from './hackathonHandlers';
 import { createLearningHandlers } from './learningHandlers';
 import { createPlannerHandlers } from './plannerHandlers';
 import { createAcademicStore, type AcademicStore } from './academics';
@@ -178,5 +179,6 @@ export function createHandlers(db: MockDb): HttpHandler[] {
     ...createPlannerHandlers(storeFor, settingsFor),
     ...createDeveloperHandlers(storeFor, settingsFor),
     ...createLearningHandlers(storeFor),
+    ...createHackathonHandlers(storeFor, settingsFor),
   ];
 }

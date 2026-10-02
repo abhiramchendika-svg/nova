@@ -8,6 +8,8 @@ export const ITEM_LABEL: Record<CalendarItemType, string> = {
   TASK: 'Task',
   TASK_DUE: 'Task due',
   MILESTONE: 'Milestone',
+  HACKATHON: 'Hackathon',
+  HACKATHON_DEADLINE: 'Hackathon deadline',
 };
 
 /** Where an item lives; tasks open in a dialog instead (null). */
@@ -19,6 +21,9 @@ export function itemHref(item: CalendarItem): string | null {
       return `/app/academics/exams/${item.refId}`;
     case 'MILESTONE':
       return `/app/developer/projects/${item.refId}`;
+    case 'HACKATHON':
+    case 'HACKATHON_DEADLINE':
+      return `/app/developer/hackathons/${item.refId}`;
     case 'ASSIGNMENT_DUE':
       return item.courseId
         ? `/app/academics/assignments?course=${item.courseId}`
@@ -48,17 +53,24 @@ export function itemDescription(item: CalendarItem): string {
   return parts.join(', ');
 }
 
-/** Busy-ness in minute-equivalents: an exam counts as two hours, a deadline as one. */
+/** Busy-ness in minute-equivalents: an exam counts as two hours, a deadline as one, a hackathon as six. */
 export function loadScore(load: DayLoad): number {
-  return load.classMinutes + load.plannedTaskMinutes + load.exams * 120 + load.deadlines * 60;
+  return (
+    load.classMinutes +
+    load.plannedTaskMinutes +
+    load.exams * 120 +
+    load.deadlines * 60 +
+    load.hackathons * 360
+  );
 }
 
 /** A full day is about eight hours' worth; the bar caps there. */
 export const FULL_DAY = 8 * 60;
 
-/** "1 exam · 2 deadlines · 3 h 20 min of classes · 45 min planned", or null on an empty day. */
+/** "1 hackathon · 1 exam · 2 deadlines · 3 h 20 min of classes · 45 min planned", or null on an empty day. */
 export function loadText(load: DayLoad): string | null {
   const parts: string[] = [];
+  if (load.hackathons) parts.push(load.hackathons === 1 ? '1 hackathon' : `${load.hackathons} hackathons`);
   if (load.exams) parts.push(load.exams === 1 ? '1 exam' : `${load.exams} exams`);
   if (load.deadlines) parts.push(load.deadlines === 1 ? '1 deadline' : `${load.deadlines} deadlines`);
   if (load.classMinutes) parts.push(`${formatMinutes(load.classMinutes)} of classes`);
