@@ -1,6 +1,6 @@
 import * as RadixDialog from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
-import type { ReactNode } from 'react';
+import type { ReactNode, RefObject } from 'react';
 import { IconButton } from './IconButton';
 
 export interface DialogProps {
@@ -11,13 +11,23 @@ export interface DialogProps {
   children: ReactNode;
   /** Footer actions; put the primary action last (right). */
   footer?: ReactNode;
+  /** Where focus goes when it opens (default: the first focusable element). */
+  initialFocus?: RefObject<HTMLElement | null>;
 }
 
 /**
  * Modal dialog on Radix: focus is trapped, Esc closes, focus returns to the trigger.
  * Below the md breakpoint it becomes a bottom sheet.
  */
-export function Dialog({ open, onOpenChange, title, description, children, footer }: DialogProps) {
+export function Dialog({
+  open,
+  onOpenChange,
+  title,
+  description,
+  children,
+  footer,
+  initialFocus,
+}: DialogProps) {
   return (
     <RadixDialog.Root open={open} onOpenChange={onOpenChange}>
       <RadixDialog.Portal>
@@ -31,6 +41,12 @@ export function Dialog({ open, onOpenChange, title, description, children, foote
             'data-[state=open]:animate-enter'
           }
           {...(description ? {} : { 'aria-describedby': undefined })}
+          onOpenAutoFocus={(e) => {
+            if (initialFocus?.current) {
+              e.preventDefault();
+              initialFocus.current.focus();
+            }
+          }}
         >
           <div className="flex items-start gap-3">
             <div className="grid flex-1 gap-1">

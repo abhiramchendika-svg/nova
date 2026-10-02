@@ -469,7 +469,11 @@ Home also uses `/timetable/day` (today's classes), `/tasks/today` (today's tasks
 | GET | `/api/v1/notifications/unread-count` | Bell badge (cheap query, polled every 60 s while the tab is visible) |
 | PATCH | `/api/v1/notifications/{id}` | `{ "read": true }` |
 | POST | `/api/v1/notifications/read-all` | |
-| GET | `/api/v1/search?q=dbms&limit=5` | `{ "courses": [...], "assignments": [...], "tasks": [...], "projects": [...], "internships": [...], "hackathons": [...] }`. `q` must be ≥ 2 chars. |
+| GET | `/api/v1/search?q=dbms&limit=5` | Phase 5a. `{ "q", "courses", "assignments", "exams", "tasks", "projects", "learningGoals", "hackathons", "internships" }`, each a list of `{ "id", "title", "subtitle", "link" }` (see below). |
+
+**Search (5a).** A case-insensitive *contains* match on names and titles (courses also by code; internship applications by company or role), only over the user's own records. Up to `limit` (1–10, default 5; `400` on `limit`) per kind, those whose title starts with the query first, then A–Z. `q` is trimmed and must be 2–100 characters (`400` on `q`). It's a plain `LIKE` with `%`, `_` and the escape character escaped, so they match literally; full-text ranking isn't in scope. `subtitle` is a short line of context (course code, due or planned day, status); `link` is where the record lives in the app (a task's opens its dialog in the ⌘K palette).
+
+The **⌘K palette** (Ctrl+K on Windows/Linux, or the Search button in the top bar) combines this with every page in the navigation, quick actions (new task, assignment, exam, project, learning goal, hackathon, internship application; today's attendance on Home) and the last 6 things opened from it (kept in this browser's localStorage only).
 
 **Insight object (traceable by construction)**
 

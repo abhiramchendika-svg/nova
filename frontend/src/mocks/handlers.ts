@@ -4,6 +4,7 @@ import type { CurrentUser } from '@/features/auth/types';
 import { createAcademicsHandlers } from './academicsHandlers';
 import { createDeveloperHandlers } from './developerHandlers';
 import { createGitHubHandlers } from './githubHandlers';
+import { createSearchHandlers } from './searchHandlers';
 import { createHackathonHandlers } from './hackathonHandlers';
 import { createInternshipHandlers } from './internshipHandlers';
 import { createLearningHandlers } from './learningHandlers';
@@ -184,5 +185,6 @@ export function createHandlers(db: MockDb): HttpHandler[] {
     ...createHackathonHandlers(storeFor, settingsFor),
     ...createInternshipHandlers(storeFor, settingsFor),
     ...createGitHubHandlers(storeFor, settingsFor),
+    ...createSearchHandlers(storeFor, settingsFor),
   ];
 }
