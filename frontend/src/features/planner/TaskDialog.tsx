@@ -53,6 +53,7 @@ const EMPTY: TaskValues = {
   courseId: '',
   examId: '',
   projectId: '',
+  learningGoalId: '',
 };
 
 function valuesOf(task: Task, timezone: string): TaskValues {
@@ -71,6 +72,7 @@ function valuesOf(task: Task, timezone: string): TaskValues {
     courseId: task.courseId ?? '',
     examId: task.examId ?? '',
     projectId: task.projectId ?? '',
+    learningGoalId: task.learningGoalId ?? '',
   };
 }
 
@@ -303,7 +305,7 @@ export function TaskDialog({
           </SelectField>
           <SelectField
             label="Category"
-            hint="Automatic: Academic with a course, Project with a project, else Personal"
+            hint="Automatic: from the course, project or learning goal, else Personal"
             error={errors.category?.message}
             {...register('category')}
           >

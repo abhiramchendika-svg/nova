@@ -31,6 +31,8 @@ export interface Task {
   examTitle: string | null;
   projectId: string | null;
   projectName: string | null;
+  learningGoalId: string | null;
+  learningGoalTitle: string | null;
   overdue: boolean;
   urgency: Urgency | null;
 }
@@ -49,6 +51,7 @@ export interface TaskRequest {
   courseId: string | null;
   examId: string | null;
   projectId: string | null;
+  learningGoalId: string | null;
 }
 
 export interface StatusResult {
@@ -76,6 +79,7 @@ export interface TaskFilter {
   courseId?: string;
   examId?: string;
   projectId?: string;
+  learningGoalId?: string;
   sort?: string;
   page?: number;
   size?: number;

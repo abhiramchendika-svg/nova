@@ -25,6 +25,7 @@ export interface StoredTask {
   courseId: string | null;
   examId: string | null;
   projectId: string | null;
+  learningGoalId: string | null;
   createdAt: number;
 }
 
@@ -91,6 +92,7 @@ export function toTask(store: AcademicStore, t: StoredTask, now: Date, timezone:
   const course = t.courseId ? store.courses.find((c) => c.id === t.courseId) : undefined;
   const exam = t.examId ? store.exams.find((e) => e.id === t.examId) : undefined;
   const project = t.projectId ? store.projects.find((p) => p.id === t.projectId) : undefined;
+  const goal = t.learningGoalId ? store.learningGoals.find((g) => g.id === t.learningGoalId) : undefined;
   const open = isOpenTask(t);
   return {
     ...t,
@@ -98,6 +100,7 @@ export function toTask(store: AcademicStore, t: StoredTask, now: Date, timezone:
     courseName: course?.name ?? null,
     examTitle: exam?.title ?? null,
     projectName: project?.name ?? null,
+    learningGoalTitle: goal?.title ?? null,
     overdue: open && t.dueAt !== null && Date.parse(t.dueAt) < now.getTime(),
     urgency: open && t.dueAt !== null ? urgencyOf(t.dueAt, now, timezone) : null,
   };
@@ -141,6 +144,7 @@ export function seedDemoTasks(store: AcademicStore, now: Date = new Date()): voi
       courseId: null,
       examId: null,
       projectId: null,
+      learningGoalId: null,
       createdAt: n,
       ...t,
     });

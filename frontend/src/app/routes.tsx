@@ -23,6 +23,8 @@ const TasksPage = lazy(pageLoaders.TasksPage);
 const CalendarPage = lazy(pageLoaders.CalendarPage);
 const ProjectsPage = lazy(pageLoaders.ProjectsPage);
 const ProjectPage = lazy(pageLoaders.ProjectPage);
+const LearningPage = lazy(pageLoaders.LearningPage);
+const GoalPage = lazy(pageLoaders.GoalPage);
 const SettingsPage = lazy(pageLoaders.SettingsPage);
 const OnboardingPage = lazy(pageLoaders.OnboardingPage);
 const SectionPlaceholder = lazy(pageLoaders.SectionPlaceholder);
@@ -68,6 +70,8 @@ export const routes: RouteObject[] = [
       { path: 'planner/calendar', element: <CalendarPage /> },
       { path: 'developer/projects', element: <ProjectsPage /> },
       { path: 'developer/projects/:projectId', element: <ProjectPage /> },
+      { path: 'developer/learning', element: <LearningPage /> },
+      { path: 'developer/learning/:goalId', element: <GoalPage /> },
       { path: 'settings', element: <SettingsPage /> },
       { path: 'academics/attendance', element: <AttendancePage /> },
       { path: 'academics/grades', element: <GradesPage /> },

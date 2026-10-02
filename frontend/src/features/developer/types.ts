@@ -54,3 +54,52 @@ export interface MilestoneRequest {
   title: string;
   dueOn: string | null;
 }
+
+// ───────────── Learning goals (docs/api.md §2.12) ─────────────
+
+export type GoalStatus = 'ACTIVE' | 'PAUSED' | 'DONE';
+
+export interface LearningTopic {
+  id: string;
+  title: string;
+  position: number;
+  done: boolean;
+  doneAt: string | null;
+}
+
+export interface LearningResource {
+  id: string;
+  title: string;
+  url: string;
+}
+
+export interface LearningGoal {
+  id: string;
+  title: string;
+  description: string | null;
+  status: GoalStatus;
+  targetOn: string | null;
+  /** From topics only; percentage is null without topics. */
+  progress: Progress;
+  /** The first open topic in checklist order. */
+  nextTopic: LearningTopic | null;
+  /** Linked study tasks that aren't done. */
+  openTasks: number;
+  topics: LearningTopic[];
+  resources: LearningResource[];
+  createdAt: string;
+}
+
+export interface GoalRequest {
+  title: string;
+  description: string | null;
+  status: GoalStatus;
+  targetOn: string | null;
+  /** A starter checklist, read on create only. */
+  topics?: string[];
+}
+
+export interface ResourceRequest {
+  title: string;
+  url: string;
+}

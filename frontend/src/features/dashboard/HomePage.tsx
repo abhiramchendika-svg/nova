@@ -21,7 +21,7 @@ import { UpcomingExams } from './UpcomingExams';
 /**
  * Home — the Today view (docs/ui-design.md §5): today's classes and tasks, what needs the user
  * (ranked on the server), the academics and planner at a glance, the coming week and exams.
- * Developer activity fills in with Phase 4.
+ * Developer shows projects and the learning goal in focus; GitHub activity joins in 4e.
  */
 export function HomePage() {
   const { data: user } = useCurrentUser();
@@ -224,7 +224,7 @@ function PlannerCard({ summary }: { summary: PlannerSummary | null }) {
 }
 
 function DeveloperCard({ summary }: { summary: DeveloperSummary | null }) {
-  if (!summary || summary.activeProjects === 0) {
+  if (!summary || (summary.activeProjects === 0 && summary.activeGoals === 0)) {
     return (
       <DomainSummary
         domain="developer"
@@ -236,16 +236,20 @@ function DeveloperCard({ summary }: { summary: DeveloperSummary | null }) {
     );
   }
   const next = summary.nextMilestone;
+  const goal = summary.focusGoal;
+  const projects = summary.activeProjects > 0;
   return (
     <DomainSummary
       domain="developer"
       title="Developer"
       text={
         <>
-          <p>
-            {summary.inDevelopment} in development · {summary.activeProjects} active{' '}
-            {summary.activeProjects === 1 ? 'project' : 'projects'}
-          </p>
+          {projects && (
+            <p>
+              {summary.inDevelopment} in development · {summary.activeProjects} active{' '}
+              {summary.activeProjects === 1 ? 'project' : 'projects'}
+            </p>
+          )}
           {next && (
             <p>
               Next milestone: <span className="font-medium text-ink">{next.title}</span> ({next.projectName}),{' '}
@@ -254,10 +258,23 @@ function DeveloperCard({ summary }: { summary: DeveloperSummary | null }) {
               </span>
             </p>
           )}
+          {goal && (
+            <p>
+              Learning:{' '}
+              <Link
+                to={`/app/developer/learning/${goal.goalId}`}
+                className="font-medium text-ink hover:underline"
+              >
+                {goal.title}
+              </Link>
+              {goal.percentage !== null && <span className="font-mono tabular"> {goal.percentage}%</span>}
+              {goal.nextTopic && <>, next: {goal.nextTopic}</>}
+            </p>
+          )}
         </>
       }
-      to="/app/developer/projects"
-      cta="Open projects"
+      to={projects ? '/app/developer/projects' : '/app/developer/learning'}
+      cta={projects ? 'Open projects' : 'Open learning'}
     />
   );
 }

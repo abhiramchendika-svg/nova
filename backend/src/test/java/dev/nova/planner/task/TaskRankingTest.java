@@ -19,7 +19,7 @@ class TaskRankingTest {
     private static Task task(String title, TaskPriority priority, LocalTime start, Instant dueAt) {
         Task task = new Task(UUID.randomUUID());
         task.edit(
-                title, null, TaskCategory.PERSONAL, priority, TODAY, start, dueAt, null, Recurrence.NONE, null, null, null);
+                title, null, TaskCategory.PERSONAL, priority, TODAY, start, dueAt, null, Recurrence.NONE, null, null, null, null);
         return task;
     }
 

@@ -57,3 +57,41 @@ export const milestoneTitle = z
   .trim()
   .min(1, 'Name the milestone.')
   .max(160, 'Keep it under 160 characters.');
+
+/** The learning goal form. Starter topics: one per line, only when adding a goal. */
+export const goalSchema = z.object({
+  title: z.string().trim().min(1, 'Name what you’re learning.').max(100, 'Keep it under 100 characters.'),
+  status: z.enum(['ACTIVE', 'PAUSED', 'DONE']),
+  description: z.string().max(4000, 'Keep the description under 4000 characters.'),
+  targetOn: z.string().refine((v) => v === '' || DATE.test(v), 'Choose a date.'),
+  topics: z
+    .string()
+    .refine((v) => topicLines(v).length <= 100, 'Up to 100 topics.')
+    .refine((v) => topicLines(v).every((t) => t.length <= 160), 'Keep each topic under 160 characters.'),
+});
+
+export type GoalValues = z.infer<typeof goalSchema>;
+
+/** One topic per line; blank lines are ignored. */
+export function topicLines(text: string): string[] {
+  return text
+    .split('\n')
+    .map((t) => t.trim())
+    .filter(Boolean);
+}
+
+export const topicTitle = z
+  .string()
+  .trim()
+  .min(1, 'Name the topic.')
+  .max(160, 'Keep it under 160 characters.');
+
+export const resourceSchema = z.object({
+  title: z.string().trim().min(1, 'Give the link a title.').max(120, 'Keep it under 120 characters.'),
+  url: z
+    .string()
+    .trim()
+    .min(1, 'Paste the web address.')
+    .max(2048, 'That address is too long.')
+    .refine(isWebLink, 'Use a full web address starting with http:// or https://.'),
+});

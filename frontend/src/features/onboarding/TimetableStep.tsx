@@ -8,15 +8,7 @@ import { useSettings } from '@/features/settings/api';
 import { Actions, StepHeader } from './parts';
 
 /** Step 4 (skippable): weekly classes, so Home can show today's classes from day one. */
-export function TimetableStep({
-  onBack,
-  onFinish,
-  finishing,
-}: {
-  onBack: () => void;
-  onFinish: () => void;
-  finishing: boolean;
-}) {
+export function TimetableStep({ onBack, onDone }: { onBack: () => void; onDone: () => void }) {
   const settings = useSettings();
   const semesters = useSemesters();
   const semester = semesters.data?.find((s) => s.current);
@@ -57,8 +49,8 @@ export function TimetableStep({
         </Button>
       </div>
       <Actions onBack={onBack}>
-        <Button variant="primary" onClick={onFinish} loading={finishing}>
-          {entries.length > 0 ? 'Finish' : 'Skip and finish'}
+        <Button variant="primary" onClick={onDone}>
+          {entries.length > 0 ? 'Continue' : 'Skip'}
         </Button>
       </Actions>
       <TimetableEntryDialog

@@ -56,6 +56,15 @@ export interface DeveloperSummary {
     dueOn: string;
     overdue: boolean;
   } | null;
+  activeGoals: number;
+  /** The active goal with the nearest target date (then the newest). */
+  focusGoal: {
+    goalId: string;
+    title: string;
+    percentage: number | null;
+    nextTopic: string | null;
+    targetOn: string | null;
+  } | null;
 }
 
 export interface Dashboard {

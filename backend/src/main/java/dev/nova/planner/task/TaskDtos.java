@@ -24,7 +24,8 @@ public final class TaskDtos {
      * Create, or full replacement on update (status is changed separately). {@code plannedStart} is
      * "HH:mm" on the user's wall clock and needs {@code plannedFor}; a repeating task needs
      * {@code plannedFor} too. Category defaults to ACADEMIC when a course or exam is linked,
-     * else PROJECT when a project is, else PERSONAL.
+     * else PROJECT when a project is, else CODING when a learning goal is,
+     * else PERSONAL.
      */
     public record TaskRequest(
             @NotBlank(message = "Give the task a title.") @Size(max = 160, message = "Keep it under 160 characters.")
@@ -40,7 +41,8 @@ public final class TaskDtos {
             Recurrence recurrence,
             UUID courseId,
             UUID examId,
-            UUID projectId) {}
+            UUID projectId,
+            UUID learningGoalId) {}
 
     /** Several tasks created together, all or none (an exam's revision plan). */
     public record BatchRequest(
@@ -77,6 +79,8 @@ public final class TaskDtos {
             String examTitle,
             UUID projectId,
             String projectName,
+            UUID learningGoalId,
+            String learningGoalTitle,
             boolean overdue,
             Urgency urgency) {}
 

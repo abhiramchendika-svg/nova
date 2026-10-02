@@ -42,11 +42,16 @@ public final class DashboardDtos {
 
     public record NextMilestone(UUID projectId, String projectName, String title, LocalDate dueOn, boolean overdue) {}
 
+    /** The active learning goal to work on next: its progress and next topic. */
+    public record FocusGoal(UUID goalId, String title, Integer percentage, String nextTopic, LocalDate targetOn) {}
+
     /**
      * Projects in development, projects that aren't completed or archived, and the soonest open
-     * milestone with a due date among those. GitHub activity joins in slice 4e.
+     * milestone with a due date among those; active learning goals and the one to focus on (the
+     * nearest target date, then the newest). GitHub activity joins in slice 4e.
      */
-    public record DeveloperSummary(int inDevelopment, int activeProjects, NextMilestone nextMilestone) {}
+    public record DeveloperSummary(
+            int inDevelopment, int activeProjects, NextMilestone nextMilestone, int activeGoals, FocusGoal focusGoal) {}
 
     public record DashboardResponse(
             LocalDate date,

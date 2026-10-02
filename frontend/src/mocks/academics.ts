@@ -11,6 +11,11 @@ import type {
 import type { StoredRecord } from './attendance';
 import type { StoredAssignment, StoredEntry, StoredExam, StoredResource, StoredTopic } from './coursework';
 import type { StoredMilestone, StoredProject } from './developer';
+import type {
+  StoredGoal,
+  StoredResource as StoredLearningResource,
+  StoredTopic as StoredLearningTopic,
+} from './learning';
 import type { StoredTask } from './planner';
 
 /**
@@ -102,6 +107,10 @@ export interface AcademicStore {
   /** Developer projects and their milestones. */
   projects: StoredProject[];
   milestones: StoredMilestone[];
+  /** Learning goals, their topics and links. */
+  learningGoals: StoredGoal[];
+  learningTopics: StoredLearningTopic[];
+  learningResources: StoredLearningResource[];
 }
 
 export function createAcademicStore(): AcademicStore {
@@ -118,6 +127,9 @@ export function createAcademicStore(): AcademicStore {
     tasks: [],
     projects: [],
     milestones: [],
+    learningGoals: [],
+    learningTopics: [],
+    learningResources: [],
   };
 }
 

@@ -5,6 +5,7 @@ import { addDays, daysBetween, formatDay, localParts, todayIn, zonedToInstant } 
 import { summarize, type AcademicStore } from './academics';
 import { courseAttendance } from './attendance';
 import { isOpen, toExamSummary } from './coursework';
+import { toGoal } from './learning';
 
 /** Home's aggregate for the mock API: a port of DashboardService.java, PriorityScorer.java and Streaks.java. */
 
@@ -212,7 +213,31 @@ function developerSummary(store: AcademicStore, today: string): Dashboard['devel
     .filter((m) => m.doneAt === null && m.dueOn !== null && ids.has(m.projectId))
     .sort((a, b) => (a.dueOn! < b.dueOn! ? -1 : a.dueOn! > b.dueOn! ? 1 : 0))[0];
   const project = next && active.find((p) => p.id === next.projectId)!;
+  const goals = store.learningGoals.filter((g) => g.status === 'ACTIVE');
+  const focus = [...goals].sort(
+    (a, b) =>
+      (a.targetOn === b.targetOn
+        ? 0
+        : a.targetOn === null
+          ? 1
+          : b.targetOn === null
+            ? -1
+            : a.targetOn < b.targetOn
+              ? -1
+              : 1) || b.createdAt.localeCompare(a.createdAt),
+  )[0];
+  const focusGoal = focus && toGoal(store, focus);
   return {
+    activeGoals: goals.length,
+    focusGoal: focusGoal
+      ? {
+          goalId: focusGoal.id,
+          title: focusGoal.title,
+          percentage: focusGoal.progress.percentage,
+          nextTopic: focusGoal.nextTopic?.title ?? null,
+          targetOn: focusGoal.targetOn,
+        }
+      : null,
     inDevelopment: active.filter((p) => p.status === 'DEVELOPMENT').length,
     activeProjects: active.length,
     nextMilestone:

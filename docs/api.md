@@ -298,16 +298,16 @@ Legend: 🔓 public · everything else requires a session. **P** marks paginated
 | GET | `/api/v1/tasks/today?date=` | `{ "date", "tasks", "completed" }`: open tasks planned for the date or earlier, or due before it ends (overdue included), in "what now?" order; plus tasks completed that date, newest first. Date defaults to today in the user's timezone. |
 | GET | `/api/v1/tasks/upcoming?days=14` | `{ "from", "to", "days": [{ "date", "tasks" }], "unscheduled" }`: open tasks after today, up to `days` (1–62, else `400` on `days`) |
 | GET | `/api/v1/tasks/completed` **P** | Done tasks, most recently completed first |
-| GET | `/api/v1/tasks` **P** | Filters: `category`, `status` (repeatable), `courseId`, `examId`, `projectId`; `sort=plannedFor\|dueAt\|createdAt[,asc\|desc]` (default newest first; anything else `400` on `sort`) |
-| POST | `/api/v1/tasks` | Create → `201`: `{ "title", "description?", "category?", "priority?", "plannedFor?", "plannedStart?", "dueAt?", "estimatedMinutes?", "recurrence?", "courseId?", "examId?", "projectId?" }` |
-| POST | `/api/v1/tasks/batch` | `{ "tasks": [ …1–30 task bodies… ] }` → `201 { "tasks": [...] }`. All or nothing; a problem with one is reported on `tasks[i].field` (e.g. `tasks[1].title`). Used by an exam's "Plan my revision". |
+| GET | `/api/v1/tasks` **P** | Filters: `category`, `status` (repeatable), `courseId`, `examId`, `projectId`, `learningGoalId`; `sort=plannedFor\|dueAt\|createdAt[,asc\|desc]` (default newest first; anything else `400` on `sort`) |
+| POST | `/api/v1/tasks` | Create → `201`: `{ "title", "description?", "category?", "priority?", "plannedFor?", "plannedStart?", "dueAt?", "estimatedMinutes?", "recurrence?", "courseId?", "examId?", "projectId?", "learningGoalId?" }` |
+| POST | `/api/v1/tasks/batch` | `{ "tasks": [ …1–30 task bodies… ] }` → `201 { "tasks": [...] }`. All or nothing; a problem with one is reported on `tasks[i].field` (e.g. `tasks[1].title`). Used by an exam's "Plan my revision" and a learning goal's "Plan my learning". |
 | GET / PUT / DELETE | `/api/v1/tasks/{id}` | Read / full replace (same body, status excluded) / delete → `204`. `DELETE ?series=true` also deletes the open repeats planned on or after this one. |
 | PATCH | `/api/v1/tasks/{id}/status` | `{ "status": "TODO" \| "IN_PROGRESS" \| "DONE" }` → `{ "task", "nextInstance" }` |
 
-- Task: `{ "id", "title", "description", "category", "priority", "status", "plannedFor", "plannedStart", "dueAt", "estimatedMinutes", "completedAt", "recurrence", "seriesId", "courseId", "courseCode", "courseName", "examId", "examTitle", "projectId", "projectName", "overdue", "urgency" }`.
+- Task: `{ "id", "title", "description", "category", "priority", "status", "plannedFor", "plannedStart", "dueAt", "estimatedMinutes", "completedAt", "recurrence", "seriesId", "courseId", "courseCode", "courseName", "examId", "examTitle", "projectId", "projectName", "learningGoalId", "learningGoalTitle", "overdue", "urgency" }`.
 - **Two kinds of date.** `plannedFor` is the day you mean to do it (optionally at `plannedStart`, `"HH:mm"` on your wall clock); `dueAt` is a hard deadline (an instant). Either, both or neither. With neither, a task is "unscheduled" and appears in `upcoming.unscheduled`.
-- `category`: `ACADEMIC`, `CODING`, `PERSONAL`, `INTERNSHIP`, `OPEN_SOURCE`, `PROJECT`; defaults to `ACADEMIC` when a course or exam is linked, else `PROJECT` when a project is, else `PERSONAL`. `priority`: `LOW`, `MEDIUM` (default), `HIGH`. `estimatedMinutes` 1–1440.
-- **Links:** the course and exam must be yours (`400` on `courseId` / `examId`); an exam from a different course than `courseId` is `400` on `examId`; linking only an exam links its course too. The project must be yours (`400` on `projectId`). Deleting the course, exam or project keeps the task and clears the link.
+- `category`: `ACADEMIC`, `CODING`, `PERSONAL`, `INTERNSHIP`, `OPEN_SOURCE`, `PROJECT`; defaults to `ACADEMIC` when a course or exam is linked, else `PROJECT` when a project is, else `CODING` when a learning goal is, else `PERSONAL`. `priority`: `LOW`, `MEDIUM` (default), `HIGH`. `estimatedMinutes` 1–1440.
+- **Links:** the course and exam must be yours (`400` on `courseId` / `examId`); an exam from a different course than `courseId` is `400` on `examId`; linking only an exam links its course too. The project and learning goal must be yours (`400` on `projectId` / `learningGoalId`). Deleting the course, exam, project or goal keeps the task and clears the link.
 - **Today's order:** overdue → due today → priority (high first) → start time (untimed last) → deadline → oldest. Upcoming groups by `plannedFor`, or by the deadline's local day when there's no plan; within a day by start time, then priority.
 - `overdue` is `true` for an open task past `dueAt`; `urgency` (as for assignments) is null without a deadline or once done. `completedAt` is set exactly while `status` is `DONE`; completing again keeps the first time.
 - **Repeats** (`recurrence`: `NONE`, `DAILY`, `WEEKDAYS`, `WEEKLY`) need `plannedFor` (`400` on `plannedFor`); `plannedStart` needs `plannedFor` too (`400` on `plannedStart`). A repeating task gets a `seriesId`. Completing it creates the next instance (same details; the deadline moves by the same number of days in your timezone) and returns it as `nextInstance`. If that day's instance already exists (e.g. completed, reopened, completed again) `nextInstance` is `null`, and reopening never deletes a generated instance. Two repeats in a series can't share a day (`409`).
@@ -360,7 +360,9 @@ Home also uses `/timetable/day` (today's classes), `/tasks/today` (today's tasks
                  "lowestAttendance": { "courseId": "…", "courseName": "Compilers", "percentage": 72.5, "target": 75 } },
   "planner": { "openToday": 3, "doneToday": 2, "weekDone": 11, "weekPlanned": 15, "streakDays": 4 },
   "developer": { "inDevelopment": 1, "activeProjects": 2,
-                 "nextMilestone": { "projectId": "…", "projectName": "Bus tracker", "title": "Map shows buses", "dueOn": "2026-10-04", "overdue": false } }
+                 "nextMilestone": { "projectId": "…", "projectName": "Bus tracker", "title": "Map shows buses", "dueOn": "2026-10-04", "overdue": false },
+                 "activeGoals": 2,
+                 "focusGoal": { "goalId": "…", "title": "Spring Boot", "percentage": 40, "nextTopic": "Spring Security", "targetOn": "2026-11-15" } }
 }
 ```
 
@@ -372,7 +374,7 @@ Home also uses `/timetable/day` (today's classes), `/tasks/today` (today's tasks
   - An exam within 7 days with prep under 50%: 30, plus 4 per day closer than 7, plus 1 per 5 points of prep missing below 50%.
   - Priority adds 15 (high), 8 (medium) or 0 (low).
 - **`academics`** is `null` without a current semester. `gpa`/`cgpa` are `null` until there are grades. `lowestAttendance` is the current semester's course with the lowest percentage among those with classes held.
-- **`developer`**: `activeProjects` counts projects that are an idea, planning or in development; `nextMilestone` is the soonest open milestone with a due date among them (`null` if none). GitHub activity joins in 4e.
+- **`developer`**: `activeProjects` counts projects that are an idea, planning or in development; `nextMilestone` is the soonest open milestone with a due date among them (`null` if none). `activeGoals` counts `ACTIVE` learning goals; `focusGoal` is the active goal with the nearest target date (undated goals after dated ones, then the newest), with its progress `percentage` (`null` without topics) and `nextTopic` (`null` when none is open), or `null` with no active goal. GitHub activity joins in 4e.
 - **`planner`**: `openToday`/`doneToday` match `/tasks/today`. `weekPlanned` counts tasks planned in the current week (by the user's week start), and `weekDone` counts how many of those are done. `streakDays` = consecutive days (ending today, or yesterday if nothing is finished yet today) with at least one completed task, looking back up to 60 days; it is `null` until the streak reaches 3.
 
 ### 2.12 Projects, learning, hackathons, internships (Phase 4)
@@ -385,9 +387,13 @@ Home also uses `/timetable/day` (today's classes), `/tasks/today` (today's tasks
 | PUT | `/api/v1/projects/{id}/milestones/{mid}` | Replace title and due date (`null` clears it) → the project |
 | PATCH | `/api/v1/projects/{id}/milestones/{mid}` | `{ "done"?, "position"? }` (at least one); `position` moves it and renumbers the rest → the project |
 | DELETE | `/api/v1/projects/{id}/milestones/{mid}` | → the project, renumbered |
-| GET/POST | `/api/v1/learning-goals` | Each with `progress: { done, total, pct }` |
-| GET/PUT/DELETE | `/api/v1/learning-goals/{id}` | |
-| POST/PATCH/DELETE | `/api/v1/learning-goals/{id}/topics[/{tid}]` | Reorder with `{ "position" }` |
+| GET / POST | `/api/v1/learning-goals` | List, newest first (`?status=` may repeat) / create → `201` (with optional starter `topics`) |
+| GET / PUT / DELETE | `/api/v1/learning-goals/{id}` | Read / full replace (`topics` ignored) / delete → `204` (topics and links go too; study tasks stay and lose the link) |
+| POST | `/api/v1/learning-goals/{id}/topics` | `{ "title" }` → `201` with the whole goal |
+| PATCH | `/api/v1/learning-goals/{id}/topics/{tid}` | `{ "done"?, "title"?, "position"? }` (at least one) → the goal |
+| DELETE | `/api/v1/learning-goals/{id}/topics/{tid}` | → the goal, renumbered |
+| POST | `/api/v1/learning-goals/{id}/resources` | `{ "title", "url" }` → `201` with the whole goal |
+| PUT / DELETE | `/api/v1/learning-goals/{id}/resources/{rid}` | Replace / remove a link → the goal |
 | GET/POST | `/api/v1/hackathons` | `?status=` |
 | GET/PUT/DELETE | `/api/v1/hackathons/{id}` | `result` is free text entered by the user and never inferred |
 | GET/POST | `/api/v1/internships` **P** | `?status=` |
@@ -403,6 +409,15 @@ Home also uses `/timetable/day` (today's classes), `/tasks/today` (today's tasks
 - `techStack`: trimmed, blanks dropped, case-insensitive duplicates removed (first spelling kept), up to 15 of up to 30 characters (`400` on `techStack`). Links must be full `http(s)://` addresses with a host (`400` on `repoUrl` / `demoUrl`); empty means none. `targetOn` can't be before `startedOn` (`400` on `targetOn`).
 - Milestones are kept in a dense 0…n−1 order, like exam topics. Up to 100 projects per user and 100 milestones per project (`422`). Another user's project or milestone is `404`.
 - Tasks link to a project with `projectId` (§2.9). Open milestones with a due date appear on the calendar (§2.10) and Home (§2.11).
+
+**Learning goals (Phase 4b).** Body: `{ "title", "description?", "status?", "targetOn?", "topics?": [..] }`; `topics` (up to 100, each 1–160 characters, `400` on `topics[i]`) is read on create only.
+
+- Goal: `{ "id", "title", "description", "status", "targetOn", "progress": { "done", "total", "percentage" }, "nextTopic", "openTasks", "topics": [...], "resources": [...], "createdAt" }`; topic: `{ "id", "title", "position", "done", "doneAt" }`; resource: `{ "id", "title", "url" }`.
+- `status`: `ACTIVE` (default), `PAUSED`, `DONE`. Title 1–100 characters, description up to 4000.
+- **Progress comes only from topics**, as for projects (whole percentage rounded half-up, `null` without topics). `nextTopic` is the first open topic in order; `openTasks` counts linked tasks that aren't done.
+- Topics keep a dense 0…n−1 order; a `position` outside it is `400` on `position`. Resource links must be full `http(s)://` addresses (`400` on `url`), titles 1–120 characters.
+- Up to 50 goals per user, 100 topics and 20 links per goal (`422`). Another user's goal, topic or link is `404`.
+- **Study tasks** link with `learningGoalId` (§2.9). "Plan my learning" is the client-side revision planner (as for exams): one task per unfinished topic without a task yet, spread from today to the target date (or 14 days without one), saved through `POST /tasks/batch` with category `CODING`.
 
 ### 2.13 GitHub (Phase 4)
 
@@ -449,7 +464,7 @@ Each rule has a minimum-data guard. For example, "task completion rate" needs �
 
 Onboarding reuses the endpoints above (settings, grading schemes, semesters, courses, timetable, learning goals, GitHub account) and ends with `POST /settings/onboarding/complete`. There's no special onboarding API, which means no duplicated logic.
 
-- **Phase 2 flow** (`/app/welcome`): You (time zone, university, attendance target → `PUT /settings`) → Semester (`POST /semesters`) → Courses (`POST /courses`, one per row) → Timetable (`POST /timetable`, skippable) → `POST /settings/onboarding/complete` → Home. "Skip setup" calls the same completion endpoint. Learning-goal and GitHub steps join in Phase 4.
+- **Phase 2 flow** (`/app/welcome`): You (time zone, university, attendance target → `PUT /settings`) → Semester (`POST /semesters`) → Courses (`POST /courses`, one per row) → Timetable (`POST /timetable`, skippable) → Goals (one learning goal with starter topics, `POST /learning-goals`, skippable; Phase 4b) → `POST /settings/onboarding/complete` → Home. "Skip setup" calls the same completion endpoint. A GitHub step joins in 4e.
 - Home sends an account whose `onboardingCompleted` is `false` (from `/auth/me`) to `/app/welcome`; deep links into the app are never redirected.
 - Resuming uses saved data, not a stored step: no current semester → the first step (pre-filled); a semester without courses → Courses; otherwise → Timetable.
 - Migration V7 marks accounts that already had a semester before onboarding shipped as onboarded, so existing users never see it.

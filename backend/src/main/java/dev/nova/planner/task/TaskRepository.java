@@ -68,6 +68,11 @@ public interface TaskRepository extends JpaRepository<Task, UUID>, JpaSpecificat
     List<Task> openInSeriesFrom(
             @Param("userId") UUID userId, @Param("seriesId") UUID seriesId, @Param("from") LocalDate from);
 
+    /** [learningGoalId, count] of tasks that aren't done, per goal (the goal list). */
+    @Query("select t.learningGoalId, count(t) from Task t where t.userId = :userId and t.learningGoalId in :goalIds"
+            + " and t.status <> dev.nova.planner.task.TaskStatus.DONE group by t.learningGoalId")
+    List<Object[]> countOpenByLearningGoal(@Param("userId") UUID userId, @Param("goalIds") Collection<UUID> goalIds);
+
     /** [projectId, count] of tasks that aren't done, per project (the project list). */
     @Query("select t.projectId, count(t) from Task t where t.userId = :userId and t.projectId in :projectIds"
             + " and t.status <> dev.nova.planner.task.TaskStatus.DONE group by t.projectId")

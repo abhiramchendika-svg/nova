@@ -1,5 +1,5 @@
 import type { BadgeTone } from '@/components/ui/Badge';
-import type { ProjectStatus } from './types';
+import type { GoalStatus, ProjectStatus } from './types';
 
 export const STATUS_LABEL: Record<ProjectStatus, string> = {
   IDEA: 'Idea',
@@ -27,3 +27,13 @@ export const STATUS_TONE: Record<ProjectStatus, BadgeTone> = {
 export function shortUrl(url: string): string {
   return url.replace(/^https?:\/\//i, '').replace(/\/$/, '');
 }
+
+// ───────────── Learning goals ─────────────
+
+export const GOAL_STATUS_LABEL: Record<GoalStatus, string> = {
+  ACTIVE: 'Active',
+  PAUSED: 'Paused',
+  DONE: 'Done',
+};
+
+export const GOAL_STATUSES: GoalStatus[] = ['ACTIVE', 'PAUSED', 'DONE'];

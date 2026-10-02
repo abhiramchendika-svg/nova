@@ -1,8 +1,8 @@
 import { z } from 'zod';
 
-/** The four Phase 2 onboarding steps, in order (architecture.md J1). */
-export const STEPS = ['You', 'Semester', 'Courses', 'Timetable'] as const;
-export type StepIndex = 0 | 1 | 2 | 3;
+/** The onboarding steps, in order (architecture.md J1); Goals was added with learning goals (Phase 4b). */
+export const STEPS = ['You', 'Semester', 'Courses', 'Timetable', 'Goals'] as const;
+export type StepIndex = 0 | 1 | 2 | 3 | 4;
 
 /**
  * Where to resume, from what's actually saved: no current semester → start at "You" (shown

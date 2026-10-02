@@ -36,6 +36,25 @@ function storeWithSemester(): AcademicStore {
   return store;
 }
 
+function withCourse(store: AcademicStore): AcademicStore {
+  store.courses.push({
+    id: 'c1',
+    semesterId: 'sem-1',
+    code: 'CSE 201',
+    name: 'Database Systems',
+    credits: 4,
+    faculty: null,
+    colorHue: null,
+    notes: null,
+    attendanceTarget: null,
+    gradeDefinitionId: null,
+    gradeKind: null,
+    baselineConducted: 0,
+    baselineAttended: 0,
+  });
+  return store;
+}
+
 describe('Onboarding', () => {
   it('sends a new account from Home to setup', async () => {
     setup();
@@ -45,7 +64,7 @@ describe('Onboarding', () => {
     expect(currentStep()).toHaveTextContent('You');
   });
 
-  it('walks through all four steps and lands on Home', async () => {
+  it('walks through all five steps and lands on Home', async () => {
     const db = setup();
     const { user, router } = renderRoute('/app/welcome');
 
@@ -90,10 +109,43 @@ describe('Onboarding', () => {
       'Mon09:00–09:50CSE 201Lecture',
     );
 
-    await user.click(screen.getByRole('button', { name: 'Finish' }));
+    await user.click(screen.getByRole('button', { name: 'Continue' }));
+
+    // 5. Goals: topics without a name are caught; then the goal is saved with its topics
+    await screen.findByRole('heading', { level: 1, name: 'Something you’re learning' });
+    expect(currentStep()).toHaveTextContent('Goals');
+    expect(screen.getByRole('button', { name: 'Skip and finish' })).toBeInTheDocument();
+    await user.type(
+      screen.getByLabelText('Topics (optional)'),
+      'Dependency injection{Enter}{Enter}Spring Data JPA',
+    );
+    await user.click(screen.getByRole('button', { name: 'Save and finish' }));
+    expect(await screen.findByText('Name what you’re learning.')).toBeInTheDocument();
+    expect(onboarded(db)).toBe(false);
+    await user.type(screen.getByLabelText('What you’re learning'), 'Spring Boot');
+    await user.click(screen.getByRole('button', { name: 'Save and finish' }));
+
     await waitFor(() => expect(router.state.location.pathname).toBe('/app'));
     expect(await screen.findByRole('heading', { level: 1, name: /Abhi\./ })).toBeInTheDocument();
     expect(onboarded(db)).toBe(true);
+    expect(store.learningGoals.map((g) => g.title)).toEqual(['Spring Boot']);
+    expect(store.learningTopics.sort((a, b) => a.position - b.position).map((t) => t.title)).toEqual([
+      'Dependency injection',
+      'Spring Data JPA',
+    ]);
+  });
+
+  it('lets the goals step be skipped', async () => {
+    const store = withCourse(storeWithSemester());
+    const db = setup(store);
+    const { user, router } = renderRoute('/app/welcome');
+    await screen.findByRole('heading', { level: 1, name: 'Your weekly classes' });
+    await user.click(screen.getByRole('button', { name: 'Skip' }));
+    await screen.findByRole('heading', { level: 1, name: 'Something you’re learning' });
+    await user.click(screen.getByRole('button', { name: 'Skip and finish' }));
+    await waitFor(() => expect(router.state.location.pathname).toBe('/app'));
+    expect(onboarded(db)).toBe(true);
+    expect(store.learningGoals).toEqual([]);
   });
 
   it('can be skipped, and then stays out of the way', async () => {
@@ -126,26 +178,10 @@ describe('Onboarding', () => {
   });
 
   it('resumes at the timetable when courses exist, listing them', async () => {
-    const store = storeWithSemester();
-    store.courses.push({
-      id: 'c1',
-      semesterId: 'sem-1',
-      code: 'CSE 201',
-      name: 'Database Systems',
-      credits: 4,
-      faculty: null,
-      colorHue: null,
-      notes: null,
-      attendanceTarget: null,
-      gradeDefinitionId: null,
-      gradeKind: null,
-      baselineConducted: 0,
-      baselineAttended: 0,
-    });
-    setup(store);
+    setup(withCourse(storeWithSemester()));
     const { user } = renderRoute('/app/welcome');
     expect(await screen.findByRole('heading', { level: 1, name: 'Your weekly classes' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Skip and finish' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Skip' })).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Back' }));
     expect(await screen.findByRole('list', { name: 'Courses already added' })).toHaveTextContent(

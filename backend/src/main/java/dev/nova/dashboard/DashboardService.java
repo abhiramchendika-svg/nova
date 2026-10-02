@@ -18,9 +18,13 @@ import dev.nova.dashboard.DashboardDtos.AttentionItem;
 import dev.nova.dashboard.DashboardDtos.AttentionKind;
 import dev.nova.dashboard.DashboardDtos.DashboardResponse;
 import dev.nova.dashboard.DashboardDtos.DeveloperSummary;
+import dev.nova.dashboard.DashboardDtos.FocusGoal;
 import dev.nova.dashboard.DashboardDtos.NextMilestone;
 import dev.nova.dashboard.DashboardDtos.LowestAttendance;
 import dev.nova.dashboard.DashboardDtos.PlannerSummary;
+import dev.nova.developer.learning.GoalStatus;
+import dev.nova.developer.learning.LearningDtos.GoalResponse;
+import dev.nova.developer.learning.LearningService;
 import dev.nova.developer.project.Milestone;
 import dev.nova.developer.project.MilestoneRepository;
 import dev.nova.developer.project.Project;
@@ -86,6 +90,7 @@ public class DashboardService {
     private final UserSettingsRepository settings;
     private final ProjectRepository projects;
     private final MilestoneRepository milestones;
+    private final LearningService learning;
     private final UserClock userClock;
 
     public DashboardService(
@@ -99,6 +104,7 @@ public class DashboardService {
             UserSettingsRepository settings,
             ProjectRepository projects,
             MilestoneRepository milestones,
+            LearningService learning,
             UserClock userClock) {
         this.assignments = assignments;
         this.tasks = tasks;
@@ -110,6 +116,7 @@ public class DashboardService {
         this.settings = settings;
         this.projects = projects;
         this.milestones = milestones;
+        this.learning = learning;
         this.userClock = userClock;
     }
 
@@ -171,7 +178,19 @@ public class DashboardService {
                 .findFirst()
                 .map(m -> nextMilestone(m, active.get(m.getProjectId()), today))
                 .orElse(null);
-        return new DeveloperSummary(inDevelopment, active.size(), next);
+        List<GoalResponse> goals = learning.list(userId, Set.of(GoalStatus.ACTIVE));
+        FocusGoal focus = goals.stream()
+                .min(Comparator.comparing(
+                                GoalResponse::targetOn, Comparator.nullsLast(Comparator.<LocalDate>naturalOrder()))
+                        .thenComparing(GoalResponse::createdAt, Comparator.reverseOrder()))
+                .map(g -> new FocusGoal(
+                        g.id(),
+                        g.title(),
+                        g.progress().percentage(),
+                        g.nextTopic() == null ? null : g.nextTopic().title(),
+                        g.targetOn()))
+                .orElse(null);
+        return new DeveloperSummary(inDevelopment, active.size(), next, goals.size(), focus);
     }
 
     private static NextMilestone nextMilestone(Milestone m, Project project, LocalDate today) {

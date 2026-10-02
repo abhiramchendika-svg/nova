@@ -11,13 +11,14 @@ import { useCompleteOnboarding, useSettings } from '@/features/settings/api';
 import { cn } from '@/lib/cn';
 import { errorMessage } from '@/services/http';
 import { CoursesStep } from './CoursesStep';
+import { GoalsStep } from './GoalsStep';
 import { SemesterStep } from './SemesterStep';
 import { resumeStep, STEPS, type StepIndex } from './steps';
 import { TimetableStep } from './TimetableStep';
 import { YouStep } from './YouStep';
 
 /**
- * First-run setup (architecture.md J1): You → Semester → Courses → Timetable → Home. Every step
+ * First-run setup (architecture.md J1): You → Semester → Courses → Timetable → Goals → Home. Every step
  * saves through the normal APIs as you continue, so leaving halfway loses nothing, and coming
  * back resumes from what's saved. "Skip setup" (or finishing) marks onboarding done.
  */
@@ -57,7 +58,7 @@ function Flow({ firstName, start }: { firstName: string; start: StepIndex }) {
   const navigate = useNavigate();
   const complete = useCompleteOnboarding();
   const [step, setStep] = useState<StepIndex>(start);
-  const next = () => setStep((s) => Math.min(3, s + 1) as StepIndex);
+  const next = () => setStep((s) => Math.min(STEPS.length - 1, s + 1) as StepIndex);
   const back = () => setStep((s) => Math.max(0, s - 1) as StepIndex);
   const finish = () => complete.mutate(undefined, { onSuccess: () => navigate('/app', { replace: true }) });
 
@@ -73,7 +74,7 @@ function Flow({ firstName, start }: { firstName: string; start: StepIndex }) {
 
       <main className="mx-auto grid max-w-2xl gap-6 px-4 py-6">
         <nav aria-label="Setup steps">
-          <ol className="grid grid-cols-4 gap-2">
+          <ol className="grid grid-cols-5 gap-2">
             {STEPS.map((name, i) => (
               <li
                 key={name}
@@ -89,7 +90,9 @@ function Flow({ firstName, start }: { firstName: string; start: StepIndex }) {
                 />
                 <span className="flex items-center gap-1">
                   {i < step && <Check size={12} aria-hidden />}
-                  <span className="sr-only">Step {i + 1} of 4: </span>
+                  <span className="sr-only">
+                    Step {i + 1} of {STEPS.length}:{' '}
+                  </span>
                   {name}
                   {i < step && <span className="sr-only"> (done)</span>}
                 </span>
@@ -104,7 +107,8 @@ function Flow({ firstName, start }: { firstName: string; start: StepIndex }) {
           {step === 0 && <YouStep firstName={firstName} onDone={next} />}
           {step === 1 && <SemesterStep onBack={back} onDone={next} />}
           {step === 2 && <CoursesStep onBack={back} onDone={next} />}
-          {step === 3 && <TimetableStep onBack={back} onFinish={finish} finishing={complete.isPending} />}
+          {step === 3 && <TimetableStep onBack={back} onDone={next} />}
+          {step === 4 && <GoalsStep onBack={back} onFinish={finish} finishing={complete.isPending} />}
         </section>
       </main>
     </div>
