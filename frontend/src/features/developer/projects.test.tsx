@@ -211,7 +211,8 @@ describe('Project page', () => {
 describe('Projects elsewhere', () => {
   it('puts dated milestones on the calendar and Home', async () => {
     setup(portfolio);
-    renderRoute(`/app/planner/calendar?date=${TODAY}`);
+    // Open the week that holds the milestone (due in 2 days): on a Saturday or Sunday that's next week
+    renderRoute(`/app/planner/calendar?date=${addDays(TODAY, 2)}`);
 
     const link = await screen.findByRole('link', { name: /^Milestone: Map shows buses, Bus tracker/ });
     expect(link).toHaveAttribute('href', '/app/developer/projects/p-dev');
