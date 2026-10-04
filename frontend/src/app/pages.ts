@@ -36,6 +36,7 @@ export const pageLoaders = {
   GitHubPage: () => import('@/features/developer/GitHubPage').then((m) => ({ default: m.GitHubPage })),
   CalendarPage: () => import('@/features/planner/CalendarPage').then((m) => ({ default: m.CalendarPage })),
   TasksPage: () => import('@/features/planner/TasksPage').then((m) => ({ default: m.TasksPage })),
+  InsightsPage: () => import('@/features/insights/InsightsPage').then((m) => ({ default: m.InsightsPage })),
   NotificationsPage: () =>
     import('@/features/notifications/NotificationsPage').then((m) => ({ default: m.NotificationsPage })),
   SettingsPage: () => import('@/features/settings/SettingsPage').then((m) => ({ default: m.SettingsPage })),

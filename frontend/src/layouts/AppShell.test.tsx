@@ -15,11 +15,11 @@ describe('app shell', () => {
     expect(within(nav).getByRole('link', { name: 'Home' })).not.toHaveAttribute('aria-current');
   });
 
-  it('shows an honest placeholder for sections from later phases', async () => {
+  it('shows an honest placeholder for pages that don’t exist yet inside a section', async () => {
     installMockApi(createMockDb({ loggedInAs: TEST_USER }));
-    renderRoute('/app/insights');
-    expect(await screen.findByRole('heading', { name: 'Insights' })).toBeInTheDocument();
-    expect(screen.getByText(/planned for Phase 5/)).toBeInTheDocument();
+    renderRoute('/app/settings/profile');
+    expect(await screen.findByRole('heading', { name: 'Settings' })).toBeInTheDocument();
+    expect(screen.getByText(/planned for Phase 2/)).toBeInTheDocument();
   });
 
   it('opens "More" on mobile with every section', async () => {

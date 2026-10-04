@@ -19,6 +19,16 @@ public interface AttendanceRecordRepository extends JpaRepository<AttendanceReco
             + " where r.userId = :userId and r.courseId in :courseIds group by r.courseId, r.status")
     List<StatusCount> countByStatus(@Param("userId") UUID userId, @Param("courseIds") Collection<UUID> courseIds);
 
+    /** Like {@link #countByStatus}, counting only classes held before a day (insights: attendance then vs now). */
+    @Query("select new dev.nova.academics.attendance.StatusCount("
+            + "r.courseId, r.status, count(r)) from AttendanceRecord r"
+            + " where r.userId = :userId and r.courseId in :courseIds and r.heldOn < :before"
+            + " group by r.courseId, r.status")
+    List<StatusCount> countByStatusBefore(
+            @Param("userId") UUID userId,
+            @Param("courseIds") Collection<UUID> courseIds,
+            @Param("before") LocalDate before);
+
     Optional<AttendanceRecord> findByIdAndUserId(UUID id, UUID userId);
 
     /** One day's marks for some courses (the timetable's day view). */

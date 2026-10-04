@@ -464,7 +464,7 @@ Home also uses `/timetable/day` (today's classes), `/tasks/today` (today's tasks
 
 | Method | Path | Purpose |
 |---|---|---|
-| GET | `/api/v1/insights?window=WEEK` | A list of insights (see below). Only rules whose data exists produce output. |
+| GET | `/api/v1/insights?window=WEEK` | Phase 5c. `WEEK` (from your week start) or `MONTH` (from the 1st), always to today in your timezone; anything else → `400` on `window`. `{ "window", "from", "to", "insights", "quiet", "charts" }` (see below). Computed on request, never stored. |
 | GET | `/api/v1/notifications` **P** | Phase 5b. Newest first; `?unread=true` for unread only. Items: `{ "id", "type", "title", "body", "link", "read", "createdAt", "readAt" }` |
 | GET | `/api/v1/notifications/unread-count` | `{ "count" }`. The bell badge (a partial-index count, polled every 60 s while the tab is visible) |
 | PATCH | `/api/v1/notifications/{id}` | `{ "read": true }` or `false` → the notification. Someone else's id → `404` |
@@ -495,16 +495,42 @@ The **⌘K palette** (Ctrl+K on Windows/Linux, or the Search button in the top b
 
 ```json
 {
-  "id": "DEADLINE_CLUSTER",
-  "severity": "INFO",
-  "text": "3 of your 5 deadlines next week fall on Wednesday.",
-  "evidence": { "window": "2026-09-28..2026-10-04", "counts": { "2026-09-30": 3, "2026-10-02": 2 } },
-  "sources": [ { "kind": "assignment", "id": "…" }, { "kind": "assignment", "id": "…" } ],
-  "link": "/app/planner/calendar?view=week&date=2026-09-28"
+  "id": "DEADLINE_CLUSTER:2026-10-09",
+  "rule": "DEADLINE_CLUSTER",
+  "domain": "planner",
+  "severity": "WARN",
+  "text": "Friday 9 Oct holds 3 of your 4 deadlines in the next 7 days.",
+  "evidence": {
+    "from": "2026-10-07", "to": "2026-10-13",
+    "facts": [ { "label": "Fri 9 Oct", "value": "3" }, { "label": "Mon 12 Oct", "value": "1" } ],
+    "formula": "open assignments and tasks due on each day, in your timezone; …",
+    "note": null
+  },
+  "sources": [ { "kind": "task", "id": "…", "label": "Lab report", "link": "/app/planner/tasks?task=…" } ],
+  "moreSources": 0,
+  "link": "/app/planner/calendar?date=2026-10-09"
 }
 ```
 
-Each rule has a minimum-data guard. For example, "task completion rate" needs ≥ 5 planned tasks in the window, and "GitHub activity increased" needs both months to have data. Otherwise the rule stays silent.
+`severity` is `WARN`, `INFO` or `GOOD`; insights are ranked warnings first, then by rule. `sources` lists at most 10 records (`moreSources` counts the rest). `quiet` lists rules that need more data, each as `{ "rule", "title", "reason" }` with the minimum and what you have ("Needs 5 tasks planned for days this week; you have 2."); a rule with enough data but nothing worth saying is simply absent. `charts` has `tasksPerDay` (each day of the window: `{ "date", "planned", "done" }`) and `deadlinesPerDay` (the next 14 days: `{ "date", "deadlines", "exams" }`).
+
+**Rules (5c).** All are pure functions in `InsightRules.java`, unit-tested with fixed dates.
+
+| Rule | Says | Minimum data |
+|---|---|---|
+| `TASK_COMPLETION` | "You completed 4 of 5 tasks planned this week (80%)." done ÷ planned, tasks planned for a day in the window up to today. GOOD ≥ 80%, WARN < 50% | 5 planned tasks |
+| `CARRIED_OVER` | Open tasks planned for an earlier day in the window. WARN from 5 | 2 such tasks (otherwise silent) |
+| `DEADLINE_CLUSTER` | The busiest day for open assignment and task deadlines in the next 7 days, when it holds ≥ 2 and ≥ 40% of them | 3 deadlines |
+| `ATTENDANCE_DROP` | A current-semester course whose attendance fell ≥ 3 points since the window began (baseline + records before the first day vs now). WARN if now at risk or below. At most 3 | 2 classes marked in the window |
+| `EXAM_PREP_GAP` | Exams in the next 14 days with topics listed and under half ticked off | — |
+| `ON_TIME_SUBMISSIONS` | Of the assignments due in the window and handed in, how many by the deadline (submitted, or completed, at or before it) | 3 handed in |
+| `GITHUB_TREND` | Public contributions so far this month vs the same days of last month, from **saved** GitHub data only; labelled with when it was fetched | the contribution calendar, contributions in both periods, ≥ 5 together |
+| `STALLED_PROJECT` | Projects in development with open milestones and none finished in 14 days (or since added). At most 3 | — |
+| `INTERNSHIP_RESPONSE` | Response rate (`responded / applied`) of applications sent this month vs last, with a note that newer ones have had less time | 3 applications sent in each month |
+| `BUSY_DAY_CLASH` | A day in the next 14 with ≥ 2 deadlines and an exam on it or a hackathon running through it. At most 2 | — |
+| `EXAM_STUDY_TIME` | Exams in the next 10 days with topics to go: study tasks linked to the exam and planned from today to the exam day (WARN when none) | — |
+
+Home shows the two highest-ranked insights for this week in a "This week" panel.
 
 ### 2.15 Onboarding (Phase 2+)
 

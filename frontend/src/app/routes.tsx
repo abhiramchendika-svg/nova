@@ -30,6 +30,7 @@ const HackathonPage = lazy(pageLoaders.HackathonPage);
 const InternshipsPage = lazy(pageLoaders.InternshipsPage);
 const InternshipPage = lazy(pageLoaders.InternshipPage);
 const GitHubPage = lazy(pageLoaders.GitHubPage);
+const InsightsPage = lazy(pageLoaders.InsightsPage);
 const NotificationsPage = lazy(pageLoaders.NotificationsPage);
 const SettingsPage = lazy(pageLoaders.SettingsPage);
 const OnboardingPage = lazy(pageLoaders.OnboardingPage);
@@ -39,7 +40,6 @@ const SectionPlaceholder = lazy(pageLoaders.SectionPlaceholder);
 const PLANNED: { path: string; phase: string }[] = [
   { path: 'academics/*', phase: 'Phase 2' },
   { path: 'developer/*', phase: 'Phase 4' },
-  { path: 'insights', phase: 'Phase 5' },
   { path: 'settings/*', phase: 'Phase 2' },
 ];
 
@@ -83,6 +83,7 @@ export const routes: RouteObject[] = [
       { path: 'developer/internships', element: <InternshipsPage /> },
       { path: 'developer/internships/:internshipId', element: <InternshipPage /> },
       { path: 'developer/github', element: <GitHubPage /> },
+      { path: 'insights', element: <InsightsPage /> },
       { path: 'notifications', element: <NotificationsPage /> },
       { path: 'settings', element: <SettingsPage /> },
       { path: 'academics/attendance', element: <AttendancePage /> },

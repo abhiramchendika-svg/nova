@@ -129,13 +129,7 @@ public class InternshipService {
         } catch (DateTimeParseException e) {
             throw ApiException.invalidField("month", "Use a month like 2026-09.");
         }
-        Map<UUID, Set<InternshipStatus>> reached = events.findByUserId(userId).stream()
-                .collect(Collectors.groupingBy(
-                        InternshipEvent::getApplicationId,
-                        Collectors.mapping(InternshipEvent::getToStatus, Collectors.toSet())));
-        List<Entry> entries = internships.findByUserId(userId).stream()
-                .map(i -> new Entry(i.getAppliedOn(), i.getStatus(), reached.getOrDefault(i.getId(), Set.of())))
-                .toList();
+        List<Entry> entries = entries(userId);
         InternshipRules.Month m = InternshipRules.month(entries, ym);
         return new AnalyticsResponse(
                 ym.toString(),
@@ -146,6 +140,18 @@ public class InternshipService {
                 m.rejected(),
                 m.responseRate(),
                 InternshipRules.funnel(entries));
+    }
+
+    /** Every application with every status it has reached, as analytics (and insights) see them. */
+    @Transactional(readOnly = true)
+    public List<Entry> entries(UUID userId) {
+        Map<UUID, Set<InternshipStatus>> reached = events.findByUserId(userId).stream()
+                .collect(Collectors.groupingBy(
+                        InternshipEvent::getApplicationId,
+                        Collectors.mapping(InternshipEvent::getToStatus, Collectors.toSet())));
+        return internships.findByUserId(userId).stream()
+                .map(i -> new Entry(i.getAppliedOn(), i.getStatus(), reached.getOrDefault(i.getId(), Set.of())))
+                .toList();
     }
 
     // ───────────── helpers ─────────────

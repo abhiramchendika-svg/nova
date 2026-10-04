@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { Link, Navigate } from 'react-router';
 import { DomainDot, type Domain } from '@/components/ui/DomainDot';
 import { Panel } from '@/components/ui/Panel';
+import { WeekInsights } from '@/features/insights/WeekInsights';
 import { Progress } from '@/components/ui/Progress';
 import { useTimetableDay } from '@/features/academics/api';
 import { useCurrentUser } from '@/features/auth/api';
@@ -90,6 +91,8 @@ export function HomePage() {
       >
         <UpcomingExams />
       </Panel>
+
+      <WeekInsights className="lg:col-span-12" />
     </div>
   );
 }

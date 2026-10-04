@@ -205,7 +205,7 @@ All interactive primitives wrap Radix (Dialog, Popover, DropdownMenu, Tabs, Tool
 | **Notification panel** | Popover from the bell; unread dot; "Mark all read"; each item links to its source. |
 | **Today strip** | SVG/HTML hybrid. Blocks are positioned by one time scale. The now line uses `--ink` with a 6px dot. Items are focusable; the tooltip shows the full title, time and location. A screen-reader alternative: a visually hidden ordered list of the same items. |
 | **Load bar** | 7 columns: stacked **deadlines** (planner hue), **exams** (academics hue), and a thin **class-hours** baseline. A 2px surface gap separates segments. The day label and count are below; today is outlined. Its `aria-label` summarises: "Wednesday: 3 deadlines, 1 exam". |
-| **Charts (Insights, GitHub)** | Recharts wrappers: 2px lines, bars with 4px rounded data ends anchored at the baseline, a recessive grid (line colour at 60%), axis labels in ink-3, hover crosshair + tooltip, and a legend when there are ≥ 2 series. **One y-axis only.** Every chart has a "View as table" toggle. |
+| **Charts (Insights, GitHub)** | Recharts wrappers: 2px lines, bars with 4px rounded data ends anchored at the baseline, a recessive grid (line colour at 60%), axis labels in ink-3, hover crosshair + tooltip, and a legend when there are ≥ 2 series. **One y-axis only.** Every chart has a "View as table" toggle. Phase 5c's two Insights charts are small hand-rolled SVG bar charts (`features/insights/DayBars.tsx`) to the same spec; Recharts comes in only when a chart needs more than that. |
 
 ## 7. States (every data view implements all four)
 
