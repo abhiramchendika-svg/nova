@@ -247,8 +247,8 @@ function Chip({
   const classes = cn(
     'block w-full overflow-hidden rounded-sm border text-left transition-colors hover:brightness-[0.97]',
     'focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-focus',
-    TONE[item.type],
-    item.done && 'opacity-60',
+    // Done items step back to a neutral tone, but stay readable (WCAG contrast; no opacity)
+    item.done ? 'border-line bg-surface-2 text-ink-2' : TONE[item.type],
     className,
   );
   const label = itemDescription(item);
@@ -540,7 +540,11 @@ function MonthView({
                 >
                   {dayItems.map((item, i) => (
                     <li key={item.key} className={cn(i >= MONTH_VISIBLE && 'md:hidden')}>
-                      <Chip item={item} onOpenTask={onOpenTask} className="px-2 py-1.5 md:px-1.5 md:py-0.5">
+                      <Chip
+                        item={item}
+                        onOpenTask={onOpenTask}
+                        className="min-h-6 px-2 py-1.5 md:px-1.5 md:py-0.5"
+                      >
                         <ChipText item={item} />
                       </Chip>
                     </li>
@@ -550,7 +554,7 @@ function MonthView({
               {hidden > 0 && (
                 <Link
                   to={moreHref(day)}
-                  className="mt-1 hidden text-[11.5px] font-medium text-ink-2 hover:text-ink hover:underline md:block"
+                  className="mt-0.5 hidden min-h-6 items-center text-[11.5px] font-medium text-ink-2 hover:text-ink hover:underline md:flex"
                 >
                   +{hidden} more<span className="sr-only"> on {longDay(day)}, in the week view</span>
                 </Link>

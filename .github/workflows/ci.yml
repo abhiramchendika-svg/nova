@@ -35,7 +35,7 @@ jobs:
         run: sh ./mvnw --batch-mode --no-transfer-progress verify
 
   frontend:
-    name: Frontend (lint, typecheck, test, build)
+    name: Frontend (lint, typecheck, test, build, e2e)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -66,3 +66,19 @@ jobs:
 
       - name: Build
         run: npx vite build
+
+      # Phase 6: accessibility (axe, WCAG 2.2 AA incl. colour contrast) in a real browser, against the
+      # mock API, so no backend is needed here.
+      - name: Install Chromium for Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: End-to-end checks
+        run: npm run e2e
+
+      - name: Keep the Playwright report when they fail
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: frontend/test-results/
+          retention-days: 7

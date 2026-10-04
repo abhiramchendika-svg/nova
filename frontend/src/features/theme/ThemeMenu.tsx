@@ -20,7 +20,7 @@ export function ThemeMenu({ onChange }: { onChange?: (preference: ThemePreferenc
   const TriggerIcon = resolved === 'dark' ? Moon : Sun;
 
   return (
-    <DropdownMenu.Root>
+    <DropdownMenu.Root modal={false}>
       <DropdownMenu.Trigger asChild>
         <IconButton label={`Theme: ${preference}`}>
           <TriggerIcon size={17} aria-hidden />

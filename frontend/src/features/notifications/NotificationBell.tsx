@@ -37,7 +37,8 @@ export function NotificationBell() {
   };
 
   return (
-    <DropdownMenu.Root open={open} onOpenChange={setOpen}>
+    // Non-modal, like the other top-bar menus: the page stays readable to assistive tech while it is open
+    <DropdownMenu.Root open={open} onOpenChange={setOpen} modal={false}>
       <DropdownMenu.Trigger asChild>
         <IconButton label={count > 0 ? `Notifications, ${count} unread` : 'Notifications'}>
           <Bell size={17} aria-hidden />

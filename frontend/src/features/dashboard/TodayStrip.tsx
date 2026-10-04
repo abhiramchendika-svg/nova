@@ -177,8 +177,8 @@ export function TodayStrip({
                 title={`${b.title} · ${b.start}–${b.end}${b.meta ? ` · ${b.meta}` : ''}`}
                 className={cn(
                   'absolute overflow-hidden rounded-sm border px-1.5 py-1',
-                  blockTone[b.domain],
-                  past && 'opacity-55',
+                  // Finished blocks step back to a neutral tone but stay readable (no opacity)
+                  past ? 'border-line bg-surface-2 text-ink-2' : blockTone[b.domain],
                 )}
                 style={{
                   left: `${left}%`,

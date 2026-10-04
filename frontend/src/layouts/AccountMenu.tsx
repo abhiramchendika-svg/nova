@@ -14,7 +14,7 @@ export function AccountMenu() {
   if (!user) return null;
 
   return (
-    <DropdownMenu.Root>
+    <DropdownMenu.Root modal={false}>
       <DropdownMenu.Trigger
         aria-label={`Account: ${user.displayName}`}
         className="grid size-9 place-items-center rounded-full outline-none data-[state=open]:ring-2 data-[state=open]:ring-line-strong"

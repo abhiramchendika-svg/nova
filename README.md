@@ -116,6 +116,8 @@ npm test            # unit + component tests (Vitest, MSW, axe-core)
 npm run lint        # ESLint incl. jsx-a11y
 npm run typecheck   # tsc
 npm run build       # production build
+npm run e2e:install # once: downloads Chromium for Playwright
+npm run e2e         # accessibility checks in a real browser (WCAG 2.2 AA, light + dark, desktop + phone)
 ```
 
 Tests never call a real external API. Backend integration tests start a throwaway PostgreSQL 16 container; frontend tests mock the network with MSW.
@@ -123,6 +125,7 @@ Tests never call a real external API. Backend integration tests start a throwawa
 ## Documentation
 
 - [Architecture & product blueprint](docs/architecture.md)
+- [Accessibility audit](docs/accessibility.md)
 - [Database design](docs/database.md)
 - [REST API design](docs/api.md)
 - [UI design system ("Signal")](docs/ui-design.md)

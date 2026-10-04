@@ -28,13 +28,13 @@
   --developer: #1baf7a;
   --academics-text: #1d5fb2;
   --planner-text: #b34217;
-  --developer-text: #0b7a55;
+  --developer-text: #096c4b;
 
   /* Status (reserved; always paired with an icon + label) */
-  --critical: #c8283c;
+  --critical: #b8233a;
   --warning: #8a5e00;
   --warning-fill: #f2b233;
-  --good: #1f7a3f;
+  --good: #1a6c37;
 
   --focus: #2a78d6;
 
