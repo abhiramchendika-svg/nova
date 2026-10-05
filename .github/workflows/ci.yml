@@ -67,8 +67,8 @@ jobs:
       - name: Build
         run: npx vite build
 
-      # Phase 6: accessibility (axe, WCAG 2.2 AA incl. colour contrast) in a real browser, against the
-      # mock API, so no backend is needed here.
+      # Phase 6: accessibility (axe, WCAG 2.2 AA incl. colour contrast), reflow, keyboard and smoke
+      # flows in a real browser, against the mock API, so no backend is needed here.
       - name: Install Chromium for Playwright
         run: npx playwright install --with-deps chromium
 

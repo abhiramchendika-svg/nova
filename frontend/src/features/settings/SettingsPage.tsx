@@ -35,7 +35,7 @@ const THEMES: { value: Settings['theme']; label: string; Icon: typeof Sun }[] = 
 export function SettingsPage() {
   const settings = useSettings();
   return (
-    <div className="animate-enter mx-auto grid max-w-2xl gap-5 px-4 py-6 lg:px-6">
+    <div className="animate-enter mx-auto grid grid-cols-1 max-w-2xl gap-5 px-4 py-6 lg:px-6">
       <header>
         <h1 className="font-display text-[24px] font-semibold tracking-[-0.01em]">Settings</h1>
         <p className="mt-1 text-ink-2">
@@ -118,7 +118,7 @@ function SettingsForm({ saved }: { saved: Settings }) {
   const formError = update.error && update.error.fieldErrors.length === 0 ? errorMessage(update.error) : null;
 
   return (
-    <form onSubmit={onSubmit} noValidate className="grid gap-5">
+    <form onSubmit={onSubmit} noValidate className="grid grid-cols-1 gap-5">
       {formError && <FormAlert message={formError} />}
 
       <Section title="Time and calendar">
@@ -219,7 +219,10 @@ function SettingsForm({ saved }: { saved: Settings }) {
 function Section({ title, children }: { title: string; children: ReactNode }) {
   const id = `settings-${title.toLowerCase().replace(/[^a-z]+/g, '-')}`;
   return (
-    <section aria-labelledby={id} className="grid gap-4 rounded-md border border-line bg-surface p-5">
+    <section
+      aria-labelledby={id}
+      className="grid grid-cols-1 gap-4 rounded-md border border-line bg-surface p-5"
+    >
       <h2 id={id} className="text-[15px] font-semibold">
         {title}
       </h2>

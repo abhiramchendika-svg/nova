@@ -12,7 +12,7 @@ export function SectionPlaceholder({ phase }: { phase: string }) {
   const { pathname } = useLocation();
   const title = titleForPath(pathname);
   return (
-    <div className="animate-enter mx-auto grid max-w-3xl gap-5 px-4 py-6 lg:px-6">
+    <div className="animate-enter mx-auto grid grid-cols-1 max-w-3xl gap-5 px-4 py-6 lg:px-6">
       <h1 className="font-display text-[24px] font-semibold tracking-[-0.01em]">{title}</h1>
       <EmptyState
         title={`${title} is on the way.`}

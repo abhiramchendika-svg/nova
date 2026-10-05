@@ -1,6 +1,6 @@
 import * as RadixDialog from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
-import type { ReactNode, RefObject } from 'react';
+import { useRef, type ReactNode, type RefObject } from 'react';
 import { IconButton } from './IconButton';
 
 export interface DialogProps {
@@ -11,7 +11,7 @@ export interface DialogProps {
   children: ReactNode;
   /** Footer actions; put the primary action last (right). */
   footer?: ReactNode;
-  /** Where focus goes when it opens (default: the first focusable element). */
+  /** Where focus goes when it opens (default: the first form field, else the first focusable element). */
   initialFocus?: RefObject<HTMLElement | null>;
 }
 
@@ -28,6 +28,10 @@ export function Dialog({
   footer,
   initialFocus,
 }: DialogProps) {
+  const body = useRef<HTMLDivElement>(null);
+  // Our dialogs are opened from state, not a Radix Trigger, so Radix doesn't know where to send focus
+  // back to: remember what had focus when it opened
+  const returnTo = useRef<HTMLElement | null>(null);
   return (
     <RadixDialog.Root open={open} onOpenChange={onOpenChange}>
       <RadixDialog.Portal>
@@ -42,10 +46,24 @@ export function Dialog({
           }
           {...(description ? {} : { 'aria-describedby': undefined })}
           onOpenAutoFocus={(e) => {
-            if (initialFocus?.current) {
+            returnTo.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+            // A form dialog starts in its first field, so you can type straight away; others keep
+            // Radix's default (the first focusable element, the Close button)
+            const target =
+              initialFocus?.current ??
+              body.current?.querySelector<HTMLElement>(
+                'input:not([type=hidden]):not([disabled]), select:not([disabled]), textarea:not([disabled])',
+              );
+            if (target) {
               e.preventDefault();
-              initialFocus.current.focus();
+              target.focus();
             }
+          }}
+          onCloseAutoFocus={(e) => {
+            e.preventDefault();
+            // Back to what opened it; if that's gone (e.g. a menu that closed), to the page content
+            const back = returnTo.current?.isConnected ? returnTo.current : document.getElementById('main');
+            back?.focus();
           }}
         >
           <div className="flex items-start gap-3">
@@ -65,7 +83,7 @@ export function Dialog({
               </IconButton>
             </RadixDialog.Close>
           </div>
-          <div>{children}</div>
+          <div ref={body}>{children}</div>
           {footer && <div className="flex flex-wrap justify-end gap-2">{footer}</div>}
         </RadixDialog.Content>
       </RadixDialog.Portal>

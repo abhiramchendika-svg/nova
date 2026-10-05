@@ -18,7 +18,18 @@ export async function logIn(page: Page): Promise<void> {
   await page.getByLabel('Password', { exact: true }).fill(DEMO.password);
   await page.getByRole('button', { name: 'Log in' }).click();
   await page.waitForURL('**/app');
-  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  // The URL changes before the app shell has loaded (React Router keeps the login page on screen during
+  // the transition, and it has a <main> and an <h1> too), so wait for something only the shell has
+  await expect(page.getByRole('button', { name: /^Account/ })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { level: 1, name: /^Good (morning|afternoon|evening)/ }),
+  ).toBeVisible();
+  await settle(page);
+}
+
+/** Puts focus on the first stop of the page (the skip link), as the first Tab after a fresh load does. */
+export async function focusFirstStop(page: Page): Promise<void> {
+  await page.locator('a[href="#main"]').focus();
 }
 
 /**
@@ -37,6 +48,16 @@ export async function settle(page: Page): Promise<void> {
   await page.waitForFunction(() => document.querySelectorAll('[aria-busy="true"]').length === 0);
   // Let lazy chunks and follow-up queries render
   await page.waitForTimeout(400);
+  // Let enter animations finish: mid-fade, text is see-through and axe would measure a lower contrast
+  // (this made checks flaky on slower machines). Endless ones, like skeleton shimmer, are skipped.
+  await page.evaluate(() =>
+    Promise.all(
+      document
+        .getAnimations()
+        .filter((a) => a.effect?.getTiming().iterations !== Infinity)
+        .map((a) => a.finished.catch(() => undefined)),
+    ),
+  );
 }
 
 /** Every WCAG 2.2 A/AA violation on the page, colour contrast included, as readable lines. */

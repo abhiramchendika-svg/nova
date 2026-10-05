@@ -25,7 +25,7 @@ export function ProjectsPage() {
   const archived = byStatus.get('ARCHIVED') ?? [];
 
   return (
-    <div className="animate-enter mx-auto grid max-w-6xl gap-6 px-4 py-6 lg:px-6">
+    <div className="animate-enter mx-auto grid grid-cols-1 max-w-6xl gap-6 px-4 py-6 lg:px-6">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="font-display text-[24px] font-semibold tracking-[-0.01em]">Projects</h1>
@@ -102,12 +102,12 @@ export function ProjectsPage() {
 function Group({ title, projects }: { title: string; projects: Project[] }) {
   const id = `group-${title.toLowerCase().replace(/\s+/g, '-')}`;
   return (
-    <section aria-labelledby={id} className="grid gap-3">
+    <section aria-labelledby={id} className="grid grid-cols-1 gap-3">
       <h2 id={id} className="flex items-baseline gap-2 text-[15px] font-semibold">
         {title}{' '}
         <span className="font-mono text-[12px] font-normal tabular text-ink-3">{projects.length}</span>
       </h2>
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
         {projects.map((p) => (
           <ProjectCard key={p.id} project={p} />
         ))}

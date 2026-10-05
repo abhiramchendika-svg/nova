@@ -75,7 +75,9 @@ export function InternshipPage() {
 }
 
 function Shell({ children }: { children: ReactNode }) {
-  return <div className="animate-enter mx-auto grid max-w-4xl gap-5 px-4 py-6 lg:px-6">{children}</div>;
+  return (
+    <div className="animate-enter mx-auto grid grid-cols-1 max-w-4xl gap-5 px-4 py-6 lg:px-6">{children}</div>
+  );
 }
 
 function InternshipView({ internship: i }: { internship: Internship }) {

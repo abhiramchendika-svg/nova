@@ -33,7 +33,7 @@ function NotificationList({ unreadOnly }: { unreadOnly: boolean }) {
   const unreadCount = unread.data?.count ?? 0;
 
   return (
-    <div className="animate-enter mx-auto grid max-w-3xl gap-5 px-4 py-6 lg:px-6">
+    <div className="animate-enter mx-auto grid grid-cols-1 max-w-3xl gap-5 px-4 py-6 lg:px-6">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="font-display text-[24px] font-semibold tracking-[-0.01em]">Notifications</h1>

@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
-import { axeViolations, demoIds, goTo, logIn, settle } from './support';
+import { appPaths } from './pages';
+import { axeViolations, goTo, logIn, settle } from './support';
 
 /**
  * Phase 6a: every page and overlay, in light and dark, desktop and phone width, has no WCAG 2.2 A/AA
@@ -22,37 +23,7 @@ for (const theme of ['light', 'dark'] as const) {
 
     test('every page in the app', async ({ page }) => {
       await logIn(page);
-      const ids = await demoIds(page);
-      const paths = [
-        '/app',
-        '/app/academics/courses',
-        `/app/academics/courses/${ids.course}`,
-        '/app/academics/assignments',
-        '/app/academics/exams',
-        `/app/academics/exams/${ids.exam}`,
-        '/app/academics/timetable',
-        '/app/academics/attendance',
-        '/app/academics/grades',
-        '/app/academics/grades/schemes',
-        '/app/planner/tasks',
-        '/app/planner/tasks?view=upcoming',
-        '/app/planner/tasks?view=done',
-        '/app/planner/calendar',
-        '/app/planner/calendar?view=month',
-        '/app/developer/projects',
-        `/app/developer/projects/${ids.project}`,
-        '/app/developer/learning',
-        `/app/developer/learning/${ids.goal}`,
-        '/app/developer/hackathons',
-        `/app/developer/hackathons/${ids.hackathon}`,
-        '/app/developer/internships',
-        `/app/developer/internships/${ids.internship}`,
-        '/app/developer/github',
-        '/app/insights',
-        '/app/insights?window=month',
-        '/app/notifications',
-        '/app/settings',
-      ];
+      const paths = await appPaths(page);
       const found: Record<string, string[]> = {};
       for (const path of paths) {
         await goTo(page, path);

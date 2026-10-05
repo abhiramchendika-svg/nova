@@ -31,7 +31,7 @@ export function Panel({ title, domain, action, children, className, headingLevel
         <Heading id={headingId} className="text-[15px] font-semibold leading-tight">
           {title}
         </Heading>
-        {action && <div className="ml-auto flex items-center gap-2">{action}</div>}
+        {action && <div className="ml-auto flex flex-wrap items-center justify-end gap-2">{action}</div>}
       </div>
       {children}
     </section>

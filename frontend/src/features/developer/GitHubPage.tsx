@@ -24,7 +24,7 @@ const USERNAME = /^[A-Za-z0-9](?:[A-Za-z0-9]|-(?=[A-Za-z0-9])){0,38}$/;
 export function GitHubPage() {
   const query = useGitHub();
   return (
-    <div className="animate-enter mx-auto grid max-w-6xl gap-6 px-4 py-6 lg:px-6">
+    <div className="animate-enter mx-auto grid grid-cols-1 max-w-6xl gap-6 px-4 py-6 lg:px-6">
       <header>
         <h1 className="font-display text-[24px] font-semibold tracking-[-0.01em]">GitHub</h1>
         <p className="mt-1 text-ink-2">

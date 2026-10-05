@@ -17,7 +17,7 @@ export function AccountMenu() {
     <DropdownMenu.Root modal={false}>
       <DropdownMenu.Trigger
         aria-label={`Account: ${user.displayName}`}
-        className="grid size-9 place-items-center rounded-full outline-none data-[state=open]:ring-2 data-[state=open]:ring-line-strong"
+        className="grid size-9 place-items-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-focus data-[state=open]:ring-2 data-[state=open]:ring-line-strong"
       >
         <span className="grid size-8 place-items-center rounded-full bg-surface-3 text-[12px] font-semibold text-ink-2">
           {initialsFor(user.displayName)}

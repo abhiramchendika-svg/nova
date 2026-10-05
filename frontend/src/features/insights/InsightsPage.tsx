@@ -24,7 +24,7 @@ export function InsightsPage() {
   const insights = useInsights(window);
 
   return (
-    <div className="animate-enter mx-auto grid max-w-4xl gap-5 px-4 py-6 lg:px-6">
+    <div className="animate-enter mx-auto grid grid-cols-1 max-w-4xl gap-5 px-4 py-6 lg:px-6">
       <header>
         <h1 className="font-display text-[24px] font-semibold tracking-[-0.01em]">Insights</h1>
         <p className="mt-1 text-ink-2">

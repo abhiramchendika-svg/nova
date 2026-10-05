@@ -26,7 +26,7 @@ export function TimeZoneField({
   const now = isValidTimeZone(zone) ? localParts(new Date().toISOString(), zone).time : null;
 
   return (
-    <div className="grid gap-2">
+    <div className="grid grid-cols-1 gap-2">
       <Field
         label="Time zone"
         list={listId}
@@ -49,10 +49,19 @@ export function TimeZoneField({
         ))}
       </datalist>
       {device !== zone && (
-        <div>
-          <Button size="sm" variant="ghost" onClick={() => onChange(device)}>
-            Use this device’s time zone ({device})
+        // The zone sits beside the button (not in it) so the row can wrap on a narrow phone
+        <div className="flex flex-wrap items-center gap-x-1">
+          <Button
+            size="sm"
+            variant="ghost"
+            aria-label={`Use this device’s time zone (${device})`}
+            onClick={() => onChange(device)}
+          >
+            Use this device’s time zone
           </Button>
+          <span aria-hidden className="text-[12.5px] text-ink-3">
+            {device}
+          </span>
         </div>
       )}
     </div>

@@ -16,7 +16,7 @@ export function ProjectCard({ project: p }: { project: Project }) {
   return (
     <article
       aria-labelledby={headingId}
-      className="grid content-start gap-3 rounded-md border border-line bg-surface p-4"
+      className="grid min-w-0 grid-cols-1 content-start gap-3 rounded-md border border-line bg-surface p-4"
     >
       <h3 id={headingId} className="text-[15px] font-semibold leading-snug">
         <Link to={`/app/developer/projects/${p.id}`} className="hover:underline">
