@@ -10,6 +10,8 @@
  * `inline` keeps the var() reference so the theme switch needs no rebuild.
  */
 @theme inline {
+  /* Tailwind's plain `transition*` utilities follow the motion tokens too, so they stop under reduced motion */
+  --default-transition-duration: var(--dur-1);
   --color-bg: var(--bg);
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);

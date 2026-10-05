@@ -95,3 +95,15 @@ export async function demoIds(page: Page) {
     };
   });
 }
+
+/** The mock's fault hooks (src/mocks/browser.ts), as the page sees them. */
+declare global {
+  interface Window {
+    __novaMock?: {
+      failRequests: (prefixes: string[]) => void;
+      slowDown: (ms: number) => void;
+      reset: () => void;
+      forgetCache?: () => void;
+    };
+  }
+}

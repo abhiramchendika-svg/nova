@@ -57,6 +57,7 @@ export function HackathonPage() {
         {hackathon.error.status === 404 ? (
           <EmptyState
             title="We couldn’t find that hackathon."
+            titleAs="h1"
             description="It may have been deleted, or the link is wrong."
             action={
               <ButtonLink to="/app/developer/hackathons" size="sm" variant="primary">
@@ -67,6 +68,7 @@ export function HackathonPage() {
         ) : (
           <ErrorState
             title="We couldn’t load this hackathon."
+            titleAs="h1"
             onRetry={() => void hackathon.refetch()}
             retrying={hackathon.isFetching}
             requestId={hackathon.error.problem.requestId}

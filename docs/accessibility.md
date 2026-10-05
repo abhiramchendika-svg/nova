@@ -31,6 +31,15 @@ Phase 6b adds three more browser suites:
 | `e2e/keyboard.spec.ts` | Tabbing through every page, **every stop shows a focus indicator** (2.4.7) and is visible; the skip link is the first stop and moves focus to the content; Ctrl+K search works from the keyboard; dialogs start in their first field, keep focus inside, close on Escape and **return focus to what opened them**; top-bar menus open, move and close from the keyboard |
 | `e2e/smoke.spec.ts` | The everyday paths end to end: log in and out, add a task and tick it off, mark a class, find a course with search, read a notification, review the week in Insights |
 
+Phase 6c adds:
+
+| Suite | Checks |
+|---|---|
+| `e2e/states.spec.ts` | With the server failing, **every page** shows an error with "Try again" (no blank areas, no crashes), and Home recovers panel by panel once it's back; with a slow server, every page shows a loading state that assistive tech hears (`aria-busy` / `role="status"`); a brand-new account sees a "what to do next" empty state on every page (or, for a missing record, a "we couldn't find that…" page that keeps its heading) |
+| `e2e/motion.spec.ts` | With "reduce motion" on, pages, dialogs and loading placeholders appear without moving, fading or shimmering (WCAG 2.3.3); without it, the same pages do animate, so the check is meaningful |
+
+The faults come from the mock API: `window.__novaMock.failRequests([...])`, `slowDown(ms)`, `reset()` and `forgetCache()` exist only under `npm run dev:mock`, so a real build has none of them. They're handy by hand too, from the browser console.
+
 ## Phase 6a findings and fixes
 
 | Finding | Where | Fix |
@@ -53,6 +62,17 @@ Phase 6b adds three more browser suites:
 | Form dialogs started on the Close button | Every form dialog | Focus starts in the first field, so you can type straight away; dialogs without fields keep Radix's default |
 
 **Making the checks reliable on slower machines.** The first Windows run had three failures that weren't app bugs: axe measured contrast on the grading schemes page while the page was still fading in (half-transparent text reads as low contrast), and two smoke tests gave up after Playwright's default 5 s. The suite now waits for enter animations to finish before measuring, allows 15 s for each expectation and 3 minutes per test, and the notification smoke test closes the task dialog a task notification opens before checking the bell.
+
+### Phase 6c
+
+| Finding | Where | Fix |
+|---|---|---|
+| A record that doesn't exist (or fails to load) left the page with no heading | Course, exam, project, learning-goal, hackathon and internship pages | The "We couldn't find that …" and "We couldn't load this …" states use the page's `<h1>` |
+| Moving between weeks or months kept the old one on screen with no sign anything was loading | Calendar | The calendar is marked busy and announces "Loading…" until the new range arrives |
+| A new account's calendar was an empty grid with no hint | Calendar | A short empty state says what fills it, with a link to add the timetable |
+| In dark mode, the page behind a dialog barely receded | All dialogs and the search palette | The overlay is a token: 45% ink in light, 62% black in dark |
+
+Reduced motion needed one fix: Tailwind's plain `transition` utilities (a few hover effects) used Tailwind's own 150 ms instead of NOVA's `--dur-*` tokens, so they kept fading under "reduce motion". They now follow `--dur-1` like everything else, which drops to 0 ms; the skeleton shimmer and spinner already switched off. The motion check reads computed styles rather than catching animations mid-flight, so it doesn't depend on timing.
 
 After the fixes the browser audit reports **no violations** on any page, overlay or width, in either
 theme. Lighthouse follows in 6d.

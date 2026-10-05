@@ -66,6 +66,7 @@ export function CoursePage() {
         {overview.error.status === 404 ? (
           <EmptyState
             title="We couldn’t find that course."
+            titleAs="h1"
             description="It may have been deleted, or the link is wrong."
             action={
               <ButtonLink to="/app/academics/courses" size="sm" variant="primary">
@@ -76,6 +77,7 @@ export function CoursePage() {
         ) : (
           <ErrorState
             title="We couldn’t load this course."
+            titleAs="h1"
             onRetry={() => void overview.refetch()}
             retrying={overview.isFetching}
             requestId={overview.error.problem.requestId}

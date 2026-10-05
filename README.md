@@ -117,7 +117,7 @@ npm run lint        # ESLint incl. jsx-a11y
 npm run typecheck   # tsc
 npm run build       # production build
 npm run e2e:install # once: downloads Chromium for Playwright
-npm run e2e         # real-browser checks (mock API): accessibility, 320 px reflow, keyboard, smoke flows
+npm run e2e         # real-browser checks (mock API): accessibility, reflow, keyboard, loading/error/empty states, reduced motion, smoke flows
 ```
 
 Tests never call a real external API. Backend integration tests start a throwaway PostgreSQL 16 container; frontend tests mock the network with MSW.

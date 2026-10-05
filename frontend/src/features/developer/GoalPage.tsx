@@ -65,6 +65,7 @@ export function GoalPage() {
         {goal.error.status === 404 ? (
           <EmptyState
             title="We couldn’t find that goal."
+            titleAs="h1"
             description="It may have been deleted, or the link is wrong."
             action={
               <ButtonLink to="/app/developer/learning" size="sm" variant="primary">
@@ -75,6 +76,7 @@ export function GoalPage() {
         ) : (
           <ErrorState
             title="We couldn’t load this goal."
+            titleAs="h1"
             onRetry={() => void goal.refetch()}
             retrying={goal.isFetching}
             requestId={goal.error.problem.requestId}

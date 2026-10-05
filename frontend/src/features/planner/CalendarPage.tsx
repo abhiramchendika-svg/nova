@@ -1,6 +1,7 @@
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { useId, useState, type CSSProperties, type ReactNode } from 'react';
 import { Link, useSearchParams } from 'react-router';
+import { EmptyState } from '@/components/patterns/EmptyState';
 import { ErrorState } from '@/components/patterns/ErrorState';
 import { Skeleton } from '@/components/patterns/Skeleton';
 import { Button, ButtonLink } from '@/components/ui/Button';
@@ -174,14 +175,36 @@ export function CalendarPage() {
           retrying={query.isFetching}
           requestId={query.error.problem.requestId}
         />
-      ) : view === 'week' ? (
-        <WeekView {...props} onAdd={(day) => setAdding({ open: true, day })} />
       ) : (
-        <MonthView
-          {...props}
-          month={date.slice(0, 7)}
-          moreHref={(day) => href({ view: 'week', date: day })}
-        />
+        // While another week or month loads, the previous one stays on screen: say so
+        <div aria-busy={query.isPlaceholderData || undefined} className="grid gap-3">
+          {query.isPlaceholderData && (
+            <p role="status" className="sr-only">
+              Loading…
+            </p>
+          )}
+          {!query.isPlaceholderData && query.data.items.length === 0 && (
+            <EmptyState
+              compact
+              title={`Nothing on your calendar this ${view === 'week' ? 'week' : 'month'}.`}
+              description="Classes from your timetable, exams, deadlines and planned tasks show up here."
+              action={
+                <ButtonLink to="/app/academics/timetable" size="sm">
+                  Add your timetable
+                </ButtonLink>
+              }
+            />
+          )}
+          {view === 'week' ? (
+            <WeekView {...props} onAdd={(day) => setAdding({ open: true, day })} />
+          ) : (
+            <MonthView
+              {...props}
+              month={date.slice(0, 7)}
+              moreHref={(day) => href({ view: 'week', date: day })}
+            />
+          )}
+        </div>
       )}
 
       <TaskDialog

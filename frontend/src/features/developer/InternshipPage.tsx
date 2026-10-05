@@ -53,6 +53,7 @@ export function InternshipPage() {
         {internship.error.status === 404 ? (
           <EmptyState
             title="We couldn’t find that application."
+            titleAs="h1"
             description="It may have been deleted, or the link is wrong."
             action={
               <ButtonLink to="/app/developer/internships" size="sm" variant="primary">
@@ -63,6 +64,7 @@ export function InternshipPage() {
         ) : (
           <ErrorState
             title="We couldn’t load this application."
+            titleAs="h1"
             onRetry={() => void internship.refetch()}
             retrying={internship.isFetching}
             requestId={internship.error.problem.requestId}

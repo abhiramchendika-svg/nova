@@ -60,6 +60,7 @@ export function ProjectPage() {
         {project.error.status === 404 ? (
           <EmptyState
             title="We couldn’t find that project."
+            titleAs="h1"
             description="It may have been deleted, or the link is wrong."
             action={
               <ButtonLink to="/app/developer/projects" size="sm" variant="primary">
@@ -70,6 +71,7 @@ export function ProjectPage() {
         ) : (
           <ErrorState
             title="We couldn’t load this project."
+            titleAs="h1"
             onRetry={() => void project.refetch()}
             retrying={project.isFetching}
             requestId={project.error.problem.requestId}

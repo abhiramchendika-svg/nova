@@ -35,7 +35,7 @@ export function Dialog({
   return (
     <RadixDialog.Root open={open} onOpenChange={onOpenChange}>
       <RadixDialog.Portal>
-        <RadixDialog.Overlay className="fixed inset-0 z-40 bg-[rgb(12_16_25/0.45)] data-[state=open]:animate-enter" />
+        <RadixDialog.Overlay className="fixed inset-0 z-40 bg-[var(--overlay)] data-[state=open]:animate-enter" />
         <RadixDialog.Content
           className={
             'fixed z-50 grid gap-4 border border-line bg-surface p-5 shadow-dialog outline-none ' +

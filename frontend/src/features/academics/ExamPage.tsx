@@ -58,6 +58,7 @@ export function ExamPage() {
         {exam.error.status === 404 ? (
           <EmptyState
             title="We couldn’t find that exam."
+            titleAs="h1"
             description="It may have been deleted, or the link is wrong."
             action={
               <ButtonLink to="/app/academics/exams" size="sm" variant="primary">
@@ -68,6 +69,7 @@ export function ExamPage() {
         ) : (
           <ErrorState
             title="We couldn’t load this exam."
+            titleAs="h1"
             onRetry={() => void exam.refetch()}
             retrying={exam.isFetching}
             requestId={exam.error.problem.requestId}

@@ -11,16 +11,19 @@ export function ErrorState({
   onRetry,
   retrying = false,
   requestId,
+  titleAs: Title = 'p',
 }: {
   title: string;
   description?: string;
   onRetry?: () => void;
   retrying?: boolean;
   requestId?: string;
+  /** 'h1' when the error is the whole page, so the page keeps a heading. */
+  titleAs?: 'p' | 'h1' | 'h2';
 }) {
   return (
     <div role="alert" className="grid justify-items-start gap-2 rounded-md border border-line bg-surface p-5">
-      <p className="text-[15px] font-semibold">{title}</p>
+      <Title className="text-[15px] font-semibold">{title}</Title>
       <p className="text-[13px] text-ink-2">{description}</p>
       {onRetry && (
         <Button size="sm" onClick={onRetry} loading={retrying} className="mt-1">
