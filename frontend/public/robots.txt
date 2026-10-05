@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+# The app itself is behind a login; only the public pages are worth indexing
+Disallow: /app

@@ -67,6 +67,10 @@ jobs:
       - name: Build
         run: npx vite build
 
+      # Phase 6d: what each first visit downloads (gzip) must stay within bundle-budget.json
+      - name: Bundle size budget
+        run: npm run size
+
       # Phase 6: accessibility (axe, WCAG 2.2 AA incl. colour contrast), reflow, keyboard and smoke
       # flows in a real browser, against the mock API, so no backend is needed here.
       - name: Install Chromium for Playwright

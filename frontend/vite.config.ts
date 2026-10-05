@@ -26,6 +26,22 @@ export default defineConfig({
   },
   build: {
     sourcemap: true,
+    // dist/.vite/manifest.json: scripts/bundle-size.mjs reads it to measure each first visit
+    manifest: true,
+    rolldownOptions: {
+      output: {
+        // Libraries in their own long-lived chunks: they change far less often than app code, so a
+        // deploy doesn't make returning visitors download React again
+        advancedChunks: {
+          groups: [
+            { name: 'react', test: /node_modules[\\/](react|react-dom|scheduler)[\\/]/ },
+            { name: 'router', test: /node_modules[\\/]react-router/ },
+            { name: 'query', test: /node_modules[\\/]@tanstack[\\/]/ },
+            { name: 'forms', test: /node_modules[\\/](zod|react-hook-form|@hookform)[\\/]/ },
+          ],
+        },
+      },
+    },
   },
   test: {
     environment: 'jsdom',

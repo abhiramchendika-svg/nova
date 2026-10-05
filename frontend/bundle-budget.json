@@ -1,0 +1,18 @@
+{
+  "note": "gzip bytes; `npm run size -- --update` rewrites this with 10% headroom over the current build",
+  "journeys": {
+    "landing (/)": {
+      "js": 169312,
+      "css": 14741
+    },
+    "log in (/login)": {
+      "js": 213415,
+      "css": 14741
+    },
+    "home after log-in (/app)": {
+      "js": 276308,
+      "css": 14741
+    }
+  },
+  "largestChunk": 74168
+}

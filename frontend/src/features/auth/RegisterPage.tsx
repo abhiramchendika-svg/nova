@@ -8,10 +8,13 @@ import { errorMessage } from '@/services/http';
 import { useRegister } from './api';
 import { AuthLayout } from './AuthLayout';
 import { FormAlert } from '@/components/patterns/FormAlert';
+import { usePrefetchPages } from '@/app/prefetch';
 import { PasswordToggle } from './PasswordToggle';
 import { PASSWORD_MIN, registerSchema, type RegisterValues } from './schemas';
 
 export function RegisterPage() {
+  // Most visits here end in the app: fetch its code while the form is being filled in
+  usePrefetchPages('OnboardingPage', 'AppShell', 'HomePage');
   const navigate = useNavigate();
   const registerUser = useRegister();
   const [showPassword, setShowPassword] = useState(false);

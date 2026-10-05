@@ -8,10 +8,13 @@ import { errorMessage } from '@/services/http';
 import { useLogin } from './api';
 import { AuthLayout } from './AuthLayout';
 import { FormAlert } from '@/components/patterns/FormAlert';
+import { usePrefetchPages } from '@/app/prefetch';
 import { PasswordToggle } from './PasswordToggle';
 import { loginSchema, safeNextPath, type LoginValues } from './schemas';
 
 export function LoginPage() {
+  // Most visits here end in the app: fetch its code while the form is being filled in
+  usePrefetchPages('AppShell', 'HomePage');
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const next = safeNextPath(params.get('next'));
