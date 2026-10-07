@@ -1,0 +1,28 @@
+name: Feature request
+description: Suggest something NOVA should do
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+      description: Describe the situation in a student's week, not the solution yet.
+      placeholder: Before exams I can't see which days are already full of deadlines…
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like NOVA to do?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Anything you've tried instead?
+  - type: checkboxes
+    id: help
+    attributes:
+      label: Contributing
+      options:
+        - label: I'd like to work on this myself

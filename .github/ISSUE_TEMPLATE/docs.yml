@@ -1,0 +1,17 @@
+name: Documentation
+description: Something in the README or docs is missing, wrong or unclear
+labels: [documentation]
+body:
+  - type: input
+    id: where
+    attributes:
+      label: Which page or section?
+      placeholder: README → Running locally → Full stack
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What's wrong or missing?
+    validations:
+      required: true

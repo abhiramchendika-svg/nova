@@ -143,14 +143,25 @@ Tests never call a real external API. Backend integration tests start a throwawa
 | 4 | Developer growth: projects, learning goals, hackathons, internships, GitHub | Done (GitHub OAuth deferred) |
 | 5 | Search, notifications and insights | Done |
 | 6 | UI polish and accessibility audit | Done |
-| 7 | Open-source readiness and live demo | Planned |
+| 7 | Open-source readiness and live demo | In progress (contributor docs done; deploy next) |
 
 ## Known limitations
 
 - `npm run dev` needs the backend running; without it the app shows "We couldn't check your session." Use `npm run dev:mock` for UI-only work.
 - The login rate limiter is in memory, which suits a single instance; multiple instances would need a shared store.
 - The theme is saved to your account (and mirrored in the browser so pages open without a flash); signed-out pages use the browser’s own choice.
-- Courses, Attendance, Grades and Grading schemes are live. The other sections show an honest "on the way" placeholder until their phase ships.
+- GitHub works from a public username; the optional GitHub OAuth connect (private-contribution counts) is not built yet.
+- Notifications are in-app only; there are no email or push reminders.
+- There is no public live demo yet; it arrives later in Phase 7.
+
+## Contributing
+
+Contributions are welcome — start with [CONTRIBUTING.md](CONTRIBUTING.md), which covers setup, how the code is organised, how to add a feature end to end and what a pull request needs. Issues labelled `good first issue` are a good way in.
+
+- [Code of Conduct](CODE_OF_CONDUCT.md)
+- [Security policy](SECURITY.md) — please report vulnerabilities privately, not in a public issue.
+
+Repository labels live in [`.github/labels.yml`](.github/labels.yml) (apply them with the **Sync labels** workflow), and Dependabot opens weekly grouped updates for npm and Maven.
 
 ## License
 
