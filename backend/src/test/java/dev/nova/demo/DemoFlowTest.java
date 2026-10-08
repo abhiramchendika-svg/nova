@@ -82,10 +82,15 @@ class DemoFlowTest extends IntegrationTest {
     void seedsFictionalDataThatTheRealApiServes() throws Exception {
         Cookie session = responseCookie(startDemo(null), SESSION_COOKIE);
 
-        mvc.perform(get("/api/v1/semesters").cookie(session))
+        String semesters = mvc.perform(get("/api/v1/semesters").cookie(session))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(3))
-                .andExpect(jsonPath("$[?(@.current == true)].name").value(List.of("Semester 3")));
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        // Read the filter result directly: MockMvc's value() doesn't compare indefinite paths to a list
+        List<String> current = JsonPath.read(semesters, "$[?(@.current == true)].name");
+        assertThat(current).containsExactly("Semester 3");
 
         // Final grades of semesters 1 and 2: (8·4 + 10·4 + 7·3 + 9·4 + 10·4 + 8·3) / 22 = 193 / 22 = 8.77
         mvc.perform(get("/api/v1/grades/summary").cookie(session))
