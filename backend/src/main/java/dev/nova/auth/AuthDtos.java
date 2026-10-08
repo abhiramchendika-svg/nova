@@ -3,6 +3,7 @@ package dev.nova.auth;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import java.time.Instant;
 import java.util.UUID;
 
 /**
@@ -43,5 +44,7 @@ public final class AuthDtos {
         }
     }
 
-    public record CurrentUserResponse(UUID id, String email, String displayName, boolean onboardingCompleted) {}
+    /** {@code demoExpiresAt} is set only for a "Try the demo" account: when it will be deleted. */
+    public record CurrentUserResponse(
+            UUID id, String email, String displayName, boolean onboardingCompleted, Instant demoExpiresAt) {}
 }

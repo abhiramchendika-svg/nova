@@ -63,6 +63,17 @@ nova:
     # Daily clean-up (UTC) of notifications read more than `retention` ago; unread ones are kept
     cleanup-cron: '0 17 3 * * *'
     retention: P90D
+  demo:
+    # "Try the demo": a temporary account with fictional data, deleted `lifetime` after it's made
+    enabled: ${NOVA_DEMO_ENABLED:true}
+    lifetime: PT24H
+    # Limits for everyone together (they hold even if client IPs are spoofed) and per client IP
+    per-hour: 60
+    max-alive: 300
+    per-ip-per-hour: 3
+    # Expired accounts are deleted five minutes after start-up, then an hour after each run
+    cleanup-initial-delay: PT5M
+    cleanup-interval: PT1H
 
 management:
   endpoints:

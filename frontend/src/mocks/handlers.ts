@@ -12,6 +12,7 @@ import { createInternshipHandlers } from './internshipHandlers';
 import { createLearningHandlers } from './learningHandlers';
 import { createPlannerHandlers } from './plannerHandlers';
 import { createAcademicStore, type AcademicStore } from './academics';
+import { DEMO_LIFETIME_MS, seedDemoStore } from './demo';
 import type { Settings, SettingsRequest } from '@/features/settings/types';
 
 /**
@@ -21,9 +22,10 @@ import type { Settings, SettingsRequest } from '@/features/settings/types';
  * It mimics the real contract, including Problem Details errors and CSRF.
  */
 
-interface StoredUser extends CurrentUser {
+type StoredUser = Omit<CurrentUser, 'demoExpiresAt'> & {
   password: string;
-}
+  demoExpiresAt?: string | null;
+};
 
 export interface MockDb {
   users: Map<string, StoredUser>;
@@ -62,8 +64,8 @@ export function createMockDb(
   return db;
 }
 
-function publicUser({ password: _password, ...user }: StoredUser): CurrentUser {
-  return user;
+function publicUser({ password: _password, demoExpiresAt, ...user }: StoredUser): CurrentUser {
+  return { ...user, demoExpiresAt: demoExpiresAt ?? null };
 }
 
 export function createHandlers(db: MockDb): HttpHandler[] {
@@ -135,6 +137,31 @@ export function createHandlers(db: MockDb): HttpHandler[] {
       }
       db.sessionEmail = user.email;
       return HttpResponse.json(publicUser(user));
+    }),
+
+    // "Try the demo": a fresh account with the demo's fictional data, logged in at once
+    http.post(`${API}/demo`, async ({ request }) => {
+      if (!csrfOk(request)) return problem(403, 'CSRF_INVALID', 'Invalid CSRF token');
+      const body = (await request.json().catch(() => null)) as { timezone?: string } | null;
+      const id = crypto.randomUUID();
+      const email = `demo-${id.replaceAll('-', '')}@demo.nova.invalid`;
+      const user: StoredUser = {
+        id,
+        email,
+        displayName: 'Demo Student',
+        onboardingCompleted: true,
+        password: crypto.randomUUID(), // never told to anyone, like the real one
+        demoExpiresAt: new Date(Date.now() + DEMO_LIFETIME_MS).toISOString(),
+      };
+      db.users.set(email, user);
+      db.academics.set(id, seedDemoStore());
+      db.settings.set(id, {
+        ...DEFAULT_SETTINGS,
+        timezone: body?.timezone || 'UTC',
+        defaultAttendanceTarget: 75,
+      });
+      db.sessionEmail = email;
+      return HttpResponse.json(publicUser(user), { status: 201 });
     }),
 
     http.post(`${API}/auth/logout`, ({ request }) => {

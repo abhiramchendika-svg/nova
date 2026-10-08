@@ -33,6 +33,15 @@ for (const theme of ['light', 'dark'] as const) {
       expect(found).toEqual({});
     });
 
+    test('a demo account, with its banner', async ({ page }) => {
+      await page.goto('/');
+      await page.getByRole('button', { name: 'Try the demo' }).click();
+      await expect(page.getByRole('complementary', { name: 'Demo account' })).toBeVisible();
+      await expect(page.getByRole('heading', { level: 1 })).toHaveText(/Demo\./);
+      await settle(page);
+      expect(await axeViolations(page)).toEqual([]);
+    });
+
     test('overlays: search, notifications, a form dialog, menus', async ({ page }) => {
       await logIn(page);
       const found: Record<string, string[]> = {};

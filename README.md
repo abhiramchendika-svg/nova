@@ -69,7 +69,7 @@ npm ci
 npm run dev:mock
 ```
 
-Open http://localhost:5173 and log in with the demo account **demo@nova.dev / nova-demo-2026** (it exists only in the mock). It comes with three semesters of clearly fictional courses and grades. The mock keeps data in page memory, so a full page reload starts fresh.
+Open http://localhost:5173 and log in with the demo account **demo@nova.dev / nova-demo-2026** (it exists only in the mock), or press **Try the demo**. Both come with three semesters of clearly fictional courses, grades, coursework, tasks and developer data. The mock keeps data in page memory, so a full page reload starts fresh.
 
 ### 3. Full stack
 
@@ -87,7 +87,7 @@ npm ci
 npm run dev
 ```
 
-Open http://localhost:5173 and create an account. The Vite dev server proxies `/api` to the backend, so the browser only ever talks to one origin and the session and CSRF cookies are first-party.
+Open http://localhost:5173 and create an account, or press **Try the demo** for a temporary account with made-up data (deleted after 24 hours). The Vite dev server proxies `/api` to the backend, so the browser only ever talks to one origin and the session and CSRF cookies are first-party.
 
 ### Environment variables
 
@@ -98,6 +98,7 @@ Open http://localhost:5173 and create an account. The Vite dev server proxies `/
 | `NOVA_COOKIE_SECURE` | backend | `false` | Set `true` behind HTTPS so cookies are Secure |
 | `NOVA_CORS_ORIGINS` | backend | empty | Only for cross-origin tooling; normal use is same-origin |
 | `PORT` | backend | `8080` | HTTP port |
+| `NOVA_DEMO_ENABLED` | backend | `true` | "Try the demo" accounts (temporary, fictional data, deleted after 24 h, rate-limited). `false` turns them off |
 | `GITHUB_SERVER_TOKEN` | backend | empty | Optional. A GitHub fine-grained token with no extra permissions; enables the contribution calendar (profiles and repositories work without it). Set it in the shell that runs the backend (PowerShell: `$env:GITHUB_SERVER_TOKEN="…"`). Never commit it. |
 | `VITE_API_MOCKS` | frontend | `false` | `true` runs the UI against the in-browser mock API |
 | `VITE_REPO_URL` | frontend | empty | Repository link on the landing page |
@@ -143,7 +144,7 @@ Tests never call a real external API. Backend integration tests start a throwawa
 | 4 | Developer growth: projects, learning goals, hackathons, internships, GitHub | Done (GitHub OAuth deferred) |
 | 5 | Search, notifications and insights | Done |
 | 6 | UI polish and accessibility audit | Done |
-| 7 | Open-source readiness and live demo | In progress (contributor docs done; deploy next) |
+| 7 | Open-source readiness and live demo | In progress (contributor docs and "Try the demo" done; deploy next) |
 
 ## Known limitations
 

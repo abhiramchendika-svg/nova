@@ -34,14 +34,6 @@ const InsightsPage = lazy(pageLoaders.InsightsPage);
 const NotificationsPage = lazy(pageLoaders.NotificationsPage);
 const SettingsPage = lazy(pageLoaders.SettingsPage);
 const OnboardingPage = lazy(pageLoaders.OnboardingPage);
-const SectionPlaceholder = lazy(pageLoaders.SectionPlaceholder);
-
-/** Sections that exist in the navigation but ship in a later phase (docs/architecture.md §18). */
-const PLANNED: { path: string; phase: string }[] = [
-  { path: 'academics/*', phase: 'Phase 2' },
-  { path: 'developer/*', phase: 'Phase 4' },
-  { path: 'settings/*', phase: 'Phase 2' },
-];
 
 export const routes: RouteObject[] = [
   { path: '/', element: <LandingPage /> },
@@ -65,7 +57,6 @@ export const routes: RouteObject[] = [
     ),
     children: [
       { index: true, element: <HomePage /> },
-      // Specific routes win over the section placeholders below (React Router ranks by specificity)
       { path: 'academics/courses', element: <CoursesPage /> },
       { path: 'academics/courses/:courseId', element: <CoursePage /> },
       { path: 'academics/assignments', element: <AssignmentsPage /> },
@@ -89,8 +80,8 @@ export const routes: RouteObject[] = [
       { path: 'academics/attendance', element: <AttendancePage /> },
       { path: 'academics/grades', element: <GradesPage /> },
       { path: 'academics/grades/schemes', element: <GradingSchemesPage /> },
-      ...PLANNED.map(({ path, phase }) => ({ path, element: <SectionPlaceholder phase={phase} /> })),
     ],
   },
+  // Anything else, including unknown pages inside /app, is a real 404
   { path: '*', element: <NotFoundPage /> },
 ];

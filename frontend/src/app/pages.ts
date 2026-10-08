@@ -42,8 +42,6 @@ export const pageLoaders = {
   SettingsPage: () => import('@/features/settings/SettingsPage').then((m) => ({ default: m.SettingsPage })),
   OnboardingPage: () =>
     import('@/features/onboarding/OnboardingPage').then((m) => ({ default: m.OnboardingPage })),
-  SectionPlaceholder: () =>
-    import('@/pages/SectionPlaceholder').then((m) => ({ default: m.SectionPlaceholder })),
 };
 
 export function preloadPages(): Promise<unknown[]> {

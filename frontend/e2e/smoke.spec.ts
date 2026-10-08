@@ -11,6 +11,17 @@ test('log in and out', async ({ page }) => {
   await expect(page).toHaveURL(/\/login$/);
 });
 
+test('try the demo from the landing page, then leave it for a real account', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Try the demo' }).click();
+  await expect(page).toHaveURL(/\/app$/);
+  const banner = page.getByRole('complementary', { name: 'Demo account' });
+  await expect(banner).toContainText('You’re in a demo.');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(/Demo\./);
+  await banner.getByRole('button', { name: 'Create your own account' }).click();
+  await expect(page).toHaveURL(/\/register$/);
+});
+
 test('add a task for today and tick it off', async ({ page }) => {
   await logIn(page);
   await goTo(page, '/app/planner/tasks');

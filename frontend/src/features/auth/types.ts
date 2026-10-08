@@ -4,6 +4,8 @@ export interface CurrentUser {
   email: string;
   displayName: string;
   onboardingCompleted: boolean;
+  /** Set only for a "Try the demo" account: when it and its data will be deleted (ISO instant). */
+  demoExpiresAt: string | null;
 }
 
 export interface LoginRequest {

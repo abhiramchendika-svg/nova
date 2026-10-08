@@ -1,19 +1,14 @@
 import { delay, http } from 'msw';
 import { setupWorker } from 'msw/browser';
 import { API, problem } from './http';
-import { createAcademicStore, seedDemoAcademics } from './academics';
-import { seedDemoCoursework } from './coursework';
+import { seedDemoStore } from './demo';
 import { createHandlers, createMockDb, DEFAULT_SETTINGS } from './handlers';
-import { seedDemoProjects } from './developer';
-import { seedDemoHackathons } from './hackathons';
-import { seedDemoInternships } from './internships';
-import { seedDemoLearning } from './learning';
-import { seedDemoTasks } from './planner';
 
 /**
  * Starts in-browser API mocks for `npm run dev:mock`.
  * A demo account is pre-registered: demo@nova.dev / nova-demo-2026
- * It comes with three semesters of clearly fictional courses, grades, attendance, assignments, exams, links, tasks, projects, a learning goal, hackathons and internship applications.
+ * It comes with the demo's clearly fictional data (see demo.ts). "Try the demo" makes a fresh,
+ * temporary copy of the same data, like the real backend does.
  */
 export async function startMockApi(): Promise<void> {
   const db = createMockDb();
@@ -24,15 +19,7 @@ export async function startMockApi(): Promise<void> {
     onboardingCompleted: true, // the demo is already set up; register a new account to see onboarding
     password: 'nova-demo-2026',
   });
-  const demoAcademics = createAcademicStore();
-  seedDemoAcademics(demoAcademics);
-  seedDemoCoursework(demoAcademics);
-  seedDemoProjects(demoAcademics);
-  seedDemoLearning(demoAcademics);
-  seedDemoHackathons(demoAcademics);
-  seedDemoInternships(demoAcademics);
-  seedDemoTasks(demoAcademics);
-  db.academics.set('00000000-0000-4000-8000-00000000de00', demoAcademics);
+  db.academics.set('00000000-0000-4000-8000-00000000de00', seedDemoStore());
   db.settings.set('00000000-0000-4000-8000-00000000de00', {
     ...DEFAULT_SETTINGS,
     defaultAttendanceTarget: 75,

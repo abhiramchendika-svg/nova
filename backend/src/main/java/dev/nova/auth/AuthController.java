@@ -13,10 +13,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.context.SecurityContext;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.context.SecurityContextHolderStrategy;
-import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -33,12 +29,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService authService;
-    private final SecurityContextRepository securityContextRepository;
-    private final SecurityContextHolderStrategy contextHolder = SecurityContextHolder.getContextHolderStrategy();
+    private final SessionStarter sessions;
 
-    public AuthController(AuthService authService, SecurityContextRepository securityContextRepository) {
+    public AuthController(AuthService authService, SessionStarter sessions) {
         this.authService = authService;
-        this.securityContextRepository = securityContextRepository;
+        this.sessions = sessions;
     }
 
     /**
@@ -56,7 +51,7 @@ public class AuthController {
             @Valid @RequestBody RegisterRequest body, HttpServletRequest request, HttpServletResponse response) {
         User user = authService.register(body);
         NovaUserDetails principal = NovaUserDetails.withoutCredentials(user);
-        startSession(
+        sessions.start(
                 UsernamePasswordAuthenticationToken.authenticated(principal, null, principal.getAuthorities()),
                 request,
                 response);
@@ -67,27 +62,12 @@ public class AuthController {
     public CurrentUserResponse login(
             @Valid @RequestBody LoginRequest body, HttpServletRequest request, HttpServletResponse response) {
         Authentication authentication = authService.authenticate(body.email(), body.password(), request.getRemoteAddr());
-        startSession(authentication, request, response);
+        sessions.start(authentication, request, response);
         return authService.currentUser(((NovaUserDetails) authentication.getPrincipal()).id());
     }
 
     @GetMapping("/me")
     public CurrentUserResponse me(@AuthenticationPrincipal NovaUserDetails principal) {
         return authService.currentUser(principal.id());
-    }
-
-    /**
-     * Stores the authenticated context in the session. If a session already existed (e.g. from an
-     * earlier anonymous visit), its id is rotated first so a planted session id can't be reused
-     * (session fixation).
-     */
-    private void startSession(Authentication authentication, HttpServletRequest request, HttpServletResponse response) {
-        if (request.getSession(false) != null) {
-            request.changeSessionId();
-        }
-        SecurityContext context = contextHolder.createEmptyContext();
-        context.setAuthentication(authentication);
-        contextHolder.setContext(context);
-        securityContextRepository.saveContext(context, request, response);
     }
 }

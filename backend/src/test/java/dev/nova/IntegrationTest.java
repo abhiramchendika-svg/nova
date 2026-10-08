@@ -25,7 +25,16 @@ import org.springframework.test.web.servlet.MvcResult;
  */
 // Background jobs never run during tests (they would race with a test's own calls): the generator's
 // first run is ten years away and "-" disables the clean-up cron. Tests call the jobs directly.
-@SpringBootTest(properties = {"nova.notifications.initial-delay=P3650D", "nova.notifications.cleanup-cron=-"})
+// Demo limits are raised so tests sharing one database never hit them; DemoRulesTest covers the limits.
+@SpringBootTest(
+        properties = {
+            "nova.notifications.initial-delay=P3650D",
+            "nova.notifications.cleanup-cron=-",
+            "nova.demo.cleanup-initial-delay=P3650D",
+            "nova.demo.per-hour=10000",
+            "nova.demo.max-alive=10000",
+            "nova.demo.per-ip-per-hour=10000"
+        })
 @AutoConfigureMockMvc
 @Import({TestcontainersConfiguration.class, FakeGitHubConfiguration.class})
 public abstract class IntegrationTest {

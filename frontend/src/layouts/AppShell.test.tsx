@@ -15,12 +15,16 @@ describe('app shell', () => {
     expect(within(nav).getByRole('link', { name: 'Home' })).not.toHaveAttribute('aria-current');
   });
 
-  it('shows an honest placeholder for pages that don’t exist yet inside a section', async () => {
-    installMockApi(createMockDb({ loggedInAs: TEST_USER }));
-    renderRoute('/app/settings/profile');
-    expect(await screen.findByRole('heading', { name: 'Settings' })).toBeInTheDocument();
-    expect(screen.getByText(/planned for Phase 2/)).toBeInTheDocument();
-  });
+  it.each(['/app/settings/profile', '/app/academics', '/app/developer/nothing-here'])(
+    'answers %s, which doesn’t exist, with a real 404',
+    async (path) => {
+      installMockApi(createMockDb({ loggedInAs: TEST_USER }));
+      renderRoute(path);
+      expect(
+        await screen.findByRole('heading', { level: 1, name: 'We couldn’t find that page.' }),
+      ).toBeInTheDocument();
+    },
+  );
 
   it('opens "More" on mobile with every section', async () => {
     installMockApi(createMockDb({ loggedInAs: TEST_USER }));

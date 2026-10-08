@@ -7,6 +7,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.time.Instant;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.UUID;
@@ -32,6 +33,10 @@ public class User extends AuditedEntity {
     @Column(name = "display_name", nullable = false, length = 80)
     private String displayName;
 
+    /** Set only on "Try the demo" accounts: when DemoCleanup deletes the account and its data. */
+    @Column(name = "demo_expires_at")
+    private Instant demoExpiresAt;
+
     /** Required by JPA; not for application code. */
     protected User() {}
 
@@ -39,6 +44,13 @@ public class User extends AuditedEntity {
         this.email = normalizeEmail(email);
         this.passwordHash = Objects.requireNonNull(passwordHash, "passwordHash");
         this.displayName = displayName.strip();
+    }
+
+    /** A temporary demo account that is deleted after {@code expiresAt}. */
+    public static User demo(String email, String passwordHash, String displayName, Instant expiresAt) {
+        User user = new User(email, passwordHash, displayName);
+        user.demoExpiresAt = Objects.requireNonNull(expiresAt, "expiresAt");
+        return user;
     }
 
     /**
@@ -71,5 +83,10 @@ public class User extends AuditedEntity {
 
     public String getDisplayName() {
         return displayName;
+    }
+
+    /** Null for a normal account. */
+    public Instant getDemoExpiresAt() {
+        return demoExpiresAt;
     }
 }

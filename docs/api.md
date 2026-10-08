@@ -67,7 +67,8 @@ Legend: 🔓 public · everything else requires a session. **P** marks paginated
 | POST 🔓 | `/api/v1/auth/register` | Create account and log in |
 | POST 🔓 | `/api/v1/auth/login` | Log in |
 | POST | `/api/v1/auth/logout` | Invalidate the session → `204` |
-| GET | `/api/v1/auth/me` | Current user: `{ id, email, displayName, onboardingCompleted }` |
+| GET | `/api/v1/auth/me` | Current user: `{ id, email, displayName, onboardingCompleted, demoExpiresAt }` (`demoExpiresAt` is `null` except for demo accounts) |
+| POST 🔓 | `/api/v1/demo` | "Try the demo": create a temporary account with fictional data and log in (Phase 7) |
 | GET / PUT | `/api/v1/settings` | Timezone, week start, university, attendance default, theme |
 | POST | `/api/v1/settings/onboarding/complete` | Marks onboarding done; returns the settings body |
 
@@ -99,6 +100,13 @@ Legend: 🔓 public · everything else requires a session. **P** marks paginated
 - Session cookie `NOVA_SESSION`: HttpOnly, SameSite=Lax, Secure in production; stored in PostgreSQL by Spring Session; 14-day sliding timeout.
 - CSRF: `GET /auth/csrf` sets a readable `XSRF-TOKEN` cookie without creating a session; unsafe requests must echo it in `X-XSRF-TOKEN`.
 - Login is rate-limited per client IP + email (5 per minute by default); the `429` includes `Retry-After` and `retryAfterSeconds`.
+
+**Demo (Phase 7)**
+
+- Request (optional body): `{ "timezone": "Asia/Kolkata" }`, the browser's IANA zone so the demo's "today" is the visitor's. Missing or unknown means `UTC`; a bad zone never fails the request.
+- Response `201`: same body as `/me`, with `demoExpiresAt` 24 hours ahead, and the browser is logged in (new session). CSRF applies like every other write.
+- The account has a random email at `demo.nova.invalid` and a password nobody knows, so it lives only as long as that browser session. It is deleted with all its data after `demoExpiresAt`.
+- Limits: 3 per client IP per hour (best effort, in memory), 60 per hour and 300 alive for everyone together (checked in the database under an advisory lock, so they hold even if IPs are spoofed). Over a limit: `429` with `Retry-After` and `retryAfterSeconds`. `NOVA_DEMO_ENABLED=false` switches it off (`404`).
 
 ### 2.2 Grading schemes (Phase 2)
 

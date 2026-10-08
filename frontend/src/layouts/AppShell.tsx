@@ -2,6 +2,7 @@ import { Suspense, useEffect, useState } from 'react';
 import { Outlet } from 'react-router';
 import { PageSkeleton } from '@/components/patterns/Skeleton';
 import { TooltipProvider } from '@/components/ui/Tooltip';
+import { DemoBanner } from '@/features/demo/DemoBanner';
 import { CommandPalette } from '@/features/search/CommandPalette';
 import { ThemeSync } from '@/features/settings/ThemeSync';
 import { BottomNav } from './BottomNav';
@@ -36,6 +37,7 @@ export function AppShell() {
         </a>
         <Sidebar />
         <div className="flex min-w-0 flex-1 flex-col">
+          <DemoBanner />
           <TopBar onSearch={() => setSearching(true)} />
           <main id="main" tabIndex={-1} className="flex-1 pb-24 outline-none lg:pb-10">
             <Suspense fallback={<PageSkeleton />}>

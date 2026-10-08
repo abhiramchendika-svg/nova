@@ -73,6 +73,7 @@ public class AuthService {
     public CurrentUserResponse currentUser(UUID userId) {
         User user = users.findById(userId).orElseThrow(ApiException::notFound);
         boolean onboarded = settings.findById(userId).map(UserSettings::isOnboardingCompleted).orElse(false);
-        return new CurrentUserResponse(user.getId(), user.getEmail(), user.getDisplayName(), onboarded);
+        return new CurrentUserResponse(
+                user.getId(), user.getEmail(), user.getDisplayName(), onboarded, user.getDemoExpiresAt());
     }
 }

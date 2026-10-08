@@ -98,4 +98,20 @@ class LoginRateLimiterTest {
         assertThatThrownBy(() -> limiter.checkAndRecord("k"))
                 .isInstanceOfSatisfying(ApiException.class, e -> assertThat(e.getRetryAfterSeconds()).isEqualTo(1));
     }
+
+    @Test
+    void purgeForgetsKeysWithNothingLeftInTheWindowButKeepsBusyOnes() {
+        limiter.checkAndRecord("old");
+        clock.advance(Duration.ofSeconds(30));
+        for (int i = 0; i < 5; i++) {
+            limiter.checkAndRecord("busy");
+        }
+        clock.advance(Duration.ofSeconds(31)); // "old" is now outside the window, "busy" isn't
+
+        limiter.purge();
+
+        assertThat(limiter.trackedKeys()).isEqualTo(1);
+        assertThatThrownBy(() -> limiter.checkAndRecord("busy")).isInstanceOf(ApiException.class);
+        assertThatCode(() -> limiter.checkAndRecord("old")).doesNotThrowAnyException();
+    }
 }

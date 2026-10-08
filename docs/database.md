@@ -549,7 +549,8 @@ GPA = Σ (credits_i × points_i) / Σ credits_i
 
 ## 8. Seed and demo data
 
-- A `dev`-profile seeder creates one demo user with a realistic semester. Its data is **clearly fictional**: invented course names, no real GitHub stats (the GitHub widget shows its "not connected" state).
+- **"Try the demo"** (`POST /api/v1/demo`, Phase 7) creates a temporary account and seeds it through the normal services (`DemoSeeder`): three semesters, courses and grades, attendance, coursework, tasks, projects, a learning goal, hackathons and internship applications, all dated relative to the visitor's today. The data is **clearly fictional**: invented courses, `example.com` links, no real people and no GitHub data (the GitHub page starts "not connected"). The browser mock (`frontend/src/mocks/demo.ts`) holds the same story.
+- A demo account is an ordinary `users` row with `demo_expires_at` set (V15), 24 hours after creation. `DemoCleanup` deletes expired ones hourly; everything a user owns cascades with the row, and their Spring Session rows are deleted by principal name.
 - Built-in grading presets are inserted by migration:
   - "10-point (O/A+/A/B+/B/C/P/F)" with points 10/9/8/7/6/5/4/0
   - "4.0 US (A–F)"

@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/Badge';
 import { ButtonLink } from '@/components/ui/Button';
 import { DomainDot, type Domain } from '@/components/ui/DomainDot';
 import { Progress } from '@/components/ui/Progress';
+import { TryDemoButton } from '@/features/demo/TryDemoButton';
 import { ThemeMenu } from '@/features/theme/ThemeMenu';
 import { ProductPreview } from './ProductPreview';
 
@@ -67,13 +68,17 @@ export function LandingPage() {
                 <ButtonLink to="/register" variant="primary" size="lg">
                   Get started, free
                 </ButtonLink>
+                <TryDemoButton />
+              </div>
+              <p className="mt-3 text-[13px] text-ink-3">
+                The demo needs no sign-up: a temporary account with made-up data, deleted after 24 hours.{' '}
                 <a
                   href="#features"
-                  className="inline-flex h-11 items-center gap-2 rounded-sm border border-line-strong bg-surface px-5 text-[15px] font-medium hover:bg-surface-2"
+                  className="font-medium text-ink-2 underline underline-offset-4 hover:text-ink"
                 >
                   See how it works
                 </a>
-              </div>
+              </p>
             </div>
             <ProductPreview />
           </div>

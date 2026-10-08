@@ -9,6 +9,7 @@ import { useLogin } from './api';
 import { AuthLayout } from './AuthLayout';
 import { FormAlert } from '@/components/patterns/FormAlert';
 import { usePrefetchPages } from '@/app/prefetch';
+import { TryDemoButton } from '@/features/demo/TryDemoButton';
 import { PasswordToggle } from './PasswordToggle';
 import { loginSchema, safeNextPath, type LoginValues } from './schemas';
 
@@ -76,6 +77,12 @@ export function LoginPage() {
           Log in
         </Button>
       </form>
+      <div className="mt-6 grid gap-3 border-t border-line pt-6">
+        <p className="text-center text-[13px] text-ink-3">
+          Just looking? Try NOVA with made-up data, no sign-up needed.
+        </p>
+        <TryDemoButton className="w-full" />
+      </div>
     </AuthLayout>
   );
 }
