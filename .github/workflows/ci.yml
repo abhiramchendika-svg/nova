@@ -47,6 +47,10 @@ jobs:
       - name: AOT cache was created
         run: docker run --rm --entrypoint sh nova-backend -c 'test -s app.aot && ls -l app.aot'
 
+      # With Render's memory limit, the JVM must accept the cache (AOTMode=on turns a mismatch into an error)
+      - name: AOT cache loads in a 512 MB container
+        run: docker run --rm --memory=512m --entrypoint java nova-backend -XX:AOTCache=app.aot -XX:AOTMode=on -version
+
   frontend:
     name: Frontend (lint, typecheck, test, build, e2e)
     runs-on: ubuntu-latest

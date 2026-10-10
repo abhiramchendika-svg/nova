@@ -24,9 +24,11 @@ RUN java -Djarmode=tools -jar application.jar extract --layers --destination ext
 FROM bellsoft/liberica-openjre-debian:25-cds
 WORKDIR /application
 
-# Same JVM options for the training run and at runtime, or the JVM ignores the cache.
-# Serial GC suits a single small CPU; the heap may use 75% of the container's memory (512 MB on Render).
-ENV JAVA_TOOL_OPTIONS="-XX:+UseSerialGC -XX:MaxRAMPercentage=75"
+# Same JVM options for the training run and at runtime, or the JVM refuses the cache. The heap is a
+# fixed size on purpose: a percentage of memory gives a huge heap on the build machine and a small one
+# on Render, which changes the object layout (compressed pointers) and makes the cache unusable.
+# 384 MB is 75% of Render's 512 MB; Serial GC suits a single small CPU.
+ENV JAVA_TOOL_OPTIONS="-XX:+UseSerialGC -Xms64m -Xmx384m"
 
 # Dependencies change least often, the application code most: separate layers keep rebuilds small
 COPY --from=extract /builder/extracted/dependencies/ ./
