@@ -9,12 +9,13 @@ spring:
     hikari:
       # Neon's free compute scales to zero after 5 idle minutes and wakes in a few hundred ms. Keep no
       # idle connections around (they could keep it awake), and allow time for a wake-up when connecting.
+      # Hikari settings bind straight to HikariCP's setters, so times are plain milliseconds ("60s" fails)
       maximum-pool-size: 5
       minimum-idle: 0
-      idle-timeout: 60s
-      max-lifetime: 15m
+      idle-timeout: 60000          # 1 minute
+      max-lifetime: 900000         # 15 minutes
       keepalive-time: 0
-      connection-timeout: 15s
+      connection-timeout: 15000    # 15 seconds
   session:
     jdbc:
       # Spring Session deletes expired sessions every minute by default, which would keep the
