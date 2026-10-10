@@ -9,7 +9,8 @@ services:
     plan: free
     # Same region as the Neon database (AWS ap-southeast-1)
     region: singapore
-    rootDir: backend
+    # Paths from the repository root. (No rootDir: with one, Render resolves these from it instead,
+    # which would point at backend/backend.)
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
     # Doesn't touch the database, so health checks never keep Neon awake
