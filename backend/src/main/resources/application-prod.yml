@@ -1,0 +1,37 @@
+# Production profile (SPRING_PROFILES_ACTIVE=prod): Render runs the Docker image, Neon hosts PostgreSQL
+# and Vercel serves the frontend and proxies /api here. See docs/deployment.md.
+# Only what differs from application.yml lives here; secrets always come from environment variables.
+
+spring:
+  datasource:
+    # Neon's direct (non-pooled) connection string, e.g.
+    # jdbc:postgresql://ep-example-123456.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channelBinding=require
+    hikari:
+      # Neon's free compute scales to zero after 5 idle minutes and wakes in a few hundred ms. Keep no
+      # idle connections around (they could keep it awake), and allow time for a wake-up when connecting.
+      maximum-pool-size: 5
+      minimum-idle: 0
+      idle-timeout: 60s
+      max-lifetime: 15m
+      keepalive-time: 0
+      connection-timeout: 15s
+  session:
+    jdbc:
+      # Spring Session deletes expired sessions every minute by default, which would keep the
+      # database awake around the clock. Hourly is plenty for a 14-day session.
+      cleanup-cron: '0 23 * * * *'
+
+server:
+  # Finish in-flight requests on redeploy instead of cutting them off
+  shutdown: graceful
+  tomcat:
+    # 0.1 CPU and 512 MB: a few dozen threads are more than this instance can use
+    threads:
+      max: 40
+
+nova:
+  proxy:
+    # Refuse to start without NOVA_PROXY_SECRET, so the API can't be reached around the website
+    required: true
+  security:
+    cookie-secure: ${NOVA_COOKIE_SECURE:true}

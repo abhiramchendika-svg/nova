@@ -89,6 +89,10 @@ npm run dev
 
 Open http://localhost:5173 and create an account, or press **Try the demo** for a temporary account with made-up data (deleted after 24 hours). The Vite dev server proxies `/api` to the backend, so the browser only ever talks to one origin and the session and CSRF cookies are first-party.
 
+### 4. The production image (optional)
+
+`docker compose --profile app up --build` builds the backend's Docker image and runs it with the production profile, as Render does. [Deployment](docs/deployment.md) walks through it, including testing the production frontend build against it.
+
 ### Environment variables
 
 | Variable | Used by | Default | Purpose |
@@ -98,6 +102,7 @@ Open http://localhost:5173 and create an account, or press **Try the demo** for 
 | `NOVA_COOKIE_SECURE` | backend | `false` | Set `true` behind HTTPS so cookies are Secure |
 | `NOVA_CORS_ORIGINS` | backend | empty | Only for cross-origin tooling; normal use is same-origin |
 | `PORT` | backend | `8080` | HTTP port |
+| `NOVA_PROXY_SECRET` | backend, Vite | empty | Shared secret the website's proxy sends with every API call. Empty for normal local development; required by the `prod` profile and the Docker backend. See [Deployment](docs/deployment.md) |
 | `NOVA_DEMO_ENABLED` | backend | `true` | "Try the demo" accounts (temporary, fictional data, deleted after 24 h, rate-limited). `false` turns them off |
 | `GITHUB_SERVER_TOKEN` | backend | empty | Optional. A GitHub fine-grained token with no extra permissions; enables the contribution calendar (profiles and repositories work without it). Set it in the shell that runs the backend (PowerShell: `$env:GITHUB_SERVER_TOKEN="…"`). Never commit it. |
 | `VITE_API_MOCKS` | frontend | `false` | `true` runs the UI against the in-browser mock API |
@@ -118,6 +123,7 @@ npm run lint        # ESLint incl. jsx-a11y
 npm run typecheck   # tsc
 npm run build       # production build
 npm run size        # what each first visit downloads, checked against bundle-budget.json
+npm run csp         # vercel.json Content-Security-Policy matches the built inline script (after build)
 npm run e2e:install # once: downloads Chromium for Playwright
 npm run e2e         # real-browser checks (mock API): accessibility, reflow, keyboard, loading/error/empty states, reduced motion, smoke flows
 ```
@@ -129,6 +135,7 @@ Tests never call a real external API. Backend integration tests start a throwawa
 - [Architecture & product blueprint](docs/architecture.md)
 - [Accessibility audit](docs/accessibility.md)
 - [Performance](docs/performance.md)
+- [Deployment](docs/deployment.md): Vercel + Render + Neon, the production Docker image, and running it locally
 - [Database design](docs/database.md)
 - [REST API design](docs/api.md)
 - [UI design system ("Signal")](docs/ui-design.md)
@@ -144,7 +151,7 @@ Tests never call a real external API. Backend integration tests start a throwawa
 | 4 | Developer growth: projects, learning goals, hackathons, internships, GitHub | Done (GitHub OAuth deferred) |
 | 5 | Search, notifications and insights | Done |
 | 6 | UI polish and accessibility audit | Done |
-| 7 | Open-source readiness and live demo | In progress (contributor docs and "Try the demo" done; deploy next) |
+| 7 | Open-source readiness and live demo | In progress (contributor docs, "Try the demo" and deploy setup done; going live next) |
 
 ## Known limitations
 

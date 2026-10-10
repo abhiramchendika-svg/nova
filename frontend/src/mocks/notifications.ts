@@ -8,6 +8,9 @@ import { applyByReason, deadlineReason, hackathonDeadlineReason } from './dashbo
 import { toHackathon } from './hackathons';
 import { deadlineMatters, stepMatters } from './internships';
 
+/** Counts attendance state changes, for unique dedupe keys (see the attendance rule). */
+let attendanceChanges = 0;
+
 /**
  * Notifications for the mock API: a port of NotificationRules.java and NotificationGenerator.java.
  * The real server runs the generator hourly; the mock runs it whenever the bell or the list asks,
@@ -159,7 +162,9 @@ export function generateNotifications(
             ? `${pct}attend the next ${need === 1 ? 'class' : `${need} classes`} to get back to ${target}`
             : `${pct}${canMiss <= 0 ? 'you can’t miss another class' : 'you can miss only 1 more class'} and stay at ${target}`,
         link: `/app/academics/courses/${c.id}`,
-        dedupeKey: `ATTENDANCE_AT_RISK:${c.id}:${previous ?? 'NEW'}>${a.status}:${nowMs}`,
+        // The state change above already stops repeats; the counter keeps two changes within the same
+        // millisecond (fast tests) from sharing a key
+        dedupeKey: `ATTENDANCE_AT_RISK:${c.id}:${previous ?? 'NEW'}>${a.status}:${nowMs}.${++attendanceChanges}`,
       });
     }
   }

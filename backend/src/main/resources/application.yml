@@ -46,6 +46,11 @@ nova:
   cors:
     # Comma-separated; empty = no cross-origin access (normal: dev and prod are same-origin via /api proxy)
     allowed-origins: ${NOVA_CORS_ORIGINS:}
+  proxy:
+    # Shared secret the website's proxy (Vercel) adds to every /api call; empty = no check (local dev).
+    # Production requires it (application-prod.yml), see dev.nova.security.ProxyGuardFilter.
+    secret: ${NOVA_PROXY_SECRET:}
+    required: false
   security:
     cookie-secure: ${NOVA_COOKIE_SECURE:false}   # true in production (HTTPS only)
     login-attempts: 5

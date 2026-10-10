@@ -4,6 +4,7 @@ import dev.nova.auth.AuthDtos.CurrentUserResponse;
 import dev.nova.auth.AuthService;
 import dev.nova.auth.SessionStarter;
 import dev.nova.demo.DemoDtos.StartRequest;
+import dev.nova.security.ClientAddress;
 import dev.nova.security.NovaUserDetails;
 import dev.nova.user.User;
 import jakarta.servlet.http.HttpServletRequest;
@@ -25,11 +26,13 @@ public class DemoController {
     private final DemoService demos;
     private final AuthService auth;
     private final SessionStarter sessions;
+    private final ClientAddress clientAddress;
 
-    public DemoController(DemoService demos, AuthService auth, SessionStarter sessions) {
+    public DemoController(DemoService demos, AuthService auth, SessionStarter sessions, ClientAddress clientAddress) {
         this.demos = demos;
         this.auth = auth;
         this.sessions = sessions;
+        this.clientAddress = clientAddress;
     }
 
     @PostMapping
@@ -37,7 +40,7 @@ public class DemoController {
             @Valid @RequestBody(required = false) StartRequest body,
             HttpServletRequest request,
             HttpServletResponse response) {
-        User user = demos.start(body == null ? null : body.timezone(), request.getRemoteAddr());
+        User user = demos.start(body == null ? null : body.timezone(), clientAddress.of(request));
         NovaUserDetails principal = NovaUserDetails.withoutCredentials(user);
         sessions.start(
                 UsernamePasswordAuthenticationToken.authenticated(principal, null, principal.getAuthorities()),

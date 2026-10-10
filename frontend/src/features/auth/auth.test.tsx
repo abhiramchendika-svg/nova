@@ -3,7 +3,10 @@ import { describe, expect, it } from 'vitest';
 import { createMockDb } from '@/mocks/handlers';
 import { axeViolations } from '@/test/axe';
 import { renderRoute } from '@/test/render';
-import { installMockApi, TEST_USER } from '@/test/server';
+import { installMockApi, server, TEST_USER } from '@/test/server';
+import { API } from '@/mocks/http';
+import { http, HttpResponse } from 'msw';
+import { WAKE_RETRY_MS } from './api';
 import { safeNextPath } from './schemas';
 
 describe('route guard', () => {
@@ -20,6 +23,28 @@ describe('route guard', () => {
     renderRoute('/app');
     expect(await screen.findByRole('heading', { level: 1, name: /Abhi\./ })).toBeInTheDocument();
     expect(screen.getByRole('navigation', { name: 'Main' })).toBeInTheDocument();
+  });
+});
+
+describe('a sleeping server', () => {
+  it('says it is waking up, keeps checking, then lets the user in', async () => {
+    installMockApi(createMockDb({ loggedInAs: TEST_USER }));
+    server.use(
+      http.get(
+        `${API}/auth/me`,
+        () =>
+          new HttpResponse('<html>Waking up</html>', {
+            status: 503,
+            headers: { 'Content-Type': 'text/html' },
+          }),
+        { once: true },
+      ),
+    );
+    renderRoute('/app');
+    expect(await screen.findByRole('heading', { name: 'Waking up NOVA’s server…' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { level: 1, name: /Abhi\./ }, { timeout: WAKE_RETRY_MS + 5_000 }),
+    ).toBeInTheDocument();
   });
 });
 

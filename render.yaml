@@ -1,0 +1,37 @@
+# Render Blueprint for the NOVA backend (docs/deployment.md).
+# Render → New → Blueprint → pick this repository. It reads this file, asks for the values marked
+# `sync: false`, and generates the proxy secret (copy it into Vercel's NOVA_PROXY_SECRET afterwards).
+services:
+  - type: web
+    name: nova-api
+    runtime: docker
+    # Free instance: 0.1 CPU, 512 MB, sleeps after 15 idle minutes (the keep-warm workflow pings it)
+    plan: free
+    # Same region as the Neon database (AWS ap-southeast-1)
+    region: singapore
+    rootDir: backend
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    # Doesn't touch the database, so health checks never keep Neon awake
+    healthCheckPath: /api/v1/health
+    # Deploy a commit only once GitHub's CI checks have passed for it
+    autoDeployTrigger: checksPass
+    buildFilter:
+      paths:
+        - backend/**
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      # Neon: direct (not "-pooler") connection, as a JDBC URL:
+      # jdbc:postgresql://<endpoint>.ap-southeast-1.aws.neon.tech/<db>?sslmode=require&channelBinding=require
+      - key: NOVA_DB_URL
+        sync: false
+      - key: NOVA_DB_USER
+        sync: false
+      - key: NOVA_DB_PASSWORD
+        sync: false
+      - key: NOVA_PROXY_SECRET
+        generateValue: true
+      # Optional: enables the GitHub contribution calendar (fine-grained token, no extra permissions)
+      - key: GITHUB_SERVER_TOKEN
+        sync: false

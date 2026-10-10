@@ -12,8 +12,10 @@ import { usePrefetchPages } from '@/app/prefetch';
 import { TryDemoButton } from '@/features/demo/TryDemoButton';
 import { PasswordToggle } from './PasswordToggle';
 import { loginSchema, safeNextPath, type LoginValues } from './schemas';
+import { useWakeServer } from './wake';
 
 export function LoginPage() {
+  useWakeServer();
   // Most visits here end in the app: fetch its code while the form is being filled in
   usePrefetchPages('AppShell', 'HomePage');
   const navigate = useNavigate();

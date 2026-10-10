@@ -12,6 +12,7 @@
     "dev:mock": "vite --mode mock",
     "build": "tsc -b && vite build",
     "size": "node scripts/bundle-size.mjs",
+    "csp": "node scripts/csp-check.mjs",
     "preview": "vite preview",
     "typecheck": "tsc -b",
     "lint": "eslint .",

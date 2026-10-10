@@ -3,6 +3,7 @@ package dev.nova.auth;
 import dev.nova.auth.AuthDtos.CurrentUserResponse;
 import dev.nova.auth.AuthDtos.LoginRequest;
 import dev.nova.auth.AuthDtos.RegisterRequest;
+import dev.nova.security.ClientAddress;
 import dev.nova.security.NovaUserDetails;
 import dev.nova.user.User;
 import jakarta.servlet.http.HttpServletRequest;
@@ -30,10 +31,12 @@ public class AuthController {
 
     private final AuthService authService;
     private final SessionStarter sessions;
+    private final ClientAddress clientAddress;
 
-    public AuthController(AuthService authService, SessionStarter sessions) {
+    public AuthController(AuthService authService, SessionStarter sessions, ClientAddress clientAddress) {
         this.authService = authService;
         this.sessions = sessions;
+        this.clientAddress = clientAddress;
     }
 
     /**
@@ -61,7 +64,7 @@ public class AuthController {
     @PostMapping("/login")
     public CurrentUserResponse login(
             @Valid @RequestBody LoginRequest body, HttpServletRequest request, HttpServletResponse response) {
-        Authentication authentication = authService.authenticate(body.email(), body.password(), request.getRemoteAddr());
+        Authentication authentication = authService.authenticate(body.email(), body.password(), clientAddress.of(request));
         sessions.start(authentication, request, response);
         return authService.currentUser(((NovaUserDetails) authentication.getPrincipal()).id());
     }

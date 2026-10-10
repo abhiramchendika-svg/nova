@@ -9,11 +9,13 @@ import { Progress } from '@/components/ui/Progress';
 import { TryDemoButton } from '@/features/demo/TryDemoButton';
 import { ThemeMenu } from '@/features/theme/ThemeMenu';
 import { ProductPreview } from './ProductPreview';
+import { useWakeServer } from '@/features/auth/wake';
 
 /** Public repository link; set VITE_REPO_URL once the repo is on GitHub. Hidden when unset. */
 const REPO_URL: string | undefined = import.meta.env.VITE_REPO_URL || undefined;
 
 export function LandingPage() {
+  useWakeServer();
   return (
     <div className="min-h-dvh bg-bg">
       <a

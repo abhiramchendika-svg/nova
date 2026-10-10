@@ -22,6 +22,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.logout.HttpStatusReturningLogoutSuccessHandler;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextRepository;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -41,7 +42,8 @@ public class SecurityConfig {
     SecurityFilterChain securityFilterChain(
             HttpSecurity http,
             SecurityContextRepository securityContextRepository,
-            @Qualifier("handlerExceptionResolver") HandlerExceptionResolver exceptionResolver)
+            @Qualifier("handlerExceptionResolver") HandlerExceptionResolver exceptionResolver,
+            @Value("${nova.security.cookie-secure:false}") boolean cookieSecure)
             throws Exception {
         http.authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.GET, "/api/v1/health", "/api/v1/auth/csrf", "/actuator/health")
@@ -54,7 +56,7 @@ public class SecurityConfig {
                         .authenticated())
                 // Cookie-to-header CSRF for SPAs: token in a readable XSRF-TOKEN cookie, echoed by the
                 // frontend in X-XSRF-TOKEN; spa() also handles BREACH-safe encoding and token refresh.
-                .csrf(csrf -> csrf.spa())
+                .csrf(csrf -> csrf.spa().csrfTokenRepository(csrfTokens(cookieSecure)))
                 .cors(Customizer.withDefaults())
                 .securityContext(context -> context.securityContextRepository(securityContextRepository))
                 .sessionManagement(session -> session.sessionFixation(fixation -> fixation.changeSessionId()))
@@ -73,6 +75,18 @@ public class SecurityConfig {
                 .httpBasic(basic -> basic.disable())
                 .requestCache(cache -> cache.disable());
         return http.build();
+    }
+
+    /**
+     * The readable XSRF-TOKEN cookie, as spa() sets it up. Behind an HTTPS proxy the app itself sees
+     * plain HTTP, so in production the Secure flag is set explicitly, like the session cookie's.
+     */
+    private static CookieCsrfTokenRepository csrfTokens(boolean secure) {
+        CookieCsrfTokenRepository repository = CookieCsrfTokenRepository.withHttpOnlyFalse();
+        if (secure) {
+            repository.setCookieCustomizer(cookie -> cookie.secure(true));
+        }
+        return repository;
     }
 
     /**

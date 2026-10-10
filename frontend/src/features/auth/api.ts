@@ -4,6 +4,10 @@ import type { CurrentUser, LoginRequest, RegisterRequest } from './types';
 
 export const meQueryKey = ['auth', 'me'] as const;
 
+/** While the server wakes up: one try every 5 s for about two and a half minutes. */
+export const WAKE_RETRY_MS = 5_000;
+const WAKE_ATTEMPTS = 30;
+
 /**
  * The current session. Resolves to `null` when logged out (401), so callers can
  * tell "not logged in" apart from "request failed" (which stays an error).
@@ -20,7 +24,16 @@ export function useCurrentUser() {
       }
     },
     staleTime: 5 * 60_000,
-    retry: (count, error) => (error.status !== 0 && error.status < 500 ? false : count < 2),
+    // A sleeping free server can take a minute or two to answer: keep asking every few seconds
+    // (RequireAuth says it's waking up), instead of giving up after two quick tries
+    retry: (count, error) =>
+      error.code === 'UNAVAILABLE'
+        ? count < WAKE_ATTEMPTS
+        : error.status !== 0 && error.status < 500
+          ? false
+          : count < 2,
+    retryDelay: (count, error) =>
+      error.code === 'UNAVAILABLE' ? WAKE_RETRY_MS : Math.min(1000 * 2 ** count, 30_000),
   });
 }
 

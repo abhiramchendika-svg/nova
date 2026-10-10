@@ -34,6 +34,19 @@ jobs:
       - name: Build and test
         run: sh ./mvnw --batch-mode --no-transfer-progress verify
 
+  docker:
+    name: Backend Docker image (build + AOT cache training)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      # The same image Render builds; fails here first if the Dockerfile or the training run breaks
+      - name: Build image
+        run: docker build --progress=plain -t nova-backend ./backend 2>&1 | tee build.log
+
+      - name: AOT cache was created
+        run: docker run --rm --entrypoint sh nova-backend -c 'test -s app.aot && ls -l app.aot'
+
   frontend:
     name: Frontend (lint, typecheck, test, build, e2e)
     runs-on: ubuntu-latest
@@ -70,6 +83,10 @@ jobs:
       # Phase 6d: what each first visit downloads (gzip) must stay within bundle-budget.json
       - name: Bundle size budget
         run: npm run size
+
+      # Phase 7: vercel.json's Content-Security-Policy must allow exactly the built inline scripts
+      - name: CSP matches the build
+        run: npm run csp
 
       # Phase 6: accessibility (axe, WCAG 2.2 AA incl. colour contrast), reflow, keyboard and smoke
       # flows in a real browser, against the mock API, so no backend is needed here.

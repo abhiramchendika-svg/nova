@@ -55,6 +55,8 @@ function codeForStatus(status: number): string {
   if (status === 404) return 'NOT_FOUND';
   if (status === 409) return 'CONFLICT';
   if (status === 429) return 'RATE_LIMITED';
+  // A gateway answering for the backend: usually the free server waking up after a quiet spell
+  if (status === 502 || status === 503 || status === 504) return 'UNAVAILABLE';
   return 'INTERNAL';
 }
 
@@ -133,7 +135,12 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
   if (!response.ok) throw await toApiError(response);
   if (response.status === 204) return undefined as T;
   const text = await response.text();
-  return (text ? JSON.parse(text) : undefined) as T;
+  if (!text) return undefined as T;
+  // A "2xx" that isn't JSON came from something in front of the API (e.g. a host's waking-up page)
+  if (!(response.headers.get('Content-Type') ?? '').includes('json')) {
+    throw new ApiError(503, { title: 'The server isn’t ready yet' });
+  }
+  return JSON.parse(text) as T;
 }
 
 /** Human-readable message for any error, following ui-design.md voice rules. */
@@ -152,6 +159,8 @@ export function errorMessage(error: unknown): string {
       return 'Your session has ended. Log in again to continue.';
     case 'NOT_FOUND':
       return 'We couldn’t find that.';
+    case 'UNAVAILABLE':
+      return 'NOVA’s server is waking up after a quiet spell. Give it a minute, then try again.';
     case 'INTERNAL':
       return 'Something went wrong on our side. Please try again.';
     default:

@@ -100,6 +100,7 @@ Legend: 🔓 public · everything else requires a session. **P** marks paginated
 - Session cookie `NOVA_SESSION`: HttpOnly, SameSite=Lax, Secure in production; stored in PostgreSQL by Spring Session; 14-day sliding timeout.
 - CSRF: `GET /auth/csrf` sets a readable `XSRF-TOKEN` cookie without creating a session; unsafe requests must echo it in `X-XSRF-TOKEN`.
 - Login is rate-limited per client IP + email (5 per minute by default); the `429` includes `Retry-After` and `retryAfterSeconds`.
+- In production every `/api` call except `/api/v1/health` must carry the website proxy's `X-Nova-Proxy-Secret` header; without it the answer is `403` with code `FORBIDDEN` (docs/deployment.md). Client IPs for rate limits then come from the proxy's `X-Forwarded-For`.
 
 **Demo (Phase 7)**
 

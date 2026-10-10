@@ -68,6 +68,7 @@ cd frontend
 npm run format:check && npm run lint && npm run typecheck
 npm test                                    # Vitest
 npm run build && npm run size               # bundle-size budget
+npm run csp                                 # vercel.json CSP still matches the built inline script
 npm run e2e                                 # Playwright: accessibility, reflow, keyboard, states, smoke
 ```
 

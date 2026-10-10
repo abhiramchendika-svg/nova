@@ -1,7 +1,8 @@
-# Local development database.
-#   docker compose up -d        start PostgreSQL in the background
-#   docker compose down         stop it (data is kept in the named volume)
-#   docker compose down -v      stop it and delete all local data
+# Local development database, and optionally the production backend image.
+#   docker compose up -d                       start PostgreSQL in the background
+#   docker compose --profile app up --build    also build and run the backend image as it runs on Render
+#   docker compose down                        stop (data is kept in the named volume)
+#   docker compose down -v                     stop and delete all local data
 services:
   postgres:
     image: postgres:16-alpine
@@ -20,6 +21,30 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+
+  # The production image with the prod profile, against the local database (docs/deployment.md).
+  # Only started with `--profile app`. NOVA_BACKEND_CPUS=0.1 mimics Render's free instance.
+  backend:
+    profiles: [app]
+    build: ./backend
+    container_name: nova-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      NOVA_DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-nova}
+      NOVA_DB_USER: ${POSTGRES_USER:-nova}
+      NOVA_DB_PASSWORD: ${POSTGRES_PASSWORD:-change-me-locally}
+      NOVA_PROXY_SECRET: ${NOVA_PROXY_SECRET:?Set NOVA_PROXY_SECRET in .env (see .env.example)}
+      # Local HTTP: cookies without the Secure flag, or the browser would drop them
+      NOVA_COOKIE_SECURE: "false"
+      GITHUB_SERVER_TOKEN: ${GITHUB_SERVER_TOKEN:-}
+      NOVA_AOT: ${NOVA_AOT:-on}
+    ports:
+      - "8080:8080"
+    mem_limit: 512m
+    cpus: ${NOVA_BACKEND_CPUS:-1}
 
 volumes:
   nova-pgdata:

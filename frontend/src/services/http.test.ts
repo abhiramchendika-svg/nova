@@ -13,6 +13,50 @@ describe('readCookie', () => {
 });
 
 describe('api()', () => {
+  it('treats a gateway timeout as a server that is waking up', async () => {
+    server.use(
+      http.get(
+        '/api/v1/health',
+        () =>
+          new HttpResponse('<html>Gateway timeout</html>', {
+            status: 504,
+            headers: { 'Content-Type': 'text/html' },
+          }),
+      ),
+    );
+    const error = await api('/health').catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(ApiError);
+    expect((error as ApiError).code).toBe('UNAVAILABLE');
+    expect(errorMessage(error)).toBe(
+      'NOVA’s server is waking up after a quiet spell. Give it a minute, then try again.',
+    );
+  });
+
+  it('treats a 200 that is not JSON (a host’s loading page) as not ready, not as data', async () => {
+    server.use(
+      http.get(
+        '/api/v1/health',
+        () =>
+          new HttpResponse('<html>Starting…</html>', {
+            status: 200,
+            headers: { 'Content-Type': 'text/html' },
+          }),
+      ),
+    );
+    const error = await api('/health').catch((e: unknown) => e);
+    expect((error as ApiError).code).toBe('UNAVAILABLE');
+  });
+
+  it('keeps an API’s own 502 code (GitHub unreachable) rather than calling it waking up', async () => {
+    server.use(
+      http.get('/api/v1/github/overview', () =>
+        HttpResponse.json({ code: 'UPSTREAM_UNAVAILABLE', title: 'GitHub didn’t answer' }, { status: 502 }),
+      ),
+    );
+    const error = await api('/github/overview').catch((e: unknown) => e);
+    expect((error as ApiError).code).toBe('UPSTREAM_UNAVAILABLE');
+  });
+
   it('parses JSON on success', async () => {
     server.use(http.get('/api/v1/health', () => HttpResponse.json({ status: 'UP' })));
     await expect(api<{ status: string }>('/health')).resolves.toEqual({ status: 'UP' });

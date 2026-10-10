@@ -11,8 +11,10 @@ import { FormAlert } from '@/components/patterns/FormAlert';
 import { usePrefetchPages } from '@/app/prefetch';
 import { PasswordToggle } from './PasswordToggle';
 import { PASSWORD_MIN, registerSchema, type RegisterValues } from './schemas';
+import { useWakeServer } from './wake';
 
 export function RegisterPage() {
+  useWakeServer();
   // Most visits here end in the app: fetch its code while the form is being filled in
   usePrefetchPages('OnboardingPage', 'AppShell', 'HomePage');
   const navigate = useNavigate();
