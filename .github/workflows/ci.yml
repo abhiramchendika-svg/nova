@@ -21,7 +21,7 @@ jobs:
       run:
         working-directory: backend
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-java@v5
         with:
@@ -38,7 +38,7 @@ jobs:
     name: Backend Docker image (build + AOT cache training)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       # The same image Render builds; fails here first if the Dockerfile or the training run breaks
       - name: Build image
@@ -54,7 +54,7 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v5
         with:
