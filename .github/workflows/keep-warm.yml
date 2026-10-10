@@ -1,13 +1,14 @@
 name: Keep the demo warm
 
 # Render's free instance sleeps after 15 idle minutes and takes a minute or more to wake. Pinging the
-# health endpoint through the website every 10 minutes keeps it awake (one service running all month
-# fits in Render's 750 free hours). GitHub may delay or skip scheduled runs, so the site still shows a
-# "waking up" message when this misses. Set the repository variable NOVA_SITE_URL (Settings → Secrets
+# health endpoint through the website every 10 minutes keeps it awake during the day in India
+# (02:00–18:59 UTC = 07:30–00:29 IST, about 17 h a day, ~530 h a month). At night it sleeps, which
+# leaves room in the workspace's 750 free hours for other free services. GitHub may delay or skip
+# scheduled runs, so the site still shows a "waking up" message when this misses. Set the repository variable NOVA_SITE_URL (Settings → Secrets
 # and variables → Actions → Variables), e.g. https://nova-xyz.vercel.app — without it the job is skipped.
 on:
   schedule:
-    - cron: '*/10 * * * *'
+    - cron: '*/10 2-18 * * *'
   workflow_dispatch:
 
 permissions: {}

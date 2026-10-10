@@ -27,8 +27,8 @@ The browser only ever talks to the Vercel domain, so the session and CSRF cookie
 
 | Limit | Effect | Handling |
 |---|---|---|
-| Render free sleeps after 15 idle minutes; waking takes about a minute, plus Spring Boot's start on 0.1 CPU | The first request after a quiet spell is slow | The site pings `/api/v1/health` as soon as the landing or login page opens; the session check keeps retrying for ~2½ minutes and shows "Waking up NOVA's server…"; the **Keep the demo warm** workflow pings every 10 minutes |
-| Render free: 750 instance hours a month per workspace | One service running all month uses ~744 | Keep only this one free service in the workspace |
+| Render free sleeps after 15 idle minutes; waking takes about a minute, plus Spring Boot's start on 0.1 CPU | The first request after a quiet spell is slow | The site pings `/api/v1/health` as soon as the landing or login page opens; the session check keeps retrying for ~2½ minutes and shows "Waking up NOVA's server…"; the **Keep the demo warm** workflow pings every 10 minutes from 07:30 to 00:30 IST |
+| Render free: 750 instance hours a month, shared by every free service in the workspace | Running all month would use ~744 and starve other free services | Kept warm in the daytime only (~530 h); at night it sleeps and wakes on demand |
 | Vercel waits up to 120 s for the backend | A very slow wake-up can still time out | Shown as "waking up", retried automatically |
 | Neon free scales to zero after 5 idle minutes; 100 CU-hours a month | Each wake-up costs a few hundred milliseconds | Nothing keeps the database awake needlessly: health checks don't query it, the pool keeps no idle connections, and Spring Session's clean-up runs hourly instead of every minute |
 | Start-up time on 0.1 CPU | Slow cold starts | The image ships a JDK 25 AOT cache trained at build time (`app.aot`) |
