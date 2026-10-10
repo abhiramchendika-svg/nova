@@ -47,9 +47,19 @@ jobs:
       - name: AOT cache was created
         run: docker run --rm --entrypoint sh nova-backend -c 'test -s app.aot && ls -l app.aot'
 
-      # With Render's memory limit, the JVM must accept the cache (AOTMode=on turns a mismatch into an error)
+      # Start the application the way the container does (same classpath, Render's memory limit) with
+      # AOTMode=on, which turns a cache that doesn't fit into an error. Like the training run it stops
+      # right after start-up and needs no database.
       - name: AOT cache loads in a 512 MB container
-        run: docker run --rm --memory=512m --entrypoint java nova-backend -XX:AOTCache=app.aot -XX:AOTMode=on -version
+        run: >-
+          docker run --rm --memory=512m --entrypoint java nova-backend
+          -XX:AOTCache=app.aot -XX:AOTMode=on
+          -Dspring.context.exit=onRefresh
+          -Dspring.flyway.enabled=false
+          -Dspring.jpa.hibernate.ddl-auto=none
+          -Dspring.jpa.properties.hibernate.boot.allow_jdbc_metadata_access=false
+          -Dspring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
+          -jar application.jar
 
   frontend:
     name: Frontend (lint, typecheck, test, build, e2e)
