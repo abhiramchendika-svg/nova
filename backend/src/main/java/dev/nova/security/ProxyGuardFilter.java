@@ -7,6 +7,9 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.util.concurrent.atomic.AtomicLong;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -36,7 +39,11 @@ public class ProxyGuardFilter extends OncePerRequestFilter {
             {"type":"about:blank","title":"Use the NOVA website","status":403,"code":"FORBIDDEN"}"""
             .getBytes(StandardCharsets.UTF_8);
 
+    private static final Logger log = LoggerFactory.getLogger(ProxyGuardFilter.class);
+    private static final long LOG_EVERY_MS = 10_000;
+
     private final byte[] secret;
+    private final AtomicLong lastLogged = new AtomicLong();
 
     public ProxyGuardFilter(
             @Value("${nova.proxy.secret:}") String secret, @Value("${nova.proxy.required:false}") boolean required) {
@@ -53,6 +60,29 @@ public class ProxyGuardFilter extends OncePerRequestFilter {
         return secret != null;
     }
 
+    /**
+     * Says why a call was refused, for setting up the proxy, without ever logging the secret itself:
+     * only whether the header came, its length and whether it looks like an unexpanded "$VARIABLE".
+     * At most once every ten seconds, so a flood of direct calls can't flood the logs.
+     */
+    private void logRejection(String sent) {
+        long now = System.currentTimeMillis();
+        long last = lastLogged.get();
+        if (now - last < LOG_EVERY_MS || !lastLogged.compareAndSet(last, now)) {
+            return;
+        }
+        if (sent == null) {
+            log.warn("Proxy guard: refused an API call without the {} header", HEADER);
+        } else {
+            log.warn(
+                    "Proxy guard: refused an API call with a wrong {} ({} characters, expected {}{})",
+                    HEADER,
+                    sent.length(),
+                    secret.length,
+                    sent.startsWith("$") ? "; it looks like an unexpanded variable name" : "");
+        }
+    }
+
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI().substring(request.getContextPath().length());
@@ -62,12 +92,14 @@ public class ProxyGuardFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
-        String sent = request.getHeader(HEADER);
+        String raw = request.getHeader(HEADER);
+        String sent = raw == null ? null : raw.strip(); // a pasted value may carry a stray space or newline
         // Constant-time comparison: the time taken doesn't reveal how much of the secret matched
         if (sent != null && MessageDigest.isEqual(secret, sent.getBytes(StandardCharsets.UTF_8))) {
             chain.doFilter(request, response);
             return;
         }
+        logRejection(sent);
         response.setStatus(HttpServletResponse.SC_FORBIDDEN);
         response.setContentType("application/problem+json");
         response.getOutputStream().write(FORBIDDEN);
