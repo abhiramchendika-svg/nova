@@ -10,9 +10,8 @@ const root = fileURLToPath(new URL('..', import.meta.url));
 const html = readFileSync(`${root}dist/index.html`, 'utf8');
 const vercel = JSON.parse(readFileSync(`${root}vercel.json`, 'utf8'));
 
-const csp = vercel.headers
-  .flatMap((rule) => rule.headers)
-  .find((h) => h.key === 'Content-Security-Policy')?.value;
+// Headers are set by `routes` entries ({ src, headers, continue: true }) in vercel.json
+const csp = vercel.routes.map((route) => route.headers?.['Content-Security-Policy']).find(Boolean);
 if (!csp) {
   console.error('vercel.json has no Content-Security-Policy header.');
   process.exit(1);
