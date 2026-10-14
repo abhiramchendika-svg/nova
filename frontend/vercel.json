@@ -7,20 +7,26 @@
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "${NOVA_API_ORIGIN}/api/$1",
-      "env": ["NOVA_API_ORIGIN"],
+      "dest": "https://nova-api-xvtg.onrender.com/api/$1",
       "transforms": [
         {
           "type": "request.headers",
           "op": "set",
-          "target": { "key": "X-Nova-Proxy-Secret" },
+          "target": {
+            "key": "X-Nova-Proxy-Secret"
+          },
           "args": "$NOVA_PROXY_SECRET",
           "env": ["NOVA_PROXY_SECRET"]
         }
       ]
     }
   ],
-  "rewrites": [{ "source": "/((?!api/).*)", "destination": "/index.html" }],
+  "rewrites": [
+    {
+      "source": "/((?!api/).*)",
+      "destination": "/index.html"
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",
@@ -29,16 +35,36 @@
           "key": "Content-Security-Policy",
           "value": "default-src 'self'; script-src 'self' 'sha256-/TVZ/Vf2lCJMG6Nc4G6cmSSL0fGggzlZbhFrcufsVY4='; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://avatars.githubusercontent.com; font-src 'self' data:; connect-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
         },
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "X-Frame-Options", "value": "DENY" },
-        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
-        { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=(), payment=()" },
-        { "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains" }
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(), microphone=(), geolocation=(), payment=()"
+        },
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=63072000; includeSubDomains"
+        }
       ]
     },
     {
       "source": "/assets/(.*)",
-      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
     }
   ]
 }

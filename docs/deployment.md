@@ -90,11 +90,11 @@ Do these in order; each step needs a value from the one before.
 ### 3. Vercel
 
 1. **Add New → Project**, import the repository, set **Root Directory** to `frontend` (framework: Vite; `vercel.json` sets the build).
-2. Environment variables (Production and Preview):
-   - `NOVA_API_ORIGIN` = `https://<service>.onrender.com` (no trailing slash)
+2. Set the backend's address: in `frontend/vercel.json`, the `/api/(.*)` route's `dest` is the Render URL (`https://nova-api-xvtg.onrender.com/api/$1` for this project). It isn't a secret; a fork changes it to its own service.
+3. Environment variables (Production and Preview):
    - `NOVA_PROXY_SECRET` = the value from Render
    - `VITE_REPO_URL` = `https://github.com/<you>/nova` (optional: the landing page's GitHub link)
-3. Deploy, open the site, and press **Try the demo**.
+4. Deploy, open the site, and press **Try the demo**.
 
 ### 4. GitHub
 
